@@ -1,0 +1,28 @@
+{
+  "language": "en",
+  "theme": "light",
+  "activeTab": "home",
+  "telecomBalance": 145.5,
+  "telebirrBalance": 2500,
+  "userProfile": {
+    "name": "Jane Doe",
+    "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200",
+    "phoneNumber": "+251987654321"
+  },
+  "simCards": [
+    { "id": "sim-mock-1", "phoneNumber": "+251987654321", "label": "Business SIM", "isPrimary": true, "provider": "Ethio Telecom" }
+  ],
+  "transactionSources": ["CBE", "Telebirr", "Zamen"],
+  "telecomPackages": [
+    { "id": "pkg-1", "simId": "sim-mock-1", "type": "internet", "value": 850, "total": 2048, "unit": "MB", "label": "Monthly Data", "expiryDate": "Nov 15, 2026", "daysLeft": 20, "totalDays": 30 },
+    { "id": "pkg-2", "simId": "sim-mock-1", "type": "voice", "value": 45, "total": 60, "unit": "Min", "label": "Weekly Voice", "expiryDate": "Oct 28, 2026", "daysLeft": 4, "totalDays": 7 }
+  ],
+  "recommendedBundles": [
+    { "id": "r1", "type": "internet", "label": "1GB Monthly", "price": 100, "description": "1GB Data for 30 days" }
+  ],
+  "transactions": [
+    { "id": "tx-1", "simId": "sim-mock-1", "type": "income", "amount": 12000, "source": "CBE", "description": "Salary", "timestamp": "10:00 AM", "category": "Income" },
+    { "id": "tx-2", "simId": "sim-mock-1", "type": "expense", "amount": 500, "source": "Telebirr", "description": "Groceries", "timestamp": "Yesterday", "category": "Food" }
+  ],
+  "giftRequests": []
+}

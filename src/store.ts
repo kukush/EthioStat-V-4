@@ -22,15 +22,15 @@ export type Intent =
 ;
 
 export const initialState: AppState = {
-  language: 'en',
-  theme: 'light',
+  language: (import.meta.env.VITE_DEFAULT_LANGUAGE as Language) || 'en',
+  theme: (import.meta.env.VITE_DEFAULT_THEME as Theme) || 'light',
   activeTab: 'home',
-  telecomBalance: 145.50,
-  telebirrBalance: 2500.00,
+  telecomBalance: Number(import.meta.env.VITE_MOCK_TELECOM_BALANCE) || 0,
+  telebirrBalance: Number(import.meta.env.VITE_MOCK_TELEBIRR_BALANCE) || 0,
   userProfile: {
-    name: 'Abebe Kebede',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200',
-    phoneNumber: '+251911223344'
+    name: import.meta.env.VITE_MOCK_USER_NAME || 'User',
+    avatarUrl: import.meta.env.VITE_MOCK_USER_AVATAR || '',
+    phoneNumber: import.meta.env.VITE_MOCK_USER_PHONE || ''
   },
   simCards: [
     { id: 'sim1', phoneNumber: '+251911223344', label: 'Primary SIM', isPrimary: true, provider: 'Ethio Telecom' }
@@ -87,11 +87,7 @@ export const reducer = (state: AppState, intent: Intent): AppState => {
       return { ...state, simCards: [...state.simCards, intent.sim] };
     case 'REMOVE_SIM':
       return { ...state, simCards: state.simCards.filter(s => s.id !== intent.id) };
-    case 'SET_PRIMARY_SIM':
-      return { 
-        ...state, 
-        simCards: state.simCards.map(s => ({ ...s, isPrimary: s.id === intent.id })) 
-      };
+
     case 'PARSE_SMS': {
       const parsed = parseEthioSMS(intent.text, intent.senderId);
       const primarySim = state.simCards.find(s => s.isPrimary) || state.simCards[0];

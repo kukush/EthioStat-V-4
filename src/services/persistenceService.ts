@@ -1,6 +1,6 @@
 import { AppState } from '../types';
 
-const STORAGE_KEY = 'ethio_balance_state';
+const STORAGE_KEY = import.meta.env.VITE_STORAGE_KEY || 'ethio_balance_state';
 
 export const persistenceService = {
   saveState: (state: AppState) => {
