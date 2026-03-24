@@ -1,0 +1,5 @@
+{
+  "name": "EthioStat-V-4",
+  "description": "A real-time dashboard for tracking Ethio Telecom balances and Telebirr/Bank transactions with multilingual support.",
+  "requestFramePermissions": []
+}
