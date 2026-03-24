@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { Globe, Shield, Bell, Smartphone, HelpCircle, LogOut, Palette, Database, Plus, X, Check, Trash2, AlertCircle, Cloud, Zap, Moon, Sun, CreditCard, FlaskConical, Search, Landmark } from 'lucide-react';
-import { Language, Theme, AppState, TelecomPackage, Transaction } from '@/types';
-import { Intent } from '@/store';
+import { Language, Theme, AppState, TelecomPackage, Transaction, Intent } from '@/domain/types';
 import { useTranslation } from '@/translations';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { injectMockData } from '@/services/mockDataService';
+import { injectMockData } from '@/data/mockDataService';
 import { ETHIOPIAN_BANKS } from '@/constants/banks';
+import SmsMonitor from '@/data/smsMonitorPlugin';
 
 interface SettingsScreenProps {
   state: AppState;
@@ -28,7 +28,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
 
   const handleAddSource = (source: string) => {
     if (source.trim()) {
-      dispatch({ type: 'ADD_TRANSACTION_SOURCE', source: source.trim() });
+      const cleanSource = source.trim();
+      dispatch({ type: 'ADD_TRANSACTION_SOURCE', source: cleanSource });
+      
+      // Trigger 7-day historical scan for this new source
+      SmsMonitor.scanHistory({ senderId: cleanSource, days: 7 });
+      
       setNewSource('');
       setSearchBank('');
       setShowAddSource(false);

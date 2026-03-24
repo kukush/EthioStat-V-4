@@ -1,25 +1,7 @@
-import { AppState, Language, Theme, Transaction, TelecomPackage, RecommendedBundle, SimCard, GiftRequest, UserProfile, PackageType } from './types';
-import { parseEthioSMS } from './services/smsParser';
+import { AppState, Language, Theme, Transaction, TelecomPackage, RecommendedBundle, SimCard, GiftRequest, UserProfile, PackageType, Intent } from './domain/types';
+import { parseSmsUseCase } from './domain/useCases/ParseSmsUseCase';
+import { syncBalanceUseCase } from './domain/useCases/SyncBalanceUseCase';
 
-export type Intent =
-  | { type: 'SET_TAB'; tab: AppState['activeTab'] }
-  | { type: 'SET_LANGUAGE'; lang: Language }
-  | { type: 'SET_THEME'; theme: Theme }
-  | { type: 'ADD_TRANSACTION_SOURCE'; source: string }
-  | { type: 'REMOVE_TRANSACTION_SOURCE'; source: string }
-  | { type: 'ADD_TRANSACTION'; transaction: Transaction }
-  | { type: 'UPDATE_PACKAGES'; packages: TelecomPackage[] }
-  | { type: 'UPDATE_BALANCE'; balance: number }
-  | { type: 'PARSE_SMS'; text: string; senderId?: string }
-  | { type: 'ADD_SIM'; sim: SimCard }
-  | { type: 'REMOVE_SIM'; id: string }
-  | { type: 'SET_PRIMARY_SIM'; id: string }
-  | { type: 'ADD_GIFT_REQUEST'; request: GiftRequest }
-  | { type: 'UPDATE_GIFT_REQUEST_STATUS'; id: string; status: GiftRequest['status'] }
-  | { type: 'REMOVE_GIFT_REQUEST'; id: string }
-  | { type: 'SET_USER_PROFILE'; profile: UserProfile }
-  | { type: 'RECHARGE'; amount: number; method: 'ussd' | 'telebirr'; packageType?: PackageType }
-;
 
 export const initialState: AppState = {
   language: (import.meta.env.VITE_DEFAULT_LANGUAGE as Language) || 'en',
@@ -88,22 +70,11 @@ export const reducer = (state: AppState, intent: Intent): AppState => {
     case 'REMOVE_SIM':
       return { ...state, simCards: state.simCards.filter(s => s.id !== intent.id) };
 
-    case 'PARSE_SMS': {
-      const parsed = parseEthioSMS(intent.text, intent.senderId);
-      const primarySim = state.simCards.find(s => s.isPrimary) || state.simCards[0];
-      const simId = primarySim?.id || 'unknown';
-      
-      return {
-        ...state,
-        telecomBalance: parsed.balance ?? state.telecomBalance,
-        telecomPackages: parsed.packages 
-          ? [...state.telecomPackages, ...parsed.packages.map(p => ({ ...p, simId } as TelecomPackage))] 
-          : state.telecomPackages,
-        transactions: parsed.transaction 
-          ? [{ ...parsed.transaction, simId } as Transaction, ...state.transactions] 
-          : state.transactions,
-      };
-    }
+    case 'PARSE_SMS': 
+      return { ...state, ...parseSmsUseCase(state, intent.text, intent.senderId) };
+    case 'PARSE_USSD': 
+      return { ...state, ...parseSmsUseCase(state, intent.text, 'USSD') };
+
     case 'ADD_GIFT_REQUEST':
       return { ...state, giftRequests: [intent.request, ...state.giftRequests] };
     case 'UPDATE_GIFT_REQUEST_STATUS':
@@ -115,26 +86,9 @@ export const reducer = (state: AppState, intent: Intent): AppState => {
       return { ...state, giftRequests: state.giftRequests.filter(r => r.id !== intent.id) };
     case 'SET_USER_PROFILE':
       return { ...state, userProfile: intent.profile };
-    case 'RECHARGE': {
-      const isExpense = intent.method === 'telebirr';
-      const newTransaction: Transaction = {
-        id: `tx-${Date.now()}`,
-        simId: state.simCards.find(s => s.isPrimary)?.id || 'unknown',
-        type: isExpense ? 'expense' : 'income',
-        amount: intent.amount,
-        source: intent.method === 'telebirr' ? 'Telebirr' : 'USSD',
-        description: `Recharge via ${intent.method.toUpperCase()}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        category: 'Telecom'
-      };
+    case 'RECHARGE': 
+      return { ...state, ...syncBalanceUseCase(state, intent.amount, intent.method) };
 
-      return {
-        ...state,
-        telecomBalance: state.telecomBalance + (intent.method === 'ussd' ? intent.amount : 0),
-        telebirrBalance: state.telebirrBalance - (intent.method === 'telebirr' ? intent.amount : 0),
-        transactions: [newTransaction, ...state.transactions]
-      };
-    }
     case 'SET_PRIMARY_SIM': {
       const primarySim = state.simCards.find(s => s.id === intent.id);
       return { 

@@ -1,12 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TelecomPackage, Transaction, Language } from '@/types';
-import { PackageCard } from '@/components/PackageCard';
-import { SummaryCard } from '@/components/SummaryCard';
-import { TransactionItem } from '@/components/TransactionItem';
+import { TelecomPackage, Transaction, Language } from '@/domain/types';
+import { TransactionItem } from '@/presentation/components/TransactionItem';
 import { useTranslation } from '@/translations';
 import { Globe, TrendingUp, TrendingDown, Wallet, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SourceSummaryCard } from '@/presentation/components/SourceSummaryCard';
 
 interface HomeScreenProps {
   packages: TelecomPackage[];
@@ -17,6 +16,9 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, telecomBalance, language }) => {
   const t = useTranslation(language);
+
+  // Extract unique sources from transactions
+  const sources = Array.from(new Set(transactions.map(t => t.source))).filter(s => s !== 'Unknown');
 
   const totalIncome = transactions
     .filter(t => t.type === 'income')
@@ -57,17 +59,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
                 netBalance >= 0 ? "text-emerald-600" : "text-rose-600"
               )}>
                 <span className="text-lg font-bold opacity-60 mr-1">ETB</span>
-                {netBalance.toFixed(2)}
+                {netBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </h2>
             </div>
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-1 text-emerald-600">
                 <TrendingUp size={14} />
-                <span className="text-xs font-bold">+{totalIncome.toFixed(0)}</span>
+                <span className="text-xs font-bold">+{totalIncome.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-1 text-rose-600">
                 <TrendingDown size={14} />
-                <span className="text-xs font-bold">-{totalExpense.toFixed(0)}</span>
+                <span className="text-xs font-bold">-{totalExpense.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -94,7 +96,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">{t('availableAirtime')}</p>
                 <h2 className="text-3xl font-black mt-1">
                   <span className="text-sm font-bold opacity-60 mr-1">ETB</span>
-                  {telecomBalance.toFixed(2)}
+                  {telecomBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h2>
               </div>
               <div className="flex flex-col justify-center space-y-3">
@@ -137,6 +139,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
           <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-purple-600/20 rounded-full blur-3xl" />
         </div>
       </section>
+
+      {/* Per-Source Summaries (CBE, Telebirr, etc.) */}
+      {sources.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex justify-between items-end px-2">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Source Summaries</h3>
+          </div>
+          <div className="space-y-4">
+            {sources.map(source => (
+              <SourceSummaryCard key={source} source={source} transactions={transactions} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <div className="flex justify-between items-end px-2">

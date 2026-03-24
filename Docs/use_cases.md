@@ -12,12 +12,22 @@ EthioStat is designed to help users track their telecom packages, manage their a
 
 ## 2. Track Financial Transactions
 **Actor**: Mobile User
-**Description**: The user wants to see a history of their income and expenses parsed from mobile money or banking SMS messages (e.g., Telebirr, CBE).
+**Description**: The user wants to see a history of their income and expenses parsed from mobile money or banking SMS messages (e.g., Telebirr, CBE, ZemenBank).
 **Flow**:
 1. User receives an SMS regarding a transaction.
-2. (Future Native Integration) The app reads the SMS and parses it using `smsParser.ts`.
-3. The parsed transaction is added to the application state.
-4. The user navigates to the `TransactionScreen` to view a categorized list of all transactions, seeing the net flow (Income vs. Expense) from various sources.
+2. The native `SmsForegroundService` intercepts the message even if the app UI is closed.
+3. The message is persisted to Room DB and parsed via the Multilingual Regex Engine.
+4. The user opens the app and sees the updated `TransactionScreen` with categorized net balances per source.
+
+## 6. Add Financial Source with History Scan
+**Actor**: Mobile User
+**Description**: The user adds a new bank or wallet source and wants to see recent past history immediately.
+**Flow**:
+1. User navigates to `Settings` > `Add Transaction Source`.
+2. User selects or enters a source ID (e.g., "CBE").
+3. The app initiates a **7-day historical SMS scan** via the `SmsMonitorPlugin`.
+4. Found messages are parsed and added to the Room DB.
+5. The `HomeScreen` displays a new dedicated card for the source showing income/expense trends.
 
 ## 3. Top-Up and Buy Packages
 **Actor**: Mobile User

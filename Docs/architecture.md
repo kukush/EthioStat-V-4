@@ -34,12 +34,16 @@ Centralized state management is implemented in `src/store.ts` using the `useRedu
 
 ### 3. Service Layer
 The business logic and data processing are decoupled into service modules (`src/services/`):
-- `smsParser.ts`: Logic to parse SMS messages (e.g., from banks or telecom providers) to extract transaction records and balances.
+- `smsParser.ts`: Logic to parse SMS messages (e.g., from banks or telecom providers) to extract transaction records and balances. Supports English, Amharic, and Afaan Oromo.
 - `mockDataService.ts`: Provides mock data for development and testing.
-- `persistenceService.ts`: Handles saving and loading the application state using `localStorage` (which Capacitor persists on device).
+- `persistenceService.ts`: Standardizes state sync between React memory and native Room DB.
 
-### 4. Native Integration Layer (Capacitor)
-Capacitor acts as the bridge between the web application and the native device. It is configured via `capacitor.config.json` and exposes native APIs (which will be configured to read SMS and access Phone State).
+### 4. Native Integration Layer (Capacitor & Room)
+Native Android components provide high-reliability background processing:
+- **Room Database**: The **primary source of truth** for all transactions and balances. 100% offline and local.
+- **SmsForegroundService**: A background-eligible service that monitors incoming SMS messages in real-time without polling.
+- **UssdAccessibilityService**: A fallback mechanism to capture USSD response text when standard callbacks are suppressed.
+- **SmsMonitorPlugin**: The Capacitor bridge that syncs Room data to the React layer and triggers historical scans.
 
 ## Data Flow
 1. **Initialization**: App loads `persistenceService` to retrieve existing state from local storage.

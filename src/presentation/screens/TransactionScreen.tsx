@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Transaction, Language, SourceSummary } from '@/types';
-import { TransactionItem } from '@/components/TransactionItem';
+import { TransactionItem } from '@/presentation/components/TransactionItem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, TrendingUp, TrendingDown, Calendar, ArrowRight, History, Wallet, Download } from 'lucide-react';
 import { cn, exportToCSV } from '@/lib/utils';

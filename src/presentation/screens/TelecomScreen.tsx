@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { PackageCard } from '@/components/PackageCard';
-import { GiftSender } from '@/components/GiftSender';
+import { PackageCard } from '@/presentation/components/PackageCard';
+import { GiftSender } from '@/presentation/components/GiftSender';
 import { TelecomPackage, RecommendedBundle, Language, GiftRequest, PackageType } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Phone, Globe, Zap, MessageSquare, X, Send, ShieldCheck, Info, Plus, Check } from 'lucide-react';

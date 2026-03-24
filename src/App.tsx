@@ -1,13 +1,14 @@
 import { useReducer, useEffect } from 'react';
-import { HomeScreen } from './screens/HomeScreen';
-import { TelecomScreen } from './screens/TelecomScreen';
-import { TransactionScreen } from './screens/TransactionScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
-import { BottomNav } from './components/BottomNav';
+import { HomeScreen } from './presentation/screens/HomeScreen';
+import { TelecomScreen } from './presentation/screens/TelecomScreen';
+import { TransactionScreen } from './presentation/screens/TransactionScreen';
+import { SettingsScreen } from './presentation/screens/SettingsScreen';
+import { BottomNav } from './presentation/components/BottomNav';
 import { Bell, User } from 'lucide-react';
 import { reducer, initialState } from './store';
+import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
 import { cn } from './lib/utils';
-import { persistenceService } from './services/persistenceService';
+import { persistenceService } from './data/persistenceService';
 
 export default function App() {
   const savedState = persistenceService.loadState();
@@ -24,6 +25,9 @@ export default function App() {
   }
   
   const [state, dispatch] = useReducer(reducer, mergedState);
+  
+  // Initialize Native SMS/USSD Bridge
+  useNativeBridge(dispatch);
 
   // Persistence
   useEffect(() => {
