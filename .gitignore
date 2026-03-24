@@ -33,3 +33,19 @@ proguard/
 /ios/App/build/
 /ios/App/Pods/
 /ios/App/Podfile.lock
+
+# IntelliJ IDEA
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+.idea
+*.iws
+
+# Compiled Java classes
+*.class
+
+# Log files
+*.log
+
+# Build tool directories
+target/
