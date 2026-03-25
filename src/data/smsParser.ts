@@ -33,44 +33,43 @@ export const parseEthioSMS = (text: string, senderId?: string): ParsedData => {
   
   const sender = senderId?.toUpperCase() || 'UNKNOWN';
 
-  // 1. Telecom Parsing (Ethio Telecom / Safaricom)
-  if (sender === '251994' || sender === 'ETHIOTELECOM' || sender === '994') {
-    // Balance
-    const balanceRegex = lang === 'am' 
-      ? /ቀሪ ሂሳብዎ ([\d,.]+) ብር/ 
-      : /balance is ([\d,.]+) ETB/i;
-    const balanceMatch = text.match(balanceRegex);
-    if (balanceMatch) data.balance = parseFloat(balanceMatch[1].replace(/,/g, ''));
+  // Universal Balance Parsing (works for any sender)
+  const universalBalanceRegex = lang === 'am' 
+    ? /ቀሪ ሂሳብዎ ([\d,.]+) ብር/ 
+    : /(?:balance is|remaining|ቀሪ)\s*([\d,.]+)\s*(?:ETB|ብር)?/i;
+  const balanceMatch = text.match(universalBalanceRegex);
+  if (balanceMatch) data.balance = parseFloat(balanceMatch[1].replace(/,/g, ''));
 
-    // Packages
-    if (!data.packages) data.packages = [];
-    
-    // Data (MB/GB)
-    const dataMatch = text.match(/([\d,.]+)\s*(MB|GB)\s*(?:data|ኢንተርኔት|Intarneetii)/i);
-    if (dataMatch) {
+    // Universal Package Parsing (works for any sender)
+  if (!data.packages) data.packages = [];
+  
+  // Data packages (MB/GB) - enhanced pattern
+  const dataMatch = text.match(/([\d,.]+)\s*(MB|GB)\s*(?:data|remaining|ኢንተርኔት|Intarneetii)/i);
+  if (dataMatch) {
+    data.packages.push({
+      id: `data-${now.getTime()}`,
+      type: 'internet',
+      value: parseFloat(dataMatch[1].replace(/,/g, '')),
+      total: parseFloat(dataMatch[1].replace(/,/g, '')),
+      unit: dataMatch[2].toUpperCase(),
+      label: lang === 'am' ? 'የዳታ ጥቅል' : lang === 'om' ? 'Paakeejii Deetaa' : 'Data Package',
+      expiryDate: 'N/A',
+      daysLeft: 1,
+      totalDays: 1
+    });
+  }
+
+  // Special case for Ethio Gebeta Data
+  if (text.toLowerCase().includes('ethio gebeta') && text.toLowerCase().includes('data')) {
+    const gebetaMatch = text.match(/([\d,.]+)\s*(MB|GB)\s*(?:ethio gebeta)?/i);
+    if (gebetaMatch) {
       data.packages.push({
-        id: `data-${now.getTime()}`,
+        id: `gebeta-${now.getTime()}`,
         type: 'internet',
-        value: parseFloat(dataMatch[1].replace(/,/g, '')),
-        total: parseFloat(dataMatch[1].replace(/,/g, '')),
-        unit: dataMatch[2].toUpperCase(),
-        label: lang === 'am' ? 'የዳታ ጥቅል' : lang === 'om' ? 'Paakeejii Deetaa' : 'Data Package',
-        expiryDate: 'N/A',
-        daysLeft: 1,
-        totalDays: 1
-      });
-    }
-
-    // Voice (Min)
-    const voiceMatch = text.match(/([\d,.]+)\s*(?:Min|ደቂቃ|Daqiiqaa)/i);
-    if (voiceMatch) {
-      data.packages.push({
-        id: `voice-${now.getTime()}`,
-        type: 'voice',
-        value: parseFloat(voiceMatch[1].replace(/,/g, '')),
-        total: parseFloat(voiceMatch[1].replace(/,/g, '')),
-        unit: 'Min',
-        label: lang === 'am' ? 'የድምፅ ጥቅል' : lang === 'om' ? 'Paakeejii Sagalee' : 'Voice Package',
+        value: parseFloat(gebetaMatch[1].replace(/,/g, '')),
+        total: parseFloat(gebetaMatch[1].replace(/,/g, '')),
+        unit: gebetaMatch[2].toUpperCase(),
+        label: 'Ethio Gebeta Data',
         expiryDate: 'N/A',
         daysLeft: 1,
         totalDays: 1
@@ -78,41 +77,221 @@ export const parseEthioSMS = (text: string, senderId?: string): ParsedData => {
     }
   }
 
-  // 2. Mobile Money Parsing (Telebirr 830)
-  if (sender === '830' || sender.includes('TELEBIRR')) {
-    const amountMatch = text.match(/(?:received|ተቀብለዋል|fudhattaniirtu)\s*(?:ETB|ብር)?\s*([\d,.]+)/i);
-    if (amountMatch) {
+  // Voice packages (Min)
+  const voiceMatch = text.match(/([\d,.]+)\s*(?:Min|ደቂቃ|Daqiiqaa)/i);
+  if (voiceMatch) {
+    data.packages.push({
+      id: `voice-${now.getTime()}`,
+      type: 'voice',
+      value: parseFloat(voiceMatch[1].replace(/,/g, '')),
+      total: parseFloat(voiceMatch[1].replace(/,/g, '')),
+      unit: 'Min',
+      label: lang === 'am' ? 'የድምፅ ጥቅል' : lang === 'om' ? 'Paakeejii Sagalee' : 'Voice Package',
+      expiryDate: 'N/A',
+      daysLeft: 1,
+      totalDays: 1
+    });
+  }
+
+  // SMS packages
+  const smsMatch = text.match(/([\d,.]+)\s*(?:SMS|ኤስኤምኤስ)/i);
+  if (smsMatch) {
+    data.packages.push({
+      id: `sms-${now.getTime()}`,
+      type: 'sms',
+      value: parseFloat(smsMatch[1].replace(/,/g, '')),
+      total: parseFloat(smsMatch[1].replace(/,/g, '')),
+      unit: 'SMS',
+      label: 'SMS Package',
+      expiryDate: 'N/A',
+      daysLeft: 1,
+      totalDays: 1
+    });
+  }
+
+  // Gift patterns
+  if (text.toLowerCase().includes('gift') || text.toLowerCase().includes('received a gift')) {
+    // Gifted data
+    const giftDataMatch = text.match(/([\d,.]+)\s*(MB|GB)\s*(?:data|ኢንተርኔት)/i);
+    if (giftDataMatch) {
+      data.packages.push({
+        id: `gift-data-${now.getTime()}`,
+        type: 'internet',
+        value: parseFloat(giftDataMatch[1].replace(/,/g, '')),
+        total: parseFloat(giftDataMatch[1].replace(/,/g, '')),
+        unit: giftDataMatch[2].toUpperCase(),
+        label: 'Gifted Data',
+        expiryDate: 'N/A',
+        daysLeft: 1,
+        totalDays: 1
+      });
+    }
+    
+    // Gifted voice
+    const giftVoiceMatch = text.match(/([\d,.]+)\s*(?:Min|ደቂቃ)/i);
+    if (giftVoiceMatch) {
+      data.packages.push({
+        id: `gift-voice-${now.getTime()}`,
+        type: 'voice',
+        value: parseFloat(giftVoiceMatch[1].replace(/,/g, '')),
+        total: parseFloat(giftVoiceMatch[1].replace(/,/g, '')),
+        unit: 'Min',
+        label: 'Gifted Voice',
+        expiryDate: 'N/A',
+        daysLeft: 1,
+        totalDays: 1
+      });
+    }
+    
+    // Gifted SMS
+    const giftSmsMatch = text.match(/([\d,.]+)\s*(?:SMS|ኤስኤምኤስ)/i);
+    if (giftSmsMatch) {
+      data.packages.push({
+        id: `gift-sms-${now.getTime()}`,
+        type: 'sms',
+        value: parseFloat(giftSmsMatch[1].replace(/,/g, '')),
+        total: parseFloat(giftSmsMatch[1].replace(/,/g, '')),
+        unit: 'SMS',
+        label: 'Gifted SMS',
+        expiryDate: 'N/A',
+        daysLeft: 1,
+        totalDays: 1
+      });
+    }
+  }
+
+  // Transaction Parsing
+  // Bank transactions (CBE, Awash, etc.)
+  const isBank = sender.includes('BANK') || ['CBE', 'BOA', 'DASHEN', 'AWASH'].includes(sender);
+  if (isBank) {
+    // Credit transactions
+    const creditMatch = text.match(/(?:credited|credited with|ገቢ|Galii)\s*(?:ETB|ብር)?\s*([\d,.]+)/i);
+    if (creditMatch) {
       data.transaction = {
-        id: `tele-${now.getTime()}`,
+        id: `bank-${now.getTime()}`,
         type: 'income',
-        amount: parseFloat(amountMatch[1].replace(/,/g, '')),
-        source: 'Telebirr',
-        description: 'Mobile Money Received',
+        amount: parseFloat(creditMatch[1].replace(/,/g, '')),
+        source: sender === 'CBE' ? 'CBE' : sender === 'AWASH' ? 'Awash' : sender,
+        description: `${sender} Transaction`,
         timestamp: now.toISOString(),
         category: 'Income'
       };
     }
-    const balMatch = text.match(/balance is ([\d,.]+) ETB/i);
-    if (balMatch) data.balance = parseFloat(balMatch[1].replace(/,/g, ''));
-  }
-
-  // 3. Bank Parsing (Generic CR/DR)
-  const isBank = sender.includes('BANK') || ['CBE', 'BOA', 'DASHEN', 'AWASH'].includes(sender);
-  if (isBank) {
-    const crMatch = text.match(/(?:CR|CREDITED|ገቢ|Galii)\s*(?:ETB|ብር)?\s*([\d,.]+)/i);
-    const drMatch = text.match(/(?:DR|DEBITED|ወጪ|Kaffaltii)\s*(?:ETB|ብር)?\s*([\d,.]+)/i);
     
-    if (crMatch || drMatch) {
-      const isIncome = !!crMatch;
-      const amount = parseFloat((crMatch || drMatch)![1].replace(/,/g, ''));
+    // Debit transactions
+    const debitMatch = text.match(/(?:debited|debited with|ወጪ|Kaffaltii)\s*(?:ETB|ብር)?\s*([\d,.]+)/i);
+    if (debitMatch) {
       data.transaction = {
         id: `bank-${now.getTime()}`,
-        type: isIncome ? 'income' : 'expense',
-        amount: amount,
-        source: sender,
+        type: 'expense',
+        amount: parseFloat(debitMatch[1].replace(/,/g, '')),
+        source: sender === 'CBE' ? 'CBE' : sender === 'AWASH' ? 'Awash' : sender,
         description: `${sender} Transaction`,
         timestamp: now.toISOString(),
-        category: isIncome ? 'Income' : 'Expense'
+        category: 'Expense'
+      };
+    }
+  }
+  
+  // Telebirr and Mobile Money transactions
+  if (sender.includes('TELEBIRR') || ['830', '806', '999', '810'].includes(sender)) {
+    const source = sender.includes('TELEBIRR') || ['830', '806', '999'].includes(sender) ? 'Telebirr' : sender;
+    
+    // Loan repayment (highest priority to avoid conflicts with loan received)
+    const loanRepaymentMatch = text.match(/(?:loan of)\s*([\d,.]+)\s*(?:ETB|ብር)?\s*(?:has been repaid)/i);
+    if (loanRepaymentMatch) {
+      data.transaction = {
+        id: `repayment-${now.getTime()}`,
+        type: 'expense',
+        amount: parseFloat(loanRepaymentMatch[1].replace(/,/g, '')),
+        source: source,
+        description: 'Loan Repayment',
+        timestamp: now.toISOString(),
+        category: 'Repayment'
+      };
+    }
+    
+    // Other loan repayment patterns
+    const otherRepaymentMatch = text.match(/(?:repaid|repayment of)\s*([\d,.]+)\s*(?:ETB|ብር)?/i);
+    if (otherRepaymentMatch && !loanRepaymentMatch) {
+      data.transaction = {
+        id: `repayment-${now.getTime()}`,
+        type: 'expense',
+        amount: parseFloat(otherRepaymentMatch[1].replace(/,/g, '')),
+        source: source,
+        description: 'Loan Repayment',
+        timestamp: now.toISOString(),
+        category: 'Repayment'
+      };
+    }
+    
+    // Loan received (lower priority)
+    const loanReceivedMatch = text.match(/(?:loan of|taken a loan of|received a loan of)\s*([\d,.]+)\s*(?:ETB|ብር)?/i);
+    if (loanReceivedMatch && !loanRepaymentMatch && !otherRepaymentMatch) {
+      data.transaction = {
+        id: `loan-${now.getTime()}`,
+        type: 'income',
+        amount: parseFloat(loanReceivedMatch[1].replace(/,/g, '')),
+        source: source,
+        description: 'Loan Received',
+        timestamp: now.toISOString(),
+        category: 'Loan'
+      };
+    }
+    
+    // Payment/Purchase transactions
+    const paymentMatch = text.match(/(?:paid|pay|payment|purchase)\s*([\d,.]+)\s*(?:ETB|ብር)?/i);
+    if (paymentMatch && !loanReceivedMatch && !loanRepaymentMatch && !otherRepaymentMatch) {
+      data.transaction = {
+        id: `payment-${now.getTime()}`,
+        type: 'expense',
+        amount: parseFloat(paymentMatch[1].replace(/,/g, '')),
+        source: source,
+        description: 'Payment/Purchase',
+        timestamp: now.toISOString(),
+        category: 'Expense'
+      };
+    }
+    
+    // Service fee (lowest priority)
+    const serviceFeeMatch = text.match(/(?:service fee|fee of)\s*([\d,.]+)\s*(?:ETB|ብር)?/i);
+    if (serviceFeeMatch && !loanReceivedMatch && !loanRepaymentMatch && !otherRepaymentMatch && !paymentMatch) {
+      data.transaction = {
+        id: `fee-${now.getTime()}`,
+        type: 'expense',
+        amount: parseFloat(serviceFeeMatch[1].replace(/,/g, '')),
+        source: source,
+        description: 'Service Fee',
+        timestamp: now.toISOString(),
+        category: 'Fee'
+      };
+    }
+    
+    // Transfer/Gift sent
+    const transferMatch = text.match(/(?:transferred|gifted)\s*([\d,.]+)\s*(?:ETB|ብር)?/i);
+    if (transferMatch) {
+      data.transaction = {
+        id: `transfer-${now.getTime()}`,
+        type: 'expense',
+        amount: parseFloat(transferMatch[1].replace(/,/g, '')),
+        source: source,
+        description: 'Transfer/Gift Sent',
+        timestamp: now.toISOString(),
+        category: 'Gift'
+      };
+    }
+    
+    // Package gifted (without amount)
+    const packageGiftMatch = text.match(/(?:gifted|transferred)\s*[\d,.]*\s*(MB|GB|SMS)/i);
+    if (packageGiftMatch && !transferMatch) {
+      data.transaction = {
+        id: `package-gift-${now.getTime()}`,
+        type: 'expense',
+        amount: 0,
+        source: source,
+        description: 'Package Gifted',
+        timestamp: now.toISOString(),
+        category: 'Gift'
       };
     }
   }

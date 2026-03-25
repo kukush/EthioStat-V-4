@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { injectMockData } from '@/data/mockDataService';
 import { ETHIOPIAN_BANKS } from '@/constants/banks';
+import { DEFAULT_AVATARS, FALLBACK_AVATAR } from '@/constants/avatars';
+import { getBankIcon } from '@/constants/bankIcons';
+import { PhoneInput, formatEthiopianPhone, normalizePhone } from '@/presentation/components/PhoneInput';
 import SmsMonitor from '@/data/smsMonitorPlugin';
 
 interface SettingsScreenProps {
@@ -20,11 +23,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
   const [showAddSource, setShowAddSource] = useState(false);
 
   const filteredBanks = useMemo(() => {
-    return ETHIOPIAN_BANKS.filter(bank => 
-      bank.name.toLowerCase().includes(searchBank.toLowerCase()) || 
-      bank.abbreviation.toLowerCase().includes(searchBank.toLowerCase())
-    );
-  }, [searchBank]);
+    return ETHIOPIAN_BANKS.filter(bank => {
+      // Filter by search query
+      const matchesSearch = bank.name.toLowerCase().includes(searchBank.toLowerCase()) || 
+                           bank.abbreviation.toLowerCase().includes(searchBank.toLowerCase());
+      
+      // Filter out banks already added as transaction sources
+      const notAlreadyAdded = !state.transactionSources.includes(bank.abbreviation);
+      
+      return matchesSearch && notAlreadyAdded;
+    });
+  }, [searchBank, state.transactionSources]);
 
   const handleAddSource = (source: string) => {
     if (source.trim()) {
@@ -59,13 +68,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
   const [newSim, setNewSim] = useState({ phoneNumber: '', label: '', provider: 'Ethio Telecom' as any });
   const [profileName, setProfileName] = useState(state.userProfile?.name || '');
   const [selectedAvatar, setSelectedAvatar] = useState(state.userProfile?.avatarUrl || '');
-
-  const defaultAvatars = [
-    { id: 'eth-m', url: 'https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?auto=format&fit=crop&q=80&w=200', label: 'Ethiopian Male' },
-    { id: 'eth-f', url: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=200', label: 'Ethiopian Female' },
-    { id: 'blk-m', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200', label: 'Black Male' },
-    { id: 'blk-f', url: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=200', label: 'Black Female' },
-  ];
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   const handleUpdateProfile = () => {
     dispatch({ 
@@ -76,16 +79,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
         phoneNumber: state.userProfile?.phoneNumber || '' 
       } 
     });
-    setShowEditProfile(false);
+    setShowSaveSuccess(true);
+    setTimeout(() => {
+      setShowSaveSuccess(false);
+      setShowEditProfile(false);
+    }, 800);
+  };
+
+  const openEditProfile = () => {
+    setProfileName(state.userProfile?.name || '');
+    setSelectedAvatar(state.userProfile?.avatarUrl || '');
+    setShowEditProfile(true);
   };
 
   const handleAddSim = () => {
     if (newSim.phoneNumber.trim()) {
+      const normalizedPhone = normalizePhone(newSim.phoneNumber);
       dispatch({ 
         type: 'ADD_SIM', 
         sim: { 
           id: `sim-${Date.now()}`, 
           ...newSim, 
+          phoneNumber: normalizedPhone,
           isPrimary: state.simCards.length === 0 
         } 
       });
@@ -110,13 +125,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
         <div className="relative group">
           <div className="w-24 h-24 rounded-full bg-slate-200 border-4 border-white shadow-xl overflow-hidden">
             <img 
-              src={state.userProfile?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200'} 
+              src={state.userProfile?.avatarUrl || FALLBACK_AVATAR} 
               alt="Profile"
               className="w-full h-full object-cover"
             />
           </div>
           <button 
-            onClick={() => setShowEditProfile(true)}
+            onClick={openEditProfile}
             className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-lg border-2 border-white hover:bg-blue-700 transition-all active:scale-95"
           >
             <Plus size={14} />
@@ -124,7 +139,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
         </div>
         <h2 className="text-xl font-black text-slate-900 mt-4">{state.userProfile?.name || 'User'}</h2>
         <p className="text-sm font-bold text-slate-400">
-          {state.userProfile?.phoneNumber || state.simCards.find(s => s.isPrimary)?.phoneNumber || 'No Primary Number'}
+          {formatEthiopianPhone(state.userProfile?.phoneNumber || state.simCards.find(s => s.isPrimary)?.phoneNumber || '')  || 'No Primary Number'}
         </p>
       </div>
 
@@ -278,14 +293,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
         
         <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
           {state.transactionSources.map((source, idx) => {
-            const sourceLogos: Record<string, string> = {
-              'CBE': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Commercial_Bank_of_Ethiopia_logo.png/220px-Commercial_Bank_of_Ethiopia_logo.png',
-              'Telebirr': 'https://www.ethiotelecom.et/wp-content/uploads/2021/05/telebirr-logo.png',
-              'Awash': 'https://awashbank.com/wp-content/uploads/2021/08/Awash-Bank-Logo-New.png',
-              'Dashen': 'https://dashenbanksc.com/wp-content/uploads/2020/07/Dashen-Bank-Logo.png',
-            };
-            const logo = sourceLogos[source];
-
             return (
               <div
                 key={source}
@@ -295,25 +302,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
                 )}
               >
                 <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden bg-white border border-slate-100",
-                    !logo && (
-                      source === 'CBE' ? 'bg-[#7B2C8F]' : 
-                      source === 'Telebirr' ? 'bg-[#005cb9]' : 
-                      source === 'Awash' ? 'bg-[#F27D26]' : 
-                      source === 'Dashen' ? 'bg-[#006838]' : 'bg-slate-400'
-                    )
-                  )}>
-                    {logo ? (
-                      <img 
-                        src={logo} 
-                        alt={source} 
-                        className="w-8 h-8 object-contain"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span className="text-white font-black text-xs">{source.substring(0, 2)}</span>
-                    )}
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden">
+                    {getBankIcon(source, 40)}
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-900">{getTranslatedSource(source)}</p>
@@ -412,8 +402,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
                       Choose Avatar
                     </label>
-                    <div className="grid grid-cols-4 gap-4">
-                      {defaultAvatars.map((avatar) => (
+                    <div className="grid grid-cols-3 gap-4">
+                      {DEFAULT_AVATARS.map((avatar) => (
                         <button
                           key={avatar.id}
                           onClick={() => setSelectedAvatar(avatar.url)}
@@ -437,9 +427,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
 
                   <button
                     onClick={handleUpdateProfile}
-                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+                    disabled={showSaveSuccess}
+                    className={cn(
+                      "w-full py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95",
+                      showSaveSuccess
+                        ? "bg-emerald-500 text-white"
+                        : "bg-slate-900 text-white hover:bg-slate-800"
+                    )}
                   >
-                    Save Changes
+                    {showSaveSuccess ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Check size={18} /> Saved!
+                      </span>
+                    ) : (
+                      'Save Changes'
+                    )}
                   </button>
                 </div>
               </div>
@@ -481,16 +483,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Phone Number</label>
-                  <div className="relative">
-                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input 
-                      type="tel"
-                      value={newSim.phoneNumber}
-                      onChange={(e) => setNewSim({ ...newSim, phoneNumber: e.target.value })}
-                      placeholder="+251 9..."
-                      className="w-full pl-12 pr-6 py-5 bg-slate-50 border-none rounded-[2rem] text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    />
-                  </div>
+                  <PhoneInput
+                    value={newSim.phoneNumber}
+                    onChange={(val) => setNewSim({ ...newSim, phoneNumber: val })}
+                  />
                 </div>
 
                 <div className="space-y-2">

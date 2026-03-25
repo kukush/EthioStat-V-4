@@ -12,9 +12,10 @@ interface HomeScreenProps {
   transactions: Transaction[];
   telecomBalance: number;
   language: Language;
+  userName?: string;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, telecomBalance, language }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, telecomBalance, language, userName }) => {
   const t = useTranslation(language);
 
   // Extract unique sources from transactions
@@ -34,7 +35,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
     <div className="space-y-8 pb-32">
       <header className="space-y-2">
         <h1 className="text-3xl font-black tracking-tight text-slate-900">{t('dashboard')}</h1>
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('welcome')}, Abebe</p>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('welcome')}, {userName || 'User'}</p>
       </header>
 
       {/* Dual-Tracking Summary */}

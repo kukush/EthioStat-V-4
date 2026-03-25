@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, Phone, Globe, Zap, MessageSquare, X, Send, ShieldCheck, Info, Plus, Check } from 'lucide-react';
 import { useTranslation } from '@/translations';
 import { cn } from '@/lib/utils';
+import { PhoneInput, normalizePhone } from '@/presentation/components/PhoneInput';
 
 interface TelecomScreenProps {
   packages: TelecomPackage[];
@@ -60,17 +61,46 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
         return;
       }
 
-      // Dial *806*RecipientNumber*Amount#
-      const ussdCode = `*806*${recipientNumber}*${amount}#`;
+      // Dial *806*RecipientNumber*Amount# (normalize phone number)
+      const normalizedPhone = normalizePhone(recipientNumber).replace('+251', '');
+      const ussdCode = `*806*${normalizedPhone}*${amount}#`;
       dispatch({ type: 'DIAL_USSD', code: ussdCode });
     } else {
-      // Telebirr transfer - just open the app as requested
-      window.open('telebirr://', '_blank');
+      // Telebirr transfer - try to open app with fallback
+      handleTelebirrRedirect();
     }
 
     setShowTransferModal(false);
     setRecipientNumber('');
     setTransferAmount('');
+  };
+
+  const handleTelebirrRedirect = () => {
+    // Try to open Telebirr app
+    const telebirrUrl = 'telebirr://';
+    const fallbackUrl = 'https://play.google.com/store/apps/details?id=com.ethiotelecom.telebirr';
+    
+    // Create a hidden iframe to test if the app opens
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = telebirrUrl;
+    document.body.appendChild(iframe);
+    
+    // Set a timeout to show fallback message if app doesn't open
+    const timeout = setTimeout(() => {
+      document.body.removeChild(iframe);
+      alert('Telebirr app not found on your device. Please install Telebirr from the app store to continue with mobile transfers.');
+    }, 2000);
+    
+    // Clean up if user returns quickly (app opened successfully)
+    window.addEventListener('blur', () => {
+      clearTimeout(timeout);
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, { once: true });
   };
 
   const handleRecharge = () => {
@@ -81,7 +111,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
       setVoucherNumber('');
     } else if (rechargeMethod === 'telebirr') {
       amount = 100;
-      window.open('telebirr://', '_blank');
+      handleTelebirrRedirect();
       dispatch({ type: 'RECHARGE', amount, method: 'telebirr' });
     }
 
@@ -496,12 +526,10 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('recipientNumber')}</label>
-                    <input 
-                      type="tel"
+                    <PhoneInput
                       value={recipientNumber}
-                      onChange={(e) => setRecipientNumber(e.target.value)}
-                      placeholder="0912345678"
-                      className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      onChange={setRecipientNumber}
+                      placeholder="9XX XXX XXXX"
                     />
                   </div>
                   <div className="space-y-2">

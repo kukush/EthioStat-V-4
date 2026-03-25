@@ -101,4 +101,5 @@ export type Intent =
   | { type: 'REMOVE_GIFT_REQUEST'; id: string }
   | { type: 'SET_USER_PROFILE'; profile: UserProfile }
   | { type: 'RECHARGE'; amount: number; method: 'ussd' | 'telebirr'; packageType?: PackageType }
+  | { type: 'DIAL_USSD'; code: string }
 ;

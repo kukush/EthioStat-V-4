@@ -4,6 +4,7 @@ import { Phone, Gift, ChevronRight, CheckCircle2, ArrowLeft, Zap, Globe, Message
 import { RecommendedBundle, Language, GiftRequest } from '@/types';
 import { useTranslation } from '@/translations';
 import { cn } from '@/lib/utils';
+import { PhoneInput, formatEthiopianPhone } from '@/presentation/components/PhoneInput';
 
 interface GiftSenderProps {
   recommendedBundles: RecommendedBundle[];
@@ -209,18 +210,11 @@ export const GiftSender: React.FC<GiftSenderProps> = ({
               exit={{ opacity: 0, x: -10 }}
               className="space-y-3"
             >
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  <Phone size={14} />
-                </div>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                  placeholder={mode === 'send' ? t('recipientNumber') : t('senderNumber')}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl text-xs font-black focus:ring-2 focus:ring-purple-500/20 transition-all"
-                />
-              </div>
+              <PhoneInput
+                value={phoneNumber}
+                onChange={setPhoneNumber}
+                placeholder={mode === 'send' ? '9XX XXX XXXX' : '9XX XXX XXXX'}
+              />
               <button
                 onClick={handleNext}
                 disabled={phoneNumber.length < 9}

@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/domain/types';
+import { getBankIcon } from '@/constants/bankIcons';
+import { findBank } from '@/constants/banks';
 
 interface SourceSummaryCardProps {
   source: string;
@@ -37,8 +39,12 @@ export const SourceSummaryCard: React.FC<SourceSummaryCardProps> = ({ source, tr
     >
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-            <Wallet size={16} />
+          <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden">
+            {findBank(source) ? getBankIcon(source, 32) : (
+              <div className="w-full h-full bg-blue-50 flex items-center justify-center text-blue-600">
+                <Wallet size={16} />
+              </div>
+            )}
           </div>
           <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{source} Summary</h3>
         </div>

@@ -24,7 +24,11 @@ if [ "$JAVA_VER" != "17" ]; then
   fi
 fi
 
-# 1. Build the React web app
+# 1. Download bank logos
+echo "🖼️ Downloading bank logos..."
+npx tsx scripts/download-logos.ts
+
+# 2. Build the React web app
 echo "📦 Building web assets..."
 npm run build
 

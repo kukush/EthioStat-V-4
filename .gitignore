@@ -49,3 +49,9 @@ proguard/
 
 # Build tool directories
 target/
+
+# windsurf directories
+.windsurf
+
+# Downloaded bank logos (built by scripts/download-logos.ts)
+public/assets/logos/

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, TrendingUp, TrendingDown, Calendar, ArrowRight, History, Wallet, Download } from 'lucide-react';
 import { cn, exportToCSV } from '@/lib/utils';
 import { useTranslation } from '@/translations';
+import { getBankIcon } from '@/constants/bankIcons';
+import { useQueryState, parseAsStringLiteral } from 'nuqs';
 
 interface TransactionScreenProps {
   transactions: Transaction[];
@@ -15,8 +17,13 @@ interface TransactionScreenProps {
 type TimeFilter = 'all' | 'day' | 'week' | 'month';
 
 export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactions, language, sources }) => {
-  const [activeSource, setActiveSource] = useState<string | 'all'>('all');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  // nuqs: sync source filter and time filter with URL params
+  const [activeSource, setActiveSource] = useQueryState('source', { defaultValue: 'all' });
+  const timeOptions = (import.meta.env.VITE_TIME_FILTER_OPTIONS || 'all,day,week,month').split(',') as readonly string[];
+  const [timeFilter, setTimeFilter] = useQueryState(
+    'time',
+    parseAsStringLiteral(timeOptions).withDefault('all')
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [showAmounts, setShowAmounts] = useState(true);
   const t = useTranslation(language);
@@ -66,13 +73,6 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
     lastTransaction: filteredTransactions[0]?.timestamp || 'N/A'
   };
   sourceSummary.netBalance = sourceSummary.income - sourceSummary.expense;
-
-  const sourceLogos: Record<string, string> = {
-    'CBE': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Commercial_Bank_of_Ethiopia_logo.png/220px-Commercial_Bank_of_Ethiopia_logo.png',
-    'Telebirr': 'https://www.ethiotelecom.et/wp-content/uploads/2021/05/telebirr-logo.png',
-    'Awash': 'https://awashbank.com/wp-content/uploads/2021/08/Awash-Bank-Logo-New.png',
-    'Dashen': 'https://dashenbanksc.com/wp-content/uploads/2020/07/Dashen-Bank-Logo.png',
-  };
 
   const activeSourceLabel = activeSource === 'all' 
     ? t('overallSummary') 
@@ -161,16 +161,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
                   "w-16 h-16 rounded-full flex items-center justify-center transition-all overflow-hidden bg-white border border-slate-100",
                   activeSource === source ? "ring-4 ring-slate-200" : "hover:ring-4 hover:ring-slate-100",
                 )}>
-                  {sourceLogos[source] ? (
-                    <img 
-                      src={sourceLogos[source]} 
-                      alt={source} 
-                      className="w-10 h-10 object-contain"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <span className="text-slate-400 text-xs font-black uppercase">{source.substring(0, 2)}</span>
-                  )}
+                  {getBankIcon(source, 40)}
                 </div>
                 <span className={cn(
                   "text-[10px] font-bold uppercase tracking-widest",

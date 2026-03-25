@@ -9,6 +9,7 @@ import { reducer, initialState } from './store';
 import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
 import { cn } from './lib/utils';
 import { persistenceService } from './data/persistenceService';
+import { useQueryState, parseAsStringLiteral } from 'nuqs';
 
 export default function App() {
   const savedState = persistenceService.loadState();
@@ -25,7 +26,28 @@ export default function App() {
   }
   
   const [state, dispatch] = useReducer(reducer, mergedState);
-  
+
+  // nuqs: Sync active tab with URL search params for deep-linking
+  const tabOptions = (import.meta.env.VITE_TAB_OPTIONS || 'home,telecom,transactions,settings').split(',') as readonly string[];
+  const [urlTab, setUrlTab] = useQueryState(
+    'tab',
+    parseAsStringLiteral(tabOptions).withDefault('home')
+  );
+
+  // Sync URL → reducer on mount and when URL changes
+  useEffect(() => {
+    if (urlTab && urlTab !== state.activeTab) {
+      dispatch({ type: 'SET_TAB', tab: urlTab as any });
+    }
+  }, [urlTab]);
+
+  // Sync reducer → URL when tab changes via BottomNav
+  useEffect(() => {
+    if (state.activeTab !== urlTab) {
+      setUrlTab(state.activeTab);
+    }
+  }, [state.activeTab]);
+
   // Initialize Native SMS/USSD Bridge
   useNativeBridge(dispatch);
 
@@ -110,6 +132,7 @@ export default function App() {
             transactions={state.transactions} 
             telecomBalance={state.telecomBalance} 
             language={state.language}
+            userName={state.userProfile?.name}
           />
         )}
         {state.activeTab === 'telecom' && (

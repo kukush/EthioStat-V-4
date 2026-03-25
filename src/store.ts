@@ -1,7 +1,13 @@
 import { AppState, Language, Theme, Transaction, TelecomPackage, RecommendedBundle, SimCard, GiftRequest, UserProfile, PackageType, Intent } from './domain/types';
 import { parseSmsUseCase } from './domain/useCases/ParseSmsUseCase';
 import { syncBalanceUseCase } from './domain/useCases/SyncBalanceUseCase';
+import { transferBalanceUseCase } from './domain/useCases/TransferBalanceUseCase';
+import { FALLBACK_AVATAR } from './constants/avatars';
+import { getMockData } from './data/mockDataService';
 
+const mockSimPhone = import.meta.env.VITE_MOCK_SIM_PHONE || '+251911223344';
+const defaultSources = (import.meta.env.VITE_DEFAULT_SOURCES || 'CBE,Telebirr,Awash,Dashen').split(',').map((s: string) => s.trim());
+const mock = getMockData();
 
 export const initialState: AppState = {
   language: (import.meta.env.VITE_DEFAULT_LANGUAGE as Language) || 'en',
@@ -11,37 +17,17 @@ export const initialState: AppState = {
   telebirrBalance: Number(import.meta.env.VITE_MOCK_TELEBIRR_BALANCE) || 0,
   userProfile: {
     name: import.meta.env.VITE_MOCK_USER_NAME || 'User',
-    avatarUrl: import.meta.env.VITE_MOCK_USER_AVATAR || '',
-    phoneNumber: import.meta.env.VITE_MOCK_USER_PHONE || ''
+    avatarUrl: import.meta.env.VITE_MOCK_USER_AVATAR || FALLBACK_AVATAR,
+    phoneNumber: import.meta.env.VITE_MOCK_USER_PHONE || mockSimPhone
   },
   simCards: [
-    { id: 'sim1', phoneNumber: '+251911223344', label: 'Primary SIM', isPrimary: true, provider: 'Ethio Telecom' }
+    { id: 'sim1', phoneNumber: mockSimPhone, label: 'Primary SIM', isPrimary: true, provider: 'Ethio Telecom' }
   ],
-  transactionSources: ['CBE', 'Telebirr', 'Awash', 'Dashen'],
-  telecomPackages: [
-    { id: '1', simId: 'sim1', type: 'internet', value: 450, total: 1024, unit: 'MB', label: 'Daily Data', expiryDate: 'Today, 11:59 PM', daysLeft: 1, totalDays: 1 },
-    { id: '2', simId: 'sim1', type: 'voice', value: 15, total: 20, unit: 'Min', label: 'Night Voice', expiryDate: 'Tomorrow, 6:00 AM', daysLeft: 1, totalDays: 1 },
-    { id: '4', simId: 'sim1', type: 'sms', value: 85, total: 100, unit: 'SMS', label: 'Weekly SMS', expiryDate: 'Oct 28, 2026', daysLeft: 5, totalDays: 7 },
-    { id: '3', simId: 'sim1', type: 'bonus', value: 12.50, total: 50, unit: 'ETB', label: 'Airtime Bonus', expiryDate: 'Oct 30, 2026', daysLeft: 30, totalDays: 30 },
-  ],
-  recommendedBundles: [
-    { id: 'r1', type: 'internet', label: '1GB Monthly', price: 100, description: '1GB Data for 30 days' },
-    { id: 'r2', type: 'combo', label: 'Weekly Combo', price: 50, description: '500MB + 50 Min + 50 SMS' },
-    { id: 'r3', type: 'voice', label: 'Daily Voice', price: 10, description: '30 Min for 24 hours' },
-    { id: 'r4', type: 'internet', label: '2GB Daily', price: 29, description: '2GB Data for 24 hours' },
-    { id: 'r5', type: 'sms', label: 'Monthly SMS', price: 45, description: '500 SMS for 30 days' },
-    { id: 'r6', type: 'combo', label: 'Monthly Premium', price: 450, description: '10GB + 500 Min + 500 SMS' },
-  ],
-  transactions: [
-    { id: '1', simId: 'sim1', type: 'income', amount: 7500, source: 'CBE', description: 'Salary Credit', timestamp: '12:45 PM', category: 'Income' },
-    { id: '2', simId: 'sim1', type: 'expense', amount: 1100, source: 'Telebirr', description: 'Utility Payment', timestamp: '10:30 AM', category: 'Utility' },
-    { id: '3', simId: 'sim1', type: 'expense', amount: 2000, source: 'Awash', description: 'Transfer to Savings', timestamp: 'Yesterday', category: 'Transfer' },
-    { id: '4', simId: 'sim1', type: 'expense', amount: 450, source: 'Telebirr', description: 'Ethio Telecom Recharge', timestamp: 'Oct 22', category: 'Telecom' },
-  ],
-  giftRequests: [
-    { id: 'gr1', senderNumber: '0922334455', bundleId: 'r1', timestamp: '10:15 AM', status: 'pending' },
-    { id: 'gr2', senderNumber: '0933445566', bundleId: 'r3', timestamp: 'Yesterday', status: 'pending' },
-  ],
+  transactionSources: defaultSources,
+  telecomPackages: mock.telecomPackages,
+  recommendedBundles: mock.recommendedBundles,
+  transactions: mock.transactions,
+  giftRequests: mock.giftRequests,
 };
 
 export const reducer = (state: AppState, intent: Intent): AppState => {
@@ -65,8 +51,15 @@ export const reducer = (state: AppState, intent: Intent): AppState => {
       return { ...state, telecomPackages: intent.packages };
     case 'UPDATE_BALANCE':
       return { ...state, telecomBalance: intent.balance };
-    case 'ADD_SIM':
-      return { ...state, simCards: [...state.simCards, intent.sim] };
+    case 'ADD_SIM': {
+      const newSimCards = [...state.simCards, intent.sim];
+      const newState = { ...state, simCards: newSimCards };
+      // When the new SIM is primary, sync phone to userProfile
+      if (intent.sim.isPrimary && state.userProfile) {
+        newState.userProfile = { ...state.userProfile, phoneNumber: intent.sim.phoneNumber };
+      }
+      return newState;
+    }
     case 'REMOVE_SIM':
       return { ...state, simCards: state.simCards.filter(s => s.id !== intent.id) };
 
@@ -88,6 +81,20 @@ export const reducer = (state: AppState, intent: Intent): AppState => {
       return { ...state, userProfile: intent.profile };
     case 'RECHARGE': 
       return { ...state, ...syncBalanceUseCase(state, intent.amount, intent.method) };
+    
+    case 'DIAL_USSD':
+      // Handle USSD transfer - extract amount and recipient from code
+      if (intent.code.startsWith('*806*')) {
+        const parts = intent.code.replace('*', '').replace('#', '').split('*');
+        if (parts.length >= 3) {
+          const recipientNumber = parts[1];
+          const amount = parseFloat(parts[2]);
+          if (!isNaN(amount)) {
+            return { ...state, ...transferBalanceUseCase(state, amount, recipientNumber, 'ussd') };
+          }
+        }
+      }
+      return state;
 
     case 'SET_PRIMARY_SIM': {
       const primarySim = state.simCards.find(s => s.id === intent.id);

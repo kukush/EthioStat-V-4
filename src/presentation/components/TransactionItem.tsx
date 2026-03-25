@@ -4,6 +4,8 @@ import { Transaction, Language } from '@/types';
 import { Smartphone, ShoppingBag, Utensils, Zap, ArrowUpRight, ArrowDownLeft, Calendar, Tag, Info, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from '@/translations';
+import { getBankIcon } from '@/constants/bankIcons';
+import { findBank } from '@/constants/banks';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -16,13 +18,6 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
   const t = useTranslation(language as Language);
   const isIncome = transaction.type === 'income';
 
-  const sourceLogos: Record<string, string> = {
-    'CBE': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Commercial_Bank_of_Ethiopia_logo.png/220px-Commercial_Bank_of_Ethiopia_logo.png',
-    'Telebirr': 'https://www.ethiotelecom.et/wp-content/uploads/2021/05/telebirr-logo.png',
-    'Awash': 'https://awashbank.com/wp-content/uploads/2021/08/Awash-Bank-Logo-New.png',
-    'Dashen': 'https://dashenbanksc.com/wp-content/uploads/2020/07/Dashen-Bank-Logo.png',
-  };
-
   const getTranslatedSource = (source: string) => {
     const key = source.toLowerCase().replace(/\s+/g, '_');
     // @ts-ignore - dynamic key access
@@ -31,16 +26,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
   };
 
   const getIcon = () => {
-    const sourceLogo = sourceLogos[transaction.source];
-    if (sourceLogo) {
-      return (
-        <img 
-          src={sourceLogo} 
-          alt={transaction.source} 
-          className="w-8 h-8 object-contain"
-          referrerPolicy="no-referrer"
-        />
-      );
+    // Use bank icon if source is a known bank
+    const bank = findBank(transaction.source);
+    if (bank) {
+      return getBankIcon(transaction.source, 32);
     }
 
     const category = transaction.category.toLowerCase();
