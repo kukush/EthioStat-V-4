@@ -1,0 +1,76 @@
+package com.ethiobalance.app.services
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.os.IBinder
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.ethiobalance.app.data.AppDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+class SmsForegroundService : Service() {
+    companion object {
+        private const val TAG = "SmsForegroundService"
+        private const val CHANNEL_ID = "SmsMonitorChannel"
+    }
+
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val sender = intent?.getStringExtra("sender")
+        val body = intent?.getStringExtra("body")
+        val timestamp = intent?.getLongExtra("timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis()
+
+        if (sender != null && body != null) {
+            Log.d(TAG, "Processing SMS from $sender in foreground service")
+
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("EthioStat Monitoring")
+                .setContentText("Processing message from $sender")
+                .setSmallIcon(android.R.drawable.stat_notify_chat)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+
+            startForeground(1, notification)
+
+            // Process with Dual Tracking Engine
+            scope.launch {
+                val db = AppDatabase.getDatabase(applicationContext)
+                ReconciliationEngine.processSms(sender, body, timestamp, db)
+            }
+        }
+
+        return START_STICKY
+    }
+
+    override fun onBind(intent: Intent?): IBinder? {
+        return null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
+    }
+
+    private fun createNotificationChannel() {
+        val serviceChannel = NotificationChannel(
+            CHANNEL_ID,
+            "SMS Monitor Service Channel",
+            NotificationManager.IMPORTANCE_LOW
+        )
+        val manager = getSystemService(NotificationManager::class.java)
+        manager?.createNotificationChannel(serviceChannel)
+    }
+}

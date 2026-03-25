@@ -71,14 +71,8 @@ export interface AppState {
   language: Language;
   theme: Theme;
   simCards: SimCard[];
-  telecomPackages: TelecomPackage[];
-  recommendedBundles: RecommendedBundle[];
-  transactions: Transaction[];
   transactionSources: string[];
-  telecomBalance: number;
-  telebirrBalance: number;
   activeTab: 'home' | 'telecom' | 'transactions' | 'settings';
-  giftRequests: GiftRequest[];
   userProfile?: UserProfile;
 }
 
@@ -86,20 +80,10 @@ export type Intent =
   | { type: 'SET_TAB'; tab: AppState['activeTab'] }
   | { type: 'SET_LANGUAGE'; lang: Language }
   | { type: 'SET_THEME'; theme: Theme }
-  | { type: 'ADD_TRANSACTION_SOURCE'; source: string }
-  | { type: 'REMOVE_TRANSACTION_SOURCE'; source: string }
-  | { type: 'ADD_TRANSACTION'; transaction: Transaction }
-  | { type: 'UPDATE_PACKAGES'; packages: TelecomPackage[] }
-  | { type: 'UPDATE_BALANCE'; balance: number }
-  | { type: 'PARSE_SMS'; text: string; senderId?: string }
-  | { type: 'PARSE_USSD'; text: string }
   | { type: 'ADD_SIM'; sim: SimCard }
   | { type: 'REMOVE_SIM'; id: string }
   | { type: 'SET_PRIMARY_SIM'; id: string }
-  | { type: 'ADD_GIFT_REQUEST'; request: GiftRequest }
-  | { type: 'UPDATE_GIFT_REQUEST_STATUS'; id: string; status: GiftRequest['status'] }
-  | { type: 'REMOVE_GIFT_REQUEST'; id: string }
+  | { type: 'ADD_TRANSACTION_SOURCE'; source: string }
+  | { type: 'REMOVE_TRANSACTION_SOURCE'; source: string }
   | { type: 'SET_USER_PROFILE'; profile: UserProfile }
-  | { type: 'RECHARGE'; amount: number; method: 'ussd' | 'telebirr'; packageType?: PackageType }
-  | { type: 'DIAL_USSD'; code: string }
 ;

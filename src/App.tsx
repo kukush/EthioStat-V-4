@@ -7,6 +7,7 @@ import { BottomNav } from './presentation/components/BottomNav';
 import { Bell, User } from 'lucide-react';
 import { reducer, initialState } from './store';
 import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
+import { useNativeData } from '@/presentation/hooks/useNativeData';
 import { cn } from './lib/utils';
 import { persistenceService } from './data/persistenceService';
 import { useQueryState, parseAsStringLiteral } from 'nuqs';
@@ -15,17 +16,8 @@ export default function App() {
   const savedState = persistenceService.loadState();
   const mergedState = savedState ? { ...initialState, ...savedState } : initialState;
   
-  // Deduplicate transactions to fix existing key errors in saved state
-  if (mergedState.transactions) {
-    const seenIds = new Set();
-    mergedState.transactions = mergedState.transactions.filter(t => {
-      if (seenIds.has(t.id)) return false;
-      seenIds.add(t.id);
-      return true;
-    });
-  }
-  
   const [state, dispatch] = useReducer(reducer, mergedState);
+  const { packages, transactions, netBalance } = useNativeData();
 
   // nuqs: Sync active tab with URL search params for deep-linking
   const tabOptions = (import.meta.env.VITE_TAB_OPTIONS || 'home,telecom,transactions,settings').split(',') as readonly string[];
@@ -128,28 +120,28 @@ export default function App() {
       <main className="pt-28 px-6 max-w-lg mx-auto">
         {state.activeTab === 'home' && (
           <HomeScreen 
-            packages={state.telecomPackages} 
-            transactions={state.transactions} 
-            telecomBalance={state.telecomBalance} 
+            packages={packages} 
+            transactions={transactions} 
+            telecomBalance={netBalance} 
             language={state.language}
             userName={state.userProfile?.name}
           />
         )}
         {state.activeTab === 'telecom' && (
           <TelecomScreen 
-            packages={state.telecomPackages} 
-            recommendedBundles={state.recommendedBundles}
-            balance={state.telecomBalance} 
+            packages={packages} 
+            recommendedBundles={[]}
+            balance={netBalance} 
             language={state.language}
-            giftRequests={state.giftRequests}
+            giftRequests={[]}
             dispatch={dispatch}
           />
         )}
         {state.activeTab === 'transactions' && (
           <TransactionScreen 
-            transactions={state.transactions} 
+            transactions={transactions} 
             language={state.language}
-            sources={state.transactionSources}
+            sources={Array.from(new Set([...state.transactionSources, ...transactions.map(t => t.source)]))}
           />
         )}
         {state.activeTab === 'settings' && (
@@ -161,7 +153,7 @@ export default function App() {
       <BottomNav 
         activeTab={state.activeTab} 
         onTabChange={setActiveTab} 
-        pendingGiftsCount={(state.giftRequests || []).filter(r => r.status === 'pending').length}
+        pendingGiftsCount={0}
         language={state.language}
       />
     </div>

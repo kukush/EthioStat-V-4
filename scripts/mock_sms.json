@@ -1,0 +1,51 @@
+[
+  {
+    "category": "1. Standard Self-Purchase via Telebirr",
+    "expectation": "Asset Tracking: Ignored (handled by 251994). Financial Tracking: Expense of 19 ETB. Net Balance drops.",
+    "sender": "830",
+    "body": "You have successfully paid 19.00 ETB for 1GB Daily Data package.",
+    "scenario": "SELF_PURCHASE"
+  },
+  {
+    "category": "2. Asset Package Confirmation",
+    "expectation": "Asset Tracking: Data increases by 1GB. Financial Tracking: Ignored financially to prevent double-counting.",
+    "sender": "251994",
+    "body": "Dear customer, you have successfully purchased 1GB Daily Internet package. Your remaining balance is 40.00 ETB. Valid until tomorrow.",
+    "scenario": "SELF_PURCHASE"
+  },
+  {
+    "category": "3. Airtime Transfer (Gift Sent)",
+    "expectation": "Asset Tracking: No asset changes. Financial Tracking: Expense of 25 ETB. Net Balance drops.",
+    "sender": "806",
+    "body": "You have transferred 25.00 ETB to 0911XXXXXX. Your new balance is 15.00 ETB.",
+    "scenario": "GIFT_SENT"
+  },
+  {
+    "category": "4. Package Gift Sent (*999#)",
+    "expectation": "Asset Tracking: No asset changes. Financial Tracking: Expense of 29 ETB. Net Balance drops.",
+    "sender": "251994",
+    "body": "You have successfully gifted 2GB Daily Internet package to 0911XXXXXX. 29.00 ETB has been deducted.",
+    "scenario": "GIFT_SENT"
+  },
+  {
+    "category": "5. Receiving a Package Gift",
+    "expectation": "Asset Tracking: Data increases by 500MB. Financial Tracking: No expense or income logged.",
+    "sender": "251994",
+    "body": "Dear customer, you have received a gift of 500MB Daily Internet package from 0911XXXXXX. Valid until tomorrow.",
+    "scenario": "RECHARGE_OR_GIFT_RECEIVED"
+  },
+  {
+    "category": "6. Airtime Recharge (Income)",
+    "expectation": "Asset Tracking: No change. Financial Tracking: Income of 50 ETB. Net Balance increases.",
+    "sender": "805",
+    "body": "Your account has been recharged with 50.00 ETB.",
+    "scenario": "RECHARGE"
+  },
+  {
+    "category": "7. Telebirr Airtime Loan (Income/Debt)",
+    "expectation": "Asset Tracking: No change. Financial Tracking: Income of 10 ETB logged. Net Balance increases momentarily.",
+    "sender": "810",
+    "body": "Dear customer, you have taken a loan of 10.00 ETB. The total amount to be repaid is 11.50 ETB.",
+    "scenario": "LOAN_TAKEN"
+  }
+]
