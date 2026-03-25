@@ -9,6 +9,7 @@ export interface SmsMonitorPlugin {
   addListener(eventName: 'smsFound', listenerFunc: (data: { sender: string; body: string; timestamp: number }) => void): void;
   getBalances(): Promise<{ packages: TelecomPackage[], netBalance: number }>;
   getTransactions(): Promise<{ transactions: Transaction[] }>;
+  dialUssd(options: { code: string }): Promise<void>;
 }
 
 const SmsMonitor = registerPlugin<SmsMonitorPlugin>('SmsMonitor');

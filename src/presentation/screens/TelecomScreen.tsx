@@ -105,9 +105,10 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
 
   const handleRecharge = () => {
     if (rechargeMethod === 'ussd') {
-      const cleanVoucher = voucherNumber.replace(/\s+/g, '');
-      if (!/^\d{13,14}$/.test(cleanVoucher)) {
-        alert(t('invalidVoucher') || "Voucher number must be exactly 13 or 14 digits.");
+      const cleanVoucher = voucherNumber.replace(/[^0-9]/g, '');
+      // EthioTelecom vouchers are 13 or 14 digits. We only dial if it looks like a valid voucher.
+      if (cleanVoucher.length < 13) {
+        alert(t('invalidVoucher') || "Voucher must be at least 13 digits.");
         return;
       }
       rechargeSelf(cleanVoucher);
@@ -331,9 +332,12 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('voucherNumber')}</label>
                     <input 
-                      type="text"
+                      type="tel"
                       value={voucherNumber}
-                      onChange={(e) => setVoucherNumber(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        if (val.length <= 15) setVoucherNumber(val);
+                      }}
                       placeholder={t('enterVoucher')}
                       className="w-full px-6 py-5 bg-slate-50 border-none rounded-[2rem] text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
                     />

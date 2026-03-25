@@ -96,6 +96,26 @@ class SmsMonitorPlugin : Plugin() {
         }
     }
 
+    @PluginMethod
+    fun dialUssd(call: PluginCall) {
+        val code = call.getString("code")
+        if (code == null) {
+            call.reject("USSD code is required")
+            return
+        }
+        
+        // Encode # as %23 for the URI to be parsed correctly by Android
+        val encodedCode = code.replace("#", "%23")
+        val uri = android.net.Uri.parse("tel:$encodedCode")
+        
+        // Use ACTION_DIAL to avoid needing CALL_PHONE permission while still opening dialer directly
+        val intent = Intent(Intent.ACTION_DIAL, uri)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        
+        context.startActivity(intent)
+        call.resolve()
+    }
+
     override fun handleOnDestroy() {
         super.handleOnDestroy()
         ussdReceiver?.let {
