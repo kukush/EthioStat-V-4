@@ -50,4 +50,27 @@ Native Android components provide high-reliability background processing:
 2. **Action Dispatch**: User interactions trigger actions dispatched to the `reducer`.
 3. **State Update**: The reducer computes the new state.
 4. **Persistence**: `useEffect` hooks listen to state changes and persist them locally.
-5. **Native Operations**: Future updates will use Capacitor plugins to read actual SMS messages and execute USSD codes.
+5. **Native Operations**: Capacitor plugins read SMS messages and execute USSD codes through native Android services.
+
+## Project Status & Implementation
+
+### Completed Features
+- **MVI Architecture**: Project refactored to align with Model-View-Intent architecture pattern
+- **Native Integration**: SMS monitoring and USSD capture implemented via Capacitor plugins
+- **Multilingual Support**: Smart parsing for English, Amharic, and Afaan Oromo languages
+- **Background Processing**: Foreground service for reliable SMS monitoring
+- **Historical Scanning**: 7-day SMS history scan when adding new transaction sources
+- **Room Database**: Native SQLite storage for 100% offline functionality
+
+### Build Fixes Applied
+- **Duplicate Switch Case**: Resolved Vite build warning in `src/store.ts`
+- **Gradle Optimization**: Updated Android build configuration for better metadata support
+- **Permissions**: Added required SMS and phone permissions to AndroidManifest.xml
+
+### Native Capabilities
+- **SMS Monitoring**: Real-time background SMS processing via SmsForegroundService
+- **USSD Capture**: Accessibility service for capturing USSD responses
+- **Room Persistence**: Primary source of truth for all transactions and balances
+- **Capacitor Bridge**: SmsMonitorPlugin syncs native data with React layer
+
+For detailed deployment instructions, see [deployment-guide.md](./deployment-guide.md).
