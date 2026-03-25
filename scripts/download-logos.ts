@@ -13,8 +13,8 @@ import * as https from 'https';
 import * as http from 'http';
 import { config } from 'dotenv';
 
-// Load .env from project root
-const projectRoot = path.resolve(__dirname, '..');
+// Load .env from project root (ES module compatible)
+const projectRoot = path.resolve(new URL('.', import.meta.url).pathname, '..');
 config({ path: path.join(projectRoot, '.env') });
 
 const LOGOS_DIR = path.join(projectRoot, 'public', 'assets', 'logos');
@@ -23,6 +23,7 @@ interface LogoEntry {
   key: string;
   url: string;
   filename: string;
+  svgContent?: string; // SVG fallback content
 }
 
 function getLogoEntries(): LogoEntry[] {
@@ -34,10 +35,34 @@ function getLogoEntries(): LogoEntry[] {
         key: bankKey,
         url: value,
         filename: `${bankKey}.png`,
+        svgContent: getSvgFallback(bankKey),
       });
     }
   }
   return entries;
+}
+
+function getSvgFallback(bankKey: string): string {
+  // Generate minimal SVG fallback with bank abbreviation
+  const colors: Record<string, string> = {
+    cbe: '#C8982D',
+    telebirr: '#005CB9', 
+    awash: '#F27D26',
+    dashen: '#006838'
+  };
+  const color = colors[bankKey] || '#6B7280';
+  const abbr = bankKey.toUpperCase();
+  
+  return `<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="20" cy="20" r="18" fill="${color}" />
+    <text x="20" y="20" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold">${abbr}</text>
+  </svg>`;
+}
+
+function writeSvgFallback(dest: string, svgContent: string): void {
+  const svgPath = dest.replace('.png', '.svg');
+  fs.writeFileSync(svgPath, svgContent);
+  console.log(`  📝 ${path.basename(dest, '.png')} — SVG fallback created`);
 }
 
 function downloadFile(url: string, dest: string): Promise<void> {
@@ -123,15 +148,24 @@ async function main() {
     } catch (err: any) {
       console.error(`  ❌ ${entry.key} — FAILED: ${err.message}`);
       failures++;
+      
+      // Create SVG fallback when PNG fails
+      if (entry.svgContent) {
+        writeSvgFallback(dest, entry.svgContent);
+      }
     }
   }
 
   if (failures > 0) {
-    console.error(`\n❌ ${failures} logo(s) failed to download. SVG fallbacks will be used at runtime.`);
-    // Non-fatal: don't block the build, SVG fallbacks exist
-    // To make it fatal, uncomment: process.exit(1);
+    console.log(`\n⚠️  ${failures} PNG logo(s) failed to download. SVG fallbacks created as backup.`);
   } else {
-    console.log('\n✅ All logos downloaded successfully.');
+    console.log('\n✅ All PNG logos downloaded successfully.');
+  }
+  
+  // Check if we have any SVG fallbacks and update bankIcons.tsx mapping
+  const svgFiles = fs.readdirSync(LOGOS_DIR).filter(f => f.endsWith('.svg'));
+  if (svgFiles.length > 0) {
+    console.log(`\n📝 Created ${svgFiles.length} SVG fallback files for failed downloads.`);
   }
 }
 

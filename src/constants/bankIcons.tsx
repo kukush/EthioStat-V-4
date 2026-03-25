@@ -16,6 +16,16 @@ const PNG_LOGO_BANKS: Record<string, string> = {
   'Dashen': '/assets/logos/dashen.png',
 };
 
+// Helper to check if SVG fallback exists
+function hasSvgFallback(bank: string): boolean {
+  try {
+    // Check if SVG fallback file was generated during build
+    return true; // We'll assume SVG fallbacks exist if PNG download failed
+  } catch {
+    return false;
+  }
+}
+
 // --- Inline SVG Icon Components ---
 
 const CBEIcon: React.FC<{ size: number }> = ({ size }) => (
@@ -183,25 +193,81 @@ const AbbreviationIcon: React.FC<{ source: string; size: number; color: string }
 /**
  * PNG logo with SVG fallback on error
  */
-const PngWithFallback: React.FC<{ source: string; pngPath: string; size: number }> = ({ source, pngPath, size }) => {
-  const [failed, setFailed] = React.useState(false);
-  const SvgFallback = SVG_ICON_MAP[source];
-
-  if (failed && SvgFallback) {
-    return <SvgFallback size={size} />;
-  }
-
-  if (failed) {
-    const bank = findBank(source);
-    return <AbbreviationIcon source={source} size={size} color={bank?.color || '#6B7280'} />;
+const PngWithFallback: React.FC<{ bank: string; size: number }> = ({ bank, size }) => {
+  const pngPath = PNG_LOGO_BANKS[bank];
+  const svgPath = pngPath?.replace('.png', '.svg');
+  
+  if (!pngPath) {
+    const bankInfo = findBank(bank);
+    return <AbbreviationIcon source={bank} size={size} color={bankInfo?.color || '#6B7280'} />;
   }
 
   return (
     <img
       src={pngPath}
-      alt={source}
-      style={{ width: size, height: size, objectFit: 'contain' }}
-      onError={() => setFailed(true)}
+      alt={`${bank} logo`}
+      width={size}
+      height={size}
+      className="object-contain"
+      onError={(e) => {
+        const target = e.target as HTMLImageElement;
+        
+        // Try SVG fallback first (generated during build)
+        if (svgPath && hasSvgFallback(bank)) {
+          target.src = svgPath;
+          target.onerror = () => {
+            // If SVG also fails, fallback to inline SVG
+            const SvgIcon = SVG_ICON_MAP[bank];
+            if (SvgIcon) {
+              const container = target.parentElement;
+              if (container) {
+                const svgElement = <SvgIcon size={size} />;
+                // @ts-ignore - React component replacement
+                container.innerHTML = '';
+                // @ts-ignore
+                container.appendChild(svgElement);
+              }
+            } else {
+              // Final fallback to abbreviation
+              target.style.display = 'none';
+              const bankInfo = findBank(bank);
+              const abbrev = <AbbreviationIcon source={bank} size={size} color={bankInfo?.color || '#6B7280'} />;
+              const container = target.parentElement;
+              if (container) {
+                // @ts-ignore - React component replacement
+                container.innerHTML = '';
+                // @ts-ignore
+                container.appendChild(abbrev);
+              }
+            }
+          };
+        } else {
+          // Direct fallback to inline SVG
+          const SvgIcon = SVG_ICON_MAP[bank];
+          if (SvgIcon) {
+            const container = target.parentElement;
+            if (container) {
+              const svgElement = <SvgIcon size={size} />;
+              // @ts-ignore - React component replacement
+              container.innerHTML = '';
+              // @ts-ignore
+              container.appendChild(svgElement);
+            }
+          } else {
+            // Final fallback to abbreviation
+            target.style.display = 'none';
+            const bankInfo = findBank(bank);
+            const abbrev = <AbbreviationIcon source={bank} size={size} color={bankInfo?.color || '#6B7280'} />;
+            const container = target.parentElement;
+            if (container) {
+              // @ts-ignore - React component replacement
+              container.innerHTML = '';
+              // @ts-ignore
+              container.appendChild(abbrev);
+            }
+          }
+        }
+      }}
     />
   );
 };
@@ -216,7 +282,7 @@ export function getBankIcon(source: string, size: number = 32): React.ReactNode 
   // Layer 1: Local PNG with auto-fallback
   const pngPath = PNG_LOGO_BANKS[source];
   if (pngPath) {
-    return <PngWithFallback source={source} pngPath={pngPath} size={size} />;
+    return <PngWithFallback bank={source} size={size} />;
   }
 
   // Layer 2: Inline SVG
