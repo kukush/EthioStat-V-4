@@ -52,10 +52,10 @@ class UssdAccessibilityService : AccessibilityService() {
             
             // Save to DB
             db.ussdDao().insert(UssdEntity(
-                id = 0,
-                requestCode = "Last USSD Request",
-                responseText = response,
-                timestamp = System.currentTimeMillis()
+                "Last USSD Request",
+                response,
+                System.currentTimeMillis(),
+                1 // simSlot
             ))
 
             // Dual-Tracking: Let the engine parse the USSD string as if it's an SMS

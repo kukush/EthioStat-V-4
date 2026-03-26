@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Globe, Shield, Bell, Smartphone, HelpCircle, LogOut, Palette, Database, Plus, X, Check, Trash2, AlertCircle, Cloud, Zap, Moon, Sun, CreditCard, FlaskConical, Search, Landmark } from 'lucide-react';
+import { Globe, Shield, Bell, Smartphone, HelpCircle, LogOut, Palette, Database, Plus, X, Check, Trash2, AlertCircle, Cloud, Zap, Moon, Sun, CreditCard, FlaskConical, Search, Landmark, Edit2, ChevronRight, MoreVertical, TrendingUp, TrendingDown, Calendar, ArrowRight, History, Wallet, Download, User } from 'lucide-react';
 import { Language, Theme, AppState, TelecomPackage, Transaction, Intent } from '@/domain/types';
 import { useTranslation } from '@/translations';
 import { cn } from '@/lib/utils';
@@ -132,9 +132,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
           </div>
           <button 
             onClick={openEditProfile}
-            className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-lg border-2 border-white hover:bg-blue-700 transition-all active:scale-95"
+            className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all active:scale-90"
           >
-            <Plus size={14} />
+            <Edit2 size={14} />
           </button>
         </div>
         <h2 className="text-xl font-black text-slate-900 mt-4">{state.userProfile?.name || 'User'}</h2>
@@ -364,86 +364,89 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
       {/* Edit Profile Modal */}
       <AnimatePresence>
         {showEditProfile && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
+              className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col mx-4"
             >
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-black text-slate-900">Edit Profile</h3>
-                  <button 
-                    onClick={() => setShowEditProfile(false)}
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
+              {/* Modal Header - Fixed */}
+              <div className="p-6 border-b border-slate-50 flex justify-between items-center shrink-0">
+                <h3 className="text-xl font-black text-slate-900">Edit Profile</h3>
+                <button 
+                  onClick={() => setShowEditProfile(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Content - Scrollable */}
+              <div className="p-6 overflow-y-auto grow space-y-8">
+                {/* Name Input */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none font-bold text-slate-900 transition-all text-lg"
+                  />
                 </div>
 
-                <div className="space-y-6">
-                  {/* Name Input */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="Enter your name"
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none font-bold text-slate-900 transition-all"
-                    />
-                  </div>
-
-                  {/* Avatar Selection */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
-                      Choose Avatar
-                    </label>
-                    <div className="grid grid-cols-3 gap-4">
-                      {DEFAULT_AVATARS.map((avatar) => (
-                        <button
-                          key={avatar.id}
-                          onClick={() => setSelectedAvatar(avatar.url)}
-                          className={cn(
-                            "relative aspect-square rounded-2xl overflow-hidden border-4 transition-all",
-                            selectedAvatar === avatar.url ? "border-blue-600 scale-105 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
-                          )}
-                        >
-                          <img src={avatar.url} alt={avatar.label} className="w-full h-full object-cover" />
-                          {selectedAvatar === avatar.url && (
-                            <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
-                              <div className="bg-blue-600 text-white rounded-full p-1">
-                                <Check size={12} />
-                              </div>
+                {/* Avatar Selection */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
+                    Choose Avatar
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {DEFAULT_AVATARS.map((avatar) => (
+                      <button
+                        key={avatar.id}
+                        onClick={() => setSelectedAvatar(avatar.url)}
+                        className={cn(
+                          "relative aspect-square rounded-2xl overflow-hidden border-4 transition-all",
+                          selectedAvatar === avatar.url ? "border-blue-600 scale-105 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
+                        )}
+                      >
+                        <img src={avatar.url} alt={avatar.label} className="w-full h-full object-cover" />
+                        {selectedAvatar === avatar.url && (
+                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                            <div className="bg-blue-600 text-white rounded-full p-1">
+                              <Check size={12} />
                             </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                          </div>
+                        )}
+                      </button>
+                    ))}
                   </div>
-
-                  <button
-                    onClick={handleUpdateProfile}
-                    disabled={showSaveSuccess}
-                    className={cn(
-                      "w-full py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95",
-                      showSaveSuccess
-                        ? "bg-emerald-500 text-white"
-                        : "bg-slate-900 text-white hover:bg-slate-800"
-                    )}
-                  >
-                    {showSaveSuccess ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Check size={18} /> Saved!
-                      </span>
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </button>
                 </div>
+              </div>
+
+              {/* Modal Footer - Fixed */}
+              <div className="p-6 border-t border-slate-50 shrink-0">
+                <button
+                  onClick={handleUpdateProfile}
+                  disabled={showSaveSuccess}
+                  className={cn(
+                    "w-full py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95 text-sm",
+                    showSaveSuccess
+                      ? "bg-emerald-500 text-white"
+                      : "bg-slate-900 text-white hover:bg-slate-800"
+                  )}
+                >
+                  {showSaveSuccess ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Check size={20} /> Saved!
+                    </span>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
               </div>
             </motion.div>
           </div>

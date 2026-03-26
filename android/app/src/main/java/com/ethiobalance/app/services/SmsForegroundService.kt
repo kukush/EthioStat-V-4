@@ -43,7 +43,15 @@ class SmsForegroundService : Service() {
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build()
 
-            startForeground(1, notification)
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                } else {
+                    startForeground(1, notification)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start foreground service: ${e.message}", e)
+            }
 
             // Process with Dual Tracking Engine
             scope.launch {

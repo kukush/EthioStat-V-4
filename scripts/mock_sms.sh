@@ -48,9 +48,10 @@ for ((i=0; i<$count; i++)); do
 
     # Broadcast SMS via adb to the provider
     adb shell am start-foreground-service \
+        -a android.intent.action.MAIN \
         -n "com.ethiobalance.app/.services.SmsForegroundService" \
         --es "sender" "$sender" \
-        --es "body" "$body"
+        --es "body" "'$body'"
         
     echo "✓ Broadcast sent. Pausing for 4 seconds so you can see the UI update..."
     sleep 4

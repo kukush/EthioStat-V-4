@@ -13,7 +13,18 @@ import { persistenceService } from './data/persistenceService';
 
 export default function App() {
   const savedState = persistenceService.loadState();
-  const mergedState = savedState ? { ...initialState, ...savedState } : initialState;
+  const mergedState = useMemo(() => {
+    if (!savedState) return initialState;
+    return {
+      ...initialState,
+      ...savedState,
+      // Deep merge userProfile to avoid losing fields like 'name' from previous versions
+      userProfile: {
+        ...initialState.userProfile,
+        ...(savedState.userProfile || {})
+      }
+    };
+  }, [savedState]);
   
   const [state, dispatch] = useReducer(reducer, mergedState);
   const { packages, transactions, netBalance } = useNativeData();
@@ -89,13 +100,16 @@ export default function App() {
           )}>
             <Bell size={20} />
           </button>
-          <button className={cn(
-            "w-10 h-10 flex items-center justify-center rounded-xl transition-colors",
-            state.theme === 'dark' ? "bg-slate-800 text-slate-400 hover:text-white" : 
-            state.theme === 'vibrant' ? "bg-indigo-500 text-indigo-200 hover:text-white" : 
-            state.theme === 'midnight' ? "bg-slate-900 text-slate-400 hover:text-white" :
-            state.theme === 'forest' ? "bg-emerald-800 text-emerald-200 hover:text-white" : "bg-slate-50 text-slate-400 hover:text-slate-600"
-          )}>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={cn(
+              "w-10 h-10 flex items-center justify-center rounded-xl transition-colors",
+              state.theme === 'dark' ? "bg-slate-800 text-slate-400 hover:text-white" : 
+              state.theme === 'vibrant' ? "bg-indigo-500 text-indigo-200 hover:text-white" : 
+              state.theme === 'midnight' ? "bg-slate-900 text-slate-400 hover:text-white" :
+              state.theme === 'forest' ? "bg-emerald-800 text-emerald-200 hover:text-white" : "bg-slate-50 text-slate-400 hover:text-slate-600"
+            )}
+          >
             <User size={20} />
           </button>
         </div>
