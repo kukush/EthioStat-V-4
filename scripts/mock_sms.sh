@@ -4,10 +4,23 @@
 # This script reads mock_sms.json and sequentially triggers Android background broadcasts
 # so you can watch the React UI update magically!
 
-JSON_FILE="mock_sms.json"
+# --- Configuration ---
+SCRIPT_DIR="$(dirname "$0")"
+JSON_FILE="$SCRIPT_DIR/mock_sms.json"
+
+# --- Dependency Checks ---
+if ! command -v jq &> /dev/null; then
+    echo "❌ Error: 'jq' is not installed. Please install it (e.g., 'brew install jq')."
+    exit 1
+fi
+
+if ! command -v adb &> /dev/null; then
+    echo "❌ Error: 'adb' is not installed. Please install Android Platform Tools."
+    exit 1
+fi
 
 if [ ! -f "$JSON_FILE" ]; then
-    echo "Error: $JSON_FILE not found."
+    echo "❌ Error: $JSON_FILE not found."
     exit 1
 fi
 

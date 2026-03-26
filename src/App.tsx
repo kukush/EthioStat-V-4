@@ -1,4 +1,4 @@
-import { useReducer, useEffect } from 'react';
+import { useReducer, useEffect, useMemo } from 'react';
 import { HomeScreen } from './presentation/screens/HomeScreen';
 import { TelecomScreen } from './presentation/screens/TelecomScreen';
 import { TransactionScreen } from './presentation/screens/TransactionScreen';
@@ -10,7 +10,6 @@ import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
 import { useNativeData } from '@/presentation/hooks/useNativeData';
 import { cn } from './lib/utils';
 import { persistenceService } from './data/persistenceService';
-import { useQueryState, parseAsStringLiteral } from 'nuqs';
 
 export default function App() {
   const savedState = persistenceService.loadState();
@@ -19,29 +18,15 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, mergedState);
   const { packages, transactions, netBalance } = useNativeData();
 
-  // nuqs: Sync active tab with URL search params for deep-linking
-  const tabOptions = (import.meta.env.VITE_TAB_OPTIONS || 'home,telecom,transactions,settings').split(',') as readonly string[];
-  const [urlTab, setUrlTab] = useQueryState(
-    'tab',
-    parseAsStringLiteral(tabOptions).withDefault('home')
+
+  // Memoized sources to prevent unnecessary re-renders of TransactionScreen
+  const sources = useMemo(() => 
+    Array.from(new Set([...state.transactionSources, ...transactions.map(t => t.source)])),
+    [state.transactionSources, transactions]
   );
 
-  // Sync URL → reducer on mount and when URL changes
-  useEffect(() => {
-    if (urlTab && urlTab !== state.activeTab) {
-      dispatch({ type: 'SET_TAB', tab: urlTab as any });
-    }
-  }, [urlTab]);
-
-  // Sync reducer → URL when tab changes via BottomNav
-  useEffect(() => {
-    if (state.activeTab !== urlTab) {
-      setUrlTab(state.activeTab);
-    }
-  }, [state.activeTab]);
-
-  // Initialize Native SMS/USSD Bridge
-  useNativeBridge(dispatch);
+  // Initialize Native SMS/USSD Bridge (dispatch not needed here as hook handles its own side effects or returns callbacks)
+  useNativeBridge();
 
   // Persistence
   useEffect(() => {
@@ -141,7 +126,7 @@ export default function App() {
           <TransactionScreen 
             transactions={transactions} 
             language={state.language}
-            sources={Array.from(new Set([...state.transactionSources, ...transactions.map(t => t.source)]))}
+            sources={sources}
           />
         )}
         {state.activeTab === 'settings' && (

@@ -36,7 +36,7 @@
         <service
             android:name=".services.SmsForegroundService"
             android:enabled="true"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="specialUse" />
 
         <receiver

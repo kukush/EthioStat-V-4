@@ -6,7 +6,6 @@ import { Search, Filter, TrendingUp, TrendingDown, Calendar, ArrowRight, History
 import { cn, exportToCSV } from '@/lib/utils';
 import { useTranslation } from '@/translations';
 import { getBankIcon } from '@/constants/bankIcons';
-import { useQueryState, parseAsStringLiteral } from 'nuqs';
 
 interface TransactionScreenProps {
   transactions: Transaction[];
@@ -17,13 +16,9 @@ interface TransactionScreenProps {
 type TimeFilter = 'all' | 'day' | 'week' | 'month';
 
 export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactions, language, sources }) => {
-  // nuqs: sync source filter and time filter with URL params
-  const [activeSource, setActiveSource] = useQueryState('source', { defaultValue: 'all' });
-  const timeOptions = (import.meta.env.VITE_TIME_FILTER_OPTIONS || 'all,day,week,month').split(',') as readonly string[];
-  const [timeFilter, setTimeFilter] = useQueryState(
-    'time',
-    parseAsStringLiteral(timeOptions).withDefault('all')
-  );
+  // Use local state instead of nuqs for filters
+  const [activeSource, setActiveSource] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAmounts, setShowAmounts] = useState(true);
   const t = useTranslation(language);
