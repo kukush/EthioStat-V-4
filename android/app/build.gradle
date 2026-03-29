@@ -25,17 +25,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        // Must match jvmTarget and jvmToolchain — all three must agree.
+        // Root build.gradle enforces jvmToolchain(21) on all subprojects.
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     kotlinOptions {
         jvmTarget = '21'
     }
 }
 
-kotlin {
-    jvmToolchain(21)
-}
+// Note: kotlin { jvmToolchain(21) } is applied globally by root build.gradle
+// via the subprojects { afterEvaluate } block — no need to repeat it here.
 
 dependencies {
     implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')

@@ -123,10 +123,18 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
   const packageTypes: PackageType[] = ['internet', 'voice', 'sms', 'bonus'];
 
   const totals = {
-    internet: packages.filter(p => p.type === 'internet').reduce((acc, p) => acc + p.value, 0),
-    voice: packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + p.value, 0),
-    sms: packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + p.value, 0),
+    internet: packages.filter(p => p.type === 'internet').reduce((acc, p) => {
+      const val = Number(p.value) || 0;
+      const valueMB = (p.unit || '').toUpperCase() === 'GB' ? val * 1024 : val;
+      return acc + valueMB;
+    }, 0),
+    voice: packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + (Number(p.value) || 0), 0),
+    sms: packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + (Number(p.value) || 0), 0),
   };
+
+  const formattedInternet = totals.internet >= 1024 
+    ? { value: (totals.internet / 1024).toFixed(1), unit: 'GB' }
+    : { value: totals.internet.toFixed(0), unit: 'MB' };
 
   return (
     <div className="space-y-8 pb-32">
@@ -179,7 +187,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
             <div className="space-y-3">
               <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">{t('data')}</p>
               <p className="text-sm font-black tracking-tight">
-                {totals.internet} <span className="text-[10px] opacity-60">MB</span>
+                {formattedInternet.value} <span className="text-[10px] opacity-60">{formattedInternet.unit}</span>
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-500 rounded-full" style={{ width: '70%' }} />

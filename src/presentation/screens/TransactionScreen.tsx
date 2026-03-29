@@ -22,12 +22,12 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
   const [searchQuery, setSearchQuery] = useState('');
   const [showAmounts, setShowAmounts] = useState(true);
   const t = useTranslation(language);
-  
+
   const filteredTransactions = transactions.filter(tr => {
-    const matchesSource = activeSource === 'all' || tr.source === activeSource;
-    const matchesSearch = tr.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         tr.source.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSource = activeSource === 'all' || tr.source.toLowerCase() === activeSource.toLowerCase();
+    const matchesSearch = (tr.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (tr.source?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+
     // Time filtering logic
     let matchesTime = true;
     if (timeFilter !== 'all') {
@@ -69,14 +69,14 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
   };
   sourceSummary.netBalance = sourceSummary.income - sourceSummary.expense;
 
-  const activeSourceLabel = activeSource === 'all' 
-    ? t('overallSummary') 
+  const activeSourceLabel = activeSource === 'all'
+    ? t('overallSummary')
     : (() => {
-        const key = activeSource.toLowerCase().replace(/\s+/g, '_');
-        // @ts-ignore
-        const translated = t(key);
-        return `${translated !== key ? translated : activeSource} ${t('summary')}`;
-      })();
+      const key = activeSource.toLowerCase().replace(/\s+/g, '_');
+      // @ts-ignore
+      const translated = t(key);
+      return `${translated !== key ? translated : activeSource} ${t('summary')}`;
+    })();
 
   return (
     <div className="space-y-8 pb-32">
@@ -108,8 +108,8 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
               onClick={() => setTimeFilter(f)}
               className={cn(
                 "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap",
-                timeFilter === f 
-                  ? "bg-slate-900 text-white border-slate-900 shadow-lg" 
+                timeFilter === f
+                  ? "bg-slate-900 text-white border-slate-900 shadow-lg"
                   : "bg-white text-slate-400 border-slate-100 hover:border-slate-200"
               )}
             >
@@ -121,7 +121,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
         {/* Source Filter Chips */}
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
           {/* All Sources */}
-          <button 
+          <button
             onClick={() => setActiveSource('all')}
             className="flex-shrink-0 flex flex-col items-center gap-2 group"
           >
@@ -147,8 +147,8 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
             const label = translated !== key ? translated : source;
 
             return (
-              <button 
-                key={source} 
+              <button
+                key={source}
                 onClick={() => setActiveSource(source)}
                 className="flex-shrink-0 flex flex-col items-center gap-2 group"
               >
@@ -187,15 +187,15 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
               </h3>
             </div>
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={() => setShowAmounts(!showAmounts)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
                 title={showAmounts ? t('hideAmount') : t('showAmount')}
               >
                 {showAmounts ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88 2 2m12.12 12.12L22 22M10.33 4.56C10.89 4.52 11.44 4.5 12 4.5c7 0 10 7 10 7a13.12 13.12 0 0 1-1.66 2.04m-3.17 1.16C15.5 15.82 13.86 16.5 12 16.5c-7 0-10-7-10-7a13.16 13.16 0 0 1 1.66-2.04m3.17-1.16C8.5 8.18 10.14 7.5 12 7.5c1.86 0 3.5.68 4.83 1.81"/><path d="M1 1l22 22"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88 2 2m12.12 12.12L22 22M10.33 4.56C10.89 4.52 11.44 4.5 12 4.5c7 0 10 7 10 7a13.12 13.12 0 0 1-1.66 2.04m-3.17 1.16C15.5 15.82 13.86 16.5 12 16.5c-7 0-10-7-10-7a13.16 13.16 0 0 1 1.66-2.04m3.17-1.16C8.5 8.18 10.14 7.5 12 7.5c1.86 0 3.5.68 4.83 1.81" /><path d="M1 1l22 22" /></svg>
                 )}
               </button>
               <div className="flex items-center gap-1 text-slate-400">
@@ -248,7 +248,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
               </div>
             </div>
           </div>
-          
+
           <div className="pt-2">
             <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest text-center italic">
               Last activity: {sourceSummary.lastTransaction}
@@ -260,7 +260,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
       <section className="space-y-4">
         <div className="flex justify-between items-end px-2">
           <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{t('transactionHistory')}</h3>
-          <button 
+          <button
             onClick={handleExport}
             className="flex items-center gap-1 text-blue-600 cursor-pointer hover:underline"
           >
@@ -268,7 +268,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({ transactio
             <Download size={12} />
           </button>
         </div>
-        
+
         <div className="space-y-3">
           <AnimatePresence mode="popLayout">
             {filteredTransactions.length > 0 ? (

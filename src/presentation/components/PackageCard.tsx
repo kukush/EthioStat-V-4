@@ -21,8 +21,8 @@ export const PackageCard: React.FC<PackageCardProps> = ({
   type, value, total, unit, label, expiry, daysLeft = 1, totalDays = 1, language, className
 }) => {
   const t = useTranslation(language);
-  const percentage = Math.min(100, (value / total) * 100);
-  const expiryPercentage = Math.min(100, (daysLeft / totalDays) * 100);
+  const percentage = total > 0 ? Math.min(100, (value / total) * 100) : 0;
+  const expiryPercentage = (totalDays || 1) > 0 ? Math.min(100, ((daysLeft || 0) / (totalDays || 1)) * 100) : 0;
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percentage / 100) * circumference;
@@ -66,7 +66,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
     },
   };
 
-  const theme = themes[type];
+  const theme = themes[type as keyof typeof themes] || themes.internet;
 
   // Try to translate the label if it matches a translation key
   const translatedLabel = label === 'Daily Data' ? t('daily') + ' ' + t('data') :
@@ -111,7 +111,13 @@ export const PackageCard: React.FC<PackageCardProps> = ({
             />
           </div>
           <div className="flex justify-between items-center">
-            <p className="text-[8px] font-bold uppercase tracking-widest opacity-60">{t('expires')}: {expiry}</p>
+            <p className="text-[8px] font-bold uppercase tracking-widest opacity-60">
+              {t('expires')}: {
+                !isNaN(Number(expiry)) 
+                  ? new Date(Number(expiry)).toLocaleDateString(language === 'en' ? 'en-US' : language === 'am' ? 'am-ET' : 'om-ET', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : expiry
+              }
+            </p>
             <div className="flex gap-1">
               {[...Array(5)].map((_, i) => (
                 <div 

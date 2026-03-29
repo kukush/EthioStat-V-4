@@ -1,4 +1,5 @@
 import { useReducer, useEffect, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { HomeScreen } from './presentation/screens/HomeScreen';
 import { TelecomScreen } from './presentation/screens/TelecomScreen';
 import { TransactionScreen } from './presentation/screens/TransactionScreen';
@@ -10,6 +11,7 @@ import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
 import { useNativeData } from '@/presentation/hooks/useNativeData';
 import { cn } from './lib/utils';
 import { persistenceService } from './data/persistenceService';
+import SimDetection from './data/simDetectionPlugin';
 
 export default function App() {
   const savedState = persistenceService.loadState();
@@ -27,8 +29,13 @@ export default function App() {
   }, [savedState]);
   
   const [state, dispatch] = useReducer(reducer, mergedState);
-  const { packages, transactions, netBalance } = useNativeData();
+  const { packages, transactions: rawTransactions, netBalance } = useNativeData();
 
+  // Globally filter out AIRTIME transactions so they don't pollute any screen's UI or summaries
+  const transactions = useMemo(() => 
+    rawTransactions.filter(t => t?.source?.toUpperCase() !== 'AIRTIME'),
+    [rawTransactions]
+  );
 
   // Memoized sources to prevent unnecessary re-renders of TransactionScreen
   const sources = useMemo(() => 
@@ -43,6 +50,31 @@ export default function App() {
   useEffect(() => {
     persistenceService.saveState(state);
   }, [state]);
+
+  // Synchronization will now be handled inside the reducer via SET_SIMS/SET_PRIMARY_SIM cases.
+  useEffect(() => {
+    const detectSims = async () => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const { sims } = await SimDetection.getSimCards();
+          if (sims && sims.length > 0) {
+            // Map SimCardInfo to our domain SimCard type
+            const domainSims = sims.map(s => ({
+              id: s.id,
+              phoneNumber: s.phoneNumber,
+              label: s.carrierName,
+              isPrimary: s.isPrimary,
+              provider: s.carrierName
+            }));
+            dispatch({ type: 'SET_SIMS', sims: domainSims });
+          }
+        }
+      } catch (err) {
+        console.error("SIM detection failed:", err);
+      }
+    };
+    detectSims();
+  }, []); // Only on mount
 
   // Apply theme to body
   useEffect(() => {
@@ -121,16 +153,17 @@ export default function App() {
           <HomeScreen 
             packages={packages} 
             transactions={transactions} 
-            telecomBalance={netBalance} 
+            telecomBalance={state.telecomBalance ?? 0} 
             language={state.language}
             userName={state.userProfile?.name}
+            userPhoneNumber={state.userProfile?.phoneNumber}
           />
         )}
         {state.activeTab === 'telecom' && (
           <TelecomScreen 
             packages={packages} 
             recommendedBundles={[]}
-            balance={netBalance} 
+            balance={state.telecomBalance ?? 0} 
             language={state.language}
             giftRequests={[]}
             dispatch={dispatch}

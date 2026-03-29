@@ -1,5 +1,6 @@
 package com.ethiobalance.app.services
 
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.BalancePackageEntity
 import java.util.UUID
 
@@ -8,6 +9,7 @@ enum class SmsScenario {
     GIFT_SENT,
     RECHARGE_OR_GIFT_RECEIVED,
     LOAN_TAKEN,
+    BALANCE_UPDATE,
     UNKNOWN
 }
 
@@ -33,8 +35,8 @@ object SmsParser {
         return "en"
     }
 
-    fun parse(sender: String, body: String): ParsedSmsResult {
-        val lang = detectLanguage(body)
+    fun parse(sender: String, body: String, timestamp: Long): ParsedSmsResult {
+        detectLanguage(body)
         val result = ParsedSmsResult(scenario = SmsScenario.UNKNOWN, confidence = 0f)
         var confidenceScore = 0f
         var scenario = SmsScenario.UNKNOWN
@@ -42,16 +44,21 @@ object SmsParser {
         var addedAmount: Double? = null
         var isRecharge = false
         val now = System.currentTimeMillis()
+        
+        // Generate a deterministic base ID so historical rescans don't duplicate entities
+        val uniqueStr = "$sender-$timestamp-${body.hashCode()}"
+        val baseId = UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
 
         // 1. Package Regexes (Asset Gain)
-        val dataMatch = Regex("([\\d,.]+)\\s*(MB|GB)\\s*(?:data|remaining|ኢንተርኔት|Intarneetii)", RegexOption.IGNORE_CASE).find(body)
+        // Allow optional words (e.g. "Daily", "Weekly", "Package") between the unit and the keyword
+        val dataMatch = Regex("([\\d,.]+)\\s*(MB|GB)(?:\\s+\\w+)*\\s*(?:data|internet|remaining|ኢንተርኔት|Intarneetii)", RegexOption.IGNORE_CASE).find(body)
         if (dataMatch != null) {
             val amount = dataMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
             val unit = dataMatch.groupValues[2].uppercase()
             result.packages.add(BalancePackageEntity(
-                id = "data-${UUID.randomUUID()}",
+                id = "data-$baseId",
                 simId = "sim1",
-                type = "DATA_AIRTIME",
+                type = "internet",
                 totalAmount = amount,
                 remainingAmount = amount,
                 unit = unit,
@@ -67,9 +74,9 @@ object SmsParser {
         if (voiceMatch != null) {
             val amount = voiceMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
             result.packages.add(BalancePackageEntity(
-                id = "voice-${UUID.randomUUID()}",
+                id = "voice-$baseId",
                 simId = "sim1",
-                type = "VOICE",
+                type = "voice",
                 totalAmount = amount,
                 remainingAmount = amount,
                 unit = "MIN",
@@ -85,9 +92,9 @@ object SmsParser {
         if (smsMatch != null) {
             val amount = smsMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
             result.packages.add(BalancePackageEntity(
-                id = "sms-${UUID.randomUUID()}",
+                id = "sms-$baseId",
                 simId = "sim1",
-                type = "SMS",
+                type = "sms",
                 totalAmount = amount,
                 remainingAmount = amount,
                 unit = "SMS",
@@ -102,8 +109,11 @@ object SmsParser {
         val isGiftReceived = body.lowercase().contains("gift") || body.lowercase().contains("received a gift")
 
         // 2. Financial Transaction Regexes (Expenses / Incomes)
-        // Telebirr, EthioTelecom, or USSD interceptions
-        if (sender.contains("TELEBIRR") || listOf("830", "806", "999", "810", "USSD").contains(sender)) {
+        // Filter: only process SMS from Telebirr / EthioTelecom senders defined in AppConstants.
+        // NOTE: "USSD" is excluded here — USSD responses arrive via AccessibilityService, not as an SMS sender.
+        val isTrustedSender = sender.contains("TELEBIRR", ignoreCase = true) ||
+            AppConstants.SMS_SENDER_WHITELIST.contains(sender)
+        if (isTrustedSender) {
             
             // Loan taken
             val loanMatch = Regex("(?:loan of|taken a loan of|received a loan of)\\s*([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
@@ -153,8 +163,8 @@ object SmsParser {
                 scenario = SmsScenario.RECHARGE_OR_GIFT_RECEIVED
             } else {
                 // Determine if it's just a balance query vs a package update.
-                // If it's *804# query from 251994, it might just be the current state (SELF_PURCHASE handles FULL_BALANCE properly in our engine)
-                scenario = SmsScenario.SELF_PURCHASE
+                // If there's no deducted amount found but packages are found, it's a BALANCE_UPDATE.
+                scenario = SmsScenario.BALANCE_UPDATE
             }
         }
 

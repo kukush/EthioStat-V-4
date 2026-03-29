@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,6 @@ import kotlinx.coroutines.launch
 class SmsForegroundService : Service() {
     companion object {
         private const val TAG = "SmsForegroundService"
-        private const val CHANNEL_ID = "SmsMonitorChannel"
     }
 
     private val job = SupervisorJob()
@@ -36,7 +36,7 @@ class SmsForegroundService : Service() {
         if (sender != null && body != null) {
             Log.d(TAG, "Processing SMS from $sender in foreground service")
 
-            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            val notification = NotificationCompat.Builder(this, AppConstants.NOTIFICATION_CHANNEL_ID)
                 .setContentTitle("EthioStat Monitoring")
                 .setContentText("Processing message from $sender")
                 .setSmallIcon(android.R.drawable.stat_notify_chat)
@@ -45,9 +45,9 @@ class SmsForegroundService : Service() {
 
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                    startForeground(AppConstants.NOTIFICATION_ID_SMS, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
                 } else {
-                    startForeground(1, notification)
+                    startForeground(AppConstants.NOTIFICATION_ID_SMS, notification)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start foreground service: ${e.message}", e)
@@ -74,8 +74,8 @@ class SmsForegroundService : Service() {
 
     private fun createNotificationChannel() {
         val serviceChannel = NotificationChannel(
-            CHANNEL_ID,
-            "SMS Monitor Service Channel",
+            AppConstants.NOTIFICATION_CHANNEL_ID,
+            AppConstants.NOTIFICATION_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_LOW
         )
         val manager = getSystemService(NotificationManager::class.java)

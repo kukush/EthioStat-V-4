@@ -10,6 +10,8 @@ import { DEFAULT_AVATARS, FALLBACK_AVATAR } from '@/constants/avatars';
 import { getBankIcon } from '@/constants/bankIcons';
 import { PhoneInput, formatEthiopianPhone, normalizePhone } from '@/presentation/components/PhoneInput';
 import SmsMonitor from '@/data/smsMonitorPlugin';
+import SimDetection from '@/data/simDetectionPlugin';
+import { useEffect } from 'react';
 
 interface SettingsScreenProps {
   state: AppState;
@@ -35,10 +37,51 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
     });
   }, [searchBank, state.transactionSources]);
 
+  // Sync Transaction Sources to Native SMS Filter (Whitelist)
+  useEffect(() => {
+    const sources = state.transactionSources.map(abbrev => {
+      const bank = ETHIOPIAN_BANKS.find(b => b.abbreviation === abbrev);
+      return {
+        abbreviation: abbrev,
+        name: bank?.name || abbrev,
+        ussd: bank?.ussd || '',
+        senderId: abbrev,
+        isEnabled: true
+      };
+    });
+    SmsMonitor.updateTransactionSources({ sources });
+  }, [state.transactionSources]);
+
+  // Auto-detect SIM cards on mount
+  useEffect(() => {
+    const detectSims = async () => {
+      try {
+        const result = await SimDetection.getSimCards();
+        if (result.sims && result.sims.length > 0) {
+          const sims = result.sims.map(s => ({
+            id: s.id,
+            phoneNumber: s.phoneNumber,
+            label: s.slotIndex === 0 ? 'SIM 1' : 'SIM 2',
+            isPrimary: s.isPrimary,
+            provider: s.carrierName
+          }));
+          dispatch({ type: 'SET_SIMS', sims });
+        }
+      } catch (err) {
+        console.error('SIM detection failed:', err);
+      }
+    };
+    detectSims();
+  }, []);
+
   const handleAddSource = (source: string) => {
     if (source.trim()) {
       const cleanSource = source.trim();
       dispatch({ type: 'ADD_TRANSACTION_SOURCE', source: cleanSource });
+      
+      // We don't need to manually call updateTransactionSources here 
+      // because the useEffect above will trigger automatically 
+      // when state.transactionSources changes.
       
       // Trigger 7-day historical scan for this new source
       SmsMonitor.scanHistory({ senderId: cleanSource, days: 7 });
@@ -47,6 +90,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
       setSearchBank('');
       setShowAddSource(false);
     }
+  };
+
+  const handleRemoveSource = (source: string) => {
+    dispatch({ type: 'REMOVE_TRANSACTION_SOURCE', source });
+  };
+
+  const handleSetPrimarySim = (id: string) => {
+    dispatch({ type: 'SET_PRIMARY_SIM', id });
+    SimDetection.setPrimarySim({ id });
   };
 
   const handleInjectMockData = () => {
@@ -67,6 +119,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [newSim, setNewSim] = useState({ phoneNumber: '', label: '', provider: 'Ethio Telecom' as any });
   const [profileName, setProfileName] = useState(state.userProfile?.name || '');
+  const [profilePhone, setProfilePhone] = useState(state.userProfile?.phoneNumber || '');
   const [selectedAvatar, setSelectedAvatar] = useState(state.userProfile?.avatarUrl || '');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
@@ -76,7 +129,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
       profile: { 
         name: profileName, 
         avatarUrl: selectedAvatar, 
-        phoneNumber: state.userProfile?.phoneNumber || '' 
+        phoneNumber: profilePhone 
       } 
     });
     setShowSaveSuccess(true);
@@ -88,6 +141,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
 
   const openEditProfile = () => {
     setProfileName(state.userProfile?.name || '');
+    setProfilePhone(state.userProfile?.phoneNumber || '');
     setSelectedAvatar(state.userProfile?.avatarUrl || '');
     setShowEditProfile(true);
   };
@@ -191,7 +245,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
               <div className="flex items-center gap-2">
                 {!sim.isPrimary && (
                   <button 
-                    onClick={() => dispatch({ type: 'SET_PRIMARY_SIM', id: sim.id })}
+                    onClick={() => handleSetPrimarySim(sim.id)}
                     className="p-2 text-slate-300 hover:text-blue-600 transition-colors"
                     title="Set as Primary"
                   >
@@ -311,7 +365,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
                   </div>
                 </div>
                 <button 
-                  onClick={() => dispatch({ type: 'REMOVE_TRANSACTION_SOURCE', source })}
+                  onClick={() => handleRemoveSource(source)}
                   className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
                 >
                   <Trash2 size={18} />
@@ -396,6 +450,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
                     placeholder="Enter your name"
                     className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none font-bold text-slate-900 transition-all text-lg"
                   />
+                </div>
+
+                {/* Phone Number Input */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Primary Phone Number
+                  </label>
+                  <PhoneInput
+                    value={profilePhone}
+                    onChange={setProfilePhone}
+                    placeholder="Enter your phone number"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-2 italic">
+                    This number will be bound to your Primary SIM for tracking and dashboard display.
+                  </p>
                 </div>
 
                 {/* Avatar Selection */}

@@ -18,7 +18,8 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
   const t = useTranslation(language as Language);
   const isIncome = transaction.type === 'income';
 
-  const getTranslatedSource = (source: string) => {
+  const getTranslatedSource = (source?: string) => {
+    if (!source) return 'Unknown';
     const key = source.toLowerCase().replace(/\s+/g, '_');
     // @ts-ignore - dynamic key access
     const translated = t(key);
@@ -32,7 +33,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
       return getBankIcon(transaction.source, 32);
     }
 
-    const category = transaction.category.toLowerCase();
+    const category = (transaction.category || '').toLowerCase();
     switch (category) {
       case 'utility':
       case 'utilities':

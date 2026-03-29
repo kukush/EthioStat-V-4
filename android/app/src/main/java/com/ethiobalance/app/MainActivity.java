@@ -8,6 +8,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(com.ethiobalance.app.plugins.SmsMonitorPlugin.class);
         super.onCreate(savedInstanceState);
         
         // Request SMS permissions on startup for EthioStat Monitoring

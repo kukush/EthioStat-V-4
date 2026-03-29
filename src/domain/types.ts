@@ -9,7 +9,7 @@ export interface SimCard {
   phoneNumber: string;
   label: string;
   isPrimary: boolean;
-  provider: 'Ethio Telecom' | 'Safaricom' | 'Other';
+  provider: string; // Dynamic provider from detection
 }
 
 export interface TelecomPackage {
@@ -86,4 +86,6 @@ export type Intent =
   | { type: 'ADD_TRANSACTION_SOURCE'; source: string }
   | { type: 'REMOVE_TRANSACTION_SOURCE'; source: string }
   | { type: 'SET_USER_PROFILE'; profile: UserProfile }
+  | { type: 'SET_SIMS'; sims: SimCard[] }
+  | { type: 'SET_TRANSACTION_SOURCES'; sources: string[] }
 ;

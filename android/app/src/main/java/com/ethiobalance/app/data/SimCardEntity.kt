@@ -1,12 +1,14 @@
 package com.ethiobalance.app.data
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room.*
 
 @Entity(tableName = "sim_cards")
 data class SimCardEntity(
-    @PrimaryKey val id: String,
+    @PrimaryKey
+    val id: String,
+    val slotIndex: Int,
+    val carrierName: String,
     val phoneNumber: String,
-    val carrier: String,
-    val isActive: Boolean
+    val isPrimary: Boolean = false,
+    val lastUpdated: Long = System.currentTimeMillis()
 )

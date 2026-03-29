@@ -10,6 +10,7 @@ export interface SmsMonitorPlugin {
   getBalances(): Promise<{ packages: TelecomPackage[], netBalance: number }>;
   getTransactions(): Promise<{ transactions: Transaction[] }>;
   dialUssd(options: { code: string }): Promise<void>;
+  updateTransactionSources(options: { sources: { abbreviation: string; name: string; ussd: string; senderId?: string; isEnabled?: boolean }[] }): Promise<void>;
 }
 
 const SmsMonitor = registerPlugin<SmsMonitorPlugin>('SmsMonitor');

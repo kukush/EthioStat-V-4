@@ -5,6 +5,7 @@ import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.AppDatabase
 import com.ethiobalance.app.data.UssdEntity
 import kotlinx.coroutines.CoroutineScope
@@ -19,7 +20,7 @@ class UssdAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString() ?: ""
-            if (packageName.contains("com.android.phone")) {
+            if (packageName.contains(AppConstants.PHONE_APP_PACKAGE)) {
                 harvestUssdText(event.source)
             }
         }
@@ -52,10 +53,10 @@ class UssdAccessibilityService : AccessibilityService() {
             
             // Save to DB
             db.ussdDao().insert(UssdEntity(
-                "Last USSD Request",
+                AppConstants.USSD_REQUEST_LABEL,
                 response,
                 System.currentTimeMillis(),
-                1 // simSlot
+                AppConstants.DEFAULT_SIM_SLOT
             ))
 
             // Dual-Tracking: Let the engine parse the USSD string as if it's an SMS
@@ -64,7 +65,7 @@ class UssdAccessibilityService : AccessibilityService() {
             }
 
             // Broadcast locally for UI string presentation if needed
-            val intent = Intent("com.ethiobalance.app.ACTION_USSD_RESPONSE")
+            val intent = Intent(AppConstants.ACTION_USSD_RESPONSE)
             intent.putExtra("ussd_text", response)
             sendBroadcast(intent)
         }

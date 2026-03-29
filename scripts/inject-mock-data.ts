@@ -7,6 +7,11 @@ import * as path from 'path';
  * when running in a specialized 'demo' mode or via a development bridge.
  */
 
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const MOCK_DATA_PATH = path.join(__dirname, 'sample-mock-data.json');
 const STORAGE_KEY = 'ethio_balance_state';
 

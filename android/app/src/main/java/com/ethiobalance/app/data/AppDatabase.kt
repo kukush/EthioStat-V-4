@@ -12,9 +12,10 @@ import androidx.room.RoomDatabase
         BalancePackageEntity::class,
         TransactionEntity::class,
         SmsLogEntity::class,
-        SimCardEntity::class
+        SimCardEntity::class,
+        TransactionSourceEntity::class
     ], 
-    version = 2, 
+    version = 3, 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun smsLogDao(): SmsLogDao
     abstract fun simCardDao(): SimCardDao
+    abstract fun transactionSourceDao(): TransactionSourceDao
 
     companion object {
         @Volatile
