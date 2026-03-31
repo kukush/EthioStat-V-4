@@ -1,4 +1,4 @@
-import { Transaction, TelecomPackage, RecommendedBundle, GiftRequest, SimCard, AppState } from '../types';
+import { Transaction, TelecomPackage, RecommendedBundle, GiftRequest } from '../types';
 
 /**
  * Returns the default initial mock data for the app.
@@ -36,7 +36,14 @@ export function getMockData() {
   return { telecomPackages, recommendedBundles, transactions, giftRequests };
 }
 
-export const generateMockData = (simId: string): Partial<AppState> => {
+export interface MockData {
+  transactions: Transaction[];
+  telecomPackages: TelecomPackage[];
+  telecomBalance: number;
+  telebirrBalance: number;
+}
+
+export const generateMockData = (simId: string): MockData => {
   const timestamp = Date.now();
   const transactions: Transaction[] = [
     {
@@ -119,17 +126,10 @@ export const generateMockData = (simId: string): Partial<AppState> => {
 export const injectMockData = (dispatch: any, simId: string) => {
   const mockData = generateMockData(simId);
   
-  if (mockData.transactions) {
-    mockData.transactions.forEach(tx => {
-      dispatch({ type: 'ADD_TRANSACTION', transaction: tx });
-    });
-  }
+  mockData.transactions.forEach(tx => {
+    dispatch({ type: 'ADD_TRANSACTION', transaction: tx });
+  });
   
-  if (mockData.telecomPackages) {
-    dispatch({ type: 'UPDATE_PACKAGES', packages: mockData.telecomPackages });
-  }
-  
-  if (mockData.telecomBalance !== undefined) {
-    dispatch({ type: 'UPDATE_BALANCE', balance: mockData.telecomBalance });
-  }
+  dispatch({ type: 'UPDATE_PACKAGES', packages: mockData.telecomPackages });
+  dispatch({ type: 'UPDATE_BALANCE', balance: mockData.telecomBalance });
 };

@@ -14,6 +14,7 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
+import com.getcapacitor.annotation.PermissionCallback
 import com.getcapacitor.PermissionState
 import android.Manifest
 import com.ethiobalance.app.services.ReconciliationEngine
@@ -26,7 +27,7 @@ import kotlinx.coroutines.launch
     name = "SmsMonitor",
     permissions = [
         Permission(
-            strings = [Manifest.permission.READ_SMS],
+            strings = [Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS],
             alias = "sms"
         )
     ]
@@ -68,7 +69,7 @@ class SmsMonitorPlugin : Plugin() {
         performSmsScan(call)
     }
 
-    @PluginMethod
+    @PermissionCallback
     fun checkSmsCallback(call: PluginCall) {
         if (getPermissionState("sms") == PermissionState.GRANTED) {
             performSmsScan(call)
@@ -95,18 +96,29 @@ class SmsMonitorPlugin : Plugin() {
                 val selection = "address LIKE ? AND date >= ?"
                 val selectionArgs = arrayOf("%$senderId%", cutoffTime.toString())
                 
+                android.util.Log.d("SmsMonitorPlugin", "scanHistory: sender=$senderId, days=$days, cutoff=$cutoffTime")
+                
                 val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, "date ASC")
                 var matchCount = 0
+
+                if (cursor == null) {
+                    android.util.Log.w("SmsMonitorPlugin", "scanHistory: cursor is NULL for sender=$senderId — content provider may be inaccessible")
+                }
 
                 cursor?.use {
                     val addressIndex = it.getColumnIndex("address")
                     val bodyIndex = it.getColumnIndex("body")
                     val dateIndex = it.getColumnIndex("date")
                     
+                    android.util.Log.d("SmsMonitorPlugin", "scanHistory: cursor has ${it.count} rows for sender=$senderId")
+                    
                     while (it.moveToNext()) {
                         val sender = it.getString(addressIndex)
                         val body = it.getString(bodyIndex)
                         val timestamp = it.getLong(dateIndex)
+                        
+                        val preview = if (body.length > 80) body.substring(0, 80) + "..." else body
+                        android.util.Log.d("SmsMonitorPlugin", "scanHistory: processing [$sender] @ $timestamp: $preview")
                         
                         // Pass each existing message through the ReconciliationEngine
                         // Since we made it idempotent, duplicates won't be created.
@@ -115,11 +127,14 @@ class SmsMonitorPlugin : Plugin() {
                     }
                 }
                 
+                android.util.Log.d("SmsMonitorPlugin", "scanHistory: done sender=$senderId, processed=$matchCount messages")
+                
                 val ret = JSObject()
                 ret.put("scanned", matchCount)
                 call.resolve(ret)
 
             } catch (e: Exception) {
+                android.util.Log.e("SmsMonitorPlugin", "scanHistory: ERROR for sender=$senderId: ${e.message}", e)
                 call.reject("Error scanning SMS history", e)
             }
         }
@@ -179,7 +194,10 @@ class SmsMonitorPlugin : Plugin() {
                 val diffMills = pkg.expiryDate - now
                 val daysLeft = if (diffMills > 0) (diffMills / (24 * 60 * 60 * 1000)).toInt() else 0
                 obj.put("daysLeft", daysLeft)
-                obj.put("totalDays", 30) // Fallback total days, could be improved if tracked
+                val totalDaysCalc = if (pkg.lastUpdated > 0) {
+                    ((pkg.expiryDate - pkg.lastUpdated) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(1)
+                } else { 30 }
+                obj.put("totalDays", totalDaysCalc)
                 
                 jsArray.put(obj)
             }

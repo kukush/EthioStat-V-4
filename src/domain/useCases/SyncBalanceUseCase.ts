@@ -1,14 +1,22 @@
 import { AppState, Transaction } from '../types';
 
+export interface SyncBalanceResult {
+  telecomBalance: number;
+  telebirrBalance: number;
+  newTransaction: Transaction;
+}
+
 /**
  * UseCase for handling a recharge/sync balance intent.
  * Aligns with the 'SyncBalanceUseCase' in the proposed MVI architecture.
  */
 export const syncBalanceUseCase = (
-  state: AppState, 
-  amount: number, 
-  method: 'ussd' | 'telebirr'
-): Partial<AppState> => {
+  state: AppState,
+  amount: number,
+  method: 'ussd' | 'telebirr',
+  currentTelecomBalance = 0,
+  currentTelebirrBalance = 0
+): SyncBalanceResult => {
   const isExpense = method === 'telebirr';
   const newTransaction: Transaction = {
     id: `tx-${Date.now()}`,
@@ -22,8 +30,8 @@ export const syncBalanceUseCase = (
   };
 
   return {
-    telecomBalance: state.telecomBalance + (method === 'ussd' ? amount : 0),
-    telebirrBalance: state.telebirrBalance - (method === 'telebirr' ? amount : 0),
-    transactions: [newTransaction, ...state.transactions]
+    telecomBalance: currentTelecomBalance + (method === 'ussd' ? amount : 0),
+    telebirrBalance: currentTelebirrBalance - (method === 'telebirr' ? amount : 0),
+    newTransaction,
   };
 };

@@ -1,15 +1,21 @@
 import { AppState, Transaction } from '../types';
 
+export interface TransferBalanceResult {
+  telecomBalance: number;
+  newTransaction: Transaction;
+}
+
 /**
  * UseCase for handling airtime transfer with balance deduction.
  * Deducts amount from telecomBalance and creates expense transaction.
  */
 export const transferBalanceUseCase = (
-  state: AppState, 
-  amount: number, 
+  state: AppState,
+  amount: number,
   recipientNumber: string,
-  method: 'ussd' | 'telebirr'
-): Partial<AppState> => {
+  method: 'ussd' | 'telebirr',
+  currentTelecomBalance = 0
+): TransferBalanceResult => {
   const newTransaction: Transaction = {
     id: `tx-${Date.now()}`,
     simId: state.simCards.find(s => s.isPrimary)?.id || 'unknown',
@@ -22,7 +28,7 @@ export const transferBalanceUseCase = (
   };
 
   return {
-    telecomBalance: state.telecomBalance - amount,
-    transactions: [newTransaction, ...state.transactions]
+    telecomBalance: currentTelecomBalance - amount,
+    newTransaction,
   };
 };

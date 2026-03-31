@@ -132,6 +132,22 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
     sms: packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + (Number(p.value) || 0), 0),
   };
 
+  const totalCapacity = {
+    internet: packages.filter(p => p.type === 'internet').reduce((acc, p) => {
+      const tot = Number(p.total) || 0;
+      const totMB = (p.unit || '').toUpperCase() === 'GB' ? tot * 1024 : tot;
+      return acc + totMB;
+    }, 0),
+    voice: packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + (Number(p.total) || 0), 0),
+    sms: packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + (Number(p.total) || 0), 0),
+  };
+
+  const summaryPct = {
+    internet: totalCapacity.internet > 0 ? Math.min(100, (totals.internet / totalCapacity.internet) * 100) : 0,
+    voice: totalCapacity.voice > 0 ? Math.min(100, (totals.voice / totalCapacity.voice) * 100) : 0,
+    sms: totalCapacity.sms > 0 ? Math.min(100, (totals.sms / totalCapacity.sms) * 100) : 0,
+  };
+
   const formattedInternet = totals.internet >= 1024 
     ? { value: (totals.internet / 1024).toFixed(1), unit: 'GB' }
     : { value: totals.internet.toFixed(0), unit: 'MB' };
@@ -190,7 +206,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 {formattedInternet.value} <span className="text-[10px] opacity-60">{formattedInternet.unit}</span>
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: '70%' }} />
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${summaryPct.internet.toFixed(0)}%` }} />
               </div>
             </div>
             <div className="space-y-3">
@@ -199,7 +215,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 {totals.voice} <span className="text-[10px] opacity-60">Min</span>
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '45%' }} />
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${summaryPct.voice.toFixed(0)}%` }} />
               </div>
             </div>
             <div className="space-y-3">
@@ -208,7 +224,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 {totals.sms} <span className="text-[10px] opacity-60">SMS</span>
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 rounded-full" style={{ width: '60%' }} />
+                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${summaryPct.sms.toFixed(0)}%` }} />
               </div>
             </div>
           </div>
@@ -246,8 +262,8 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
         </div>
         
         <div className="grid gap-4">
-          {(packages || []).length > 0 ? (
-            (packages || []).map((pkg) => (
+          {(packages || []).filter(p => p.type !== 'airtime').length > 0 ? (
+            (packages || []).filter(p => p.type !== 'airtime').map((pkg) => (
               <PackageCard
                 key={pkg.id}
                 type={pkg.type}

@@ -29,7 +29,7 @@ export default function App() {
   }, [savedState]);
   
   const [state, dispatch] = useReducer(reducer, mergedState);
-  const { packages, transactions: rawTransactions, netBalance } = useNativeData();
+  const { packages, transactions: rawTransactions, netBalance, isLoading } = useNativeData();
 
   // Globally filter out AIRTIME transactions so they don't pollute any screen's UI or summaries
   const transactions = useMemo(() => 
@@ -37,14 +37,24 @@ export default function App() {
     [rawTransactions]
   );
 
-  // Memoized sources to prevent unnecessary re-renders of TransactionScreen
-  const sources = useMemo(() => 
-    Array.from(new Set([...state.transactionSources, ...transactions.map(t => t.source)])),
-    [state.transactionSources, transactions]
+  // Extract airtime balance from native packages (type='airtime') for the top card
+  const airtimeBalance = useMemo(
+    () => packages.find((p: any) => p.type === 'airtime')?.value ?? (state as any).telecomBalance ?? 0,
+    [packages, (state as any).telecomBalance]
   );
 
-  // Initialize Native SMS/USSD Bridge (dispatch not needed here as hook handles its own side effects or returns callbacks)
-  useNativeBridge();
+  // Memoized sources — case-insensitive dedup so "Telebirr" and "TELEBIRR" don't both appear
+  const sources = useMemo(() => {
+    const seen = new Map<string, string>();
+    [...state.transactionSources, ...transactions.map(t => t.source)].forEach(s => {
+      const key = s.toLowerCase();
+      if (!seen.has(key)) seen.set(key, s);
+    });
+    return Array.from(seen.values());
+  }, [state.transactionSources, transactions]);
+
+  // Initialize Native SMS/USSD Bridge and trigger startup 7-day scan for all configured sources
+  useNativeBridge(state.transactionSources);
 
   // Persistence
   useEffect(() => {
@@ -149,11 +159,17 @@ export default function App() {
 
       {/* Main Content */}
       <main className="pt-28 px-6 max-w-lg mx-auto">
+        {isLoading && Capacitor.isNativePlatform() && (
+          <div className="flex flex-col items-center justify-center py-24 gap-4 opacity-60">
+            <div className="w-8 h-8 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold uppercase tracking-widest">Scanning SMS…</p>
+          </div>
+        )}
         {state.activeTab === 'home' && (
           <HomeScreen 
             packages={packages} 
             transactions={transactions} 
-            telecomBalance={state.telecomBalance ?? 0} 
+            telecomBalance={airtimeBalance} 
             language={state.language}
             userName={state.userProfile?.name}
             userPhoneNumber={state.userProfile?.phoneNumber}
@@ -163,7 +179,7 @@ export default function App() {
           <TelecomScreen 
             packages={packages} 
             recommendedBundles={[]}
-            balance={state.telecomBalance ?? 0} 
+            balance={airtimeBalance} 
             language={state.language}
             giftRequests={[]}
             dispatch={dispatch}

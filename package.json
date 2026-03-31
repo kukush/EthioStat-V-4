@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "tsx src/data/smsParser.test.ts"
+    "test": "tsx src/data/smsParser.test.ts",
+    "mock:inject": "tsx scripts/inject-mock-data.ts"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",

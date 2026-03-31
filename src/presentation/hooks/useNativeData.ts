@@ -25,7 +25,14 @@ export const useNativeData = () => {
       
       setPackages(balanceRes.packages || []);
       setNetBalance(balanceRes.netBalance || 0);
-      setTransactions(transactionRes.transactions || []);
+      // Normalize type to lowercase so frontend filters (t.type === 'income') work
+      // regardless of whether native stores INCOME or income
+      const normalizedTx = (transactionRes.transactions || []).map((tx: any) => ({
+        ...tx,
+        type: (tx.type as string).toLowerCase() as 'income' | 'expense',
+        description: tx.description || tx.category || '',
+      }));
+      setTransactions(normalizedTx);
     } catch (e) {
       console.error("Failed to load native data", e);
     } finally {

@@ -37,8 +37,8 @@ class SmsForegroundService : Service() {
             Log.d(TAG, "Processing SMS from $sender in foreground service")
 
             val notification = NotificationCompat.Builder(this, AppConstants.NOTIFICATION_CHANNEL_ID)
-                .setContentTitle("EthioStat Monitoring")
-                .setContentText("Processing message from $sender")
+                .setContentTitle("EthioStat")
+                .setContentText("Processing message from $sender...")
                 .setSmallIcon(android.R.drawable.stat_notify_chat)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build()
@@ -53,14 +53,23 @@ class SmsForegroundService : Service() {
                 Log.e(TAG, "Failed to start foreground service: ${e.message}", e)
             }
 
-            // Process with Dual Tracking Engine
+            // Process with Dual Tracking Engine, then stop the service when done
             scope.launch {
-                val db = AppDatabase.getDatabase(applicationContext)
-                ReconciliationEngine.processSms(sender, body, timestamp, db)
+                try {
+                    val db = AppDatabase.getDatabase(applicationContext)
+                    ReconciliationEngine.processSms(sender, body, timestamp, db)
+                    Log.d(TAG, "SMS from $sender processed successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing SMS from $sender: ${e.message}", e)
+                } finally {
+                    stopSelf(startId)
+                }
             }
+        } else {
+            stopSelf(startId)
         }
 
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? {

@@ -45,7 +45,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
         abbreviation: abbrev,
         name: bank?.name || abbrev,
         ussd: bank?.ussd || '',
-        senderId: abbrev,
+        senderId: bank?.senderId ?? abbrev,
         isEnabled: true
       };
     });
@@ -83,8 +83,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
       // because the useEffect above will trigger automatically 
       // when state.transactionSources changes.
       
-      // Trigger 7-day historical scan for this new source
-      SmsMonitor.scanHistory({ senderId: cleanSource, days: 7 });
+      // Trigger 7-day historical scan using the real SMS sender number, not the abbreviation
+      const bank = ETHIOPIAN_BANKS.find(b => b.abbreviation === cleanSource);
+      const senderId = bank?.senderId ?? cleanSource;
+      SmsMonitor.scanHistory({ senderId, days: 7 });
       
       setNewSource('');
       setSearchBank('');
