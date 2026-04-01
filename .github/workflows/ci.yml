@@ -32,6 +32,7 @@ jobs:
       run: npm run build
 
     - name: Set up JDK 17
+      id: setup-java
       uses: actions/setup-java@v4
       with:
         java-version: '17'
