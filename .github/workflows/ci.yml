@@ -46,6 +46,6 @@ jobs:
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew -Dorg.gradle.java.home=${{ steps.setup-java.outputs.path }} assembleDebug
       env:
         JAVA_HOME: ${{ steps.setup-java.outputs.path }}
