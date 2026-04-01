@@ -1,25 +1,23 @@
 # EthioStat Architecture
 
 ## Overview
-EthioStat is a telecom-grade, dual-tracking hybrid mobile application designed to function as an offline-first billing engine. Built with React and Capacitor, its business logic operates primarily in Android native memory, ensuring deterministic state processing.
+EthioStat is a telecom-grade, dual-tracking hybrid mobile application designed to function as an offline-first billing engine. While initially built with React and Capacitor, the active native Android application operates primarily as a **100% Pure Native Kotlin Application**. It utilizes a modern **MVVM / MVI** architecture via strictly typed **Kotlin DSL (`.kts`)** build processes.
+Its business and parsing logic operates entirely in Android native memory, ensuring deterministic state processing.
 
 The app tracks a user's telecom balances (Assets: internet, voice, SMS, airtime, and bonuses) separately from its financial history (Transactions: income and expenses).
 
 ## System Architecture
 
 ### 1. Presentation Layer (UI)
-React functional components are **strictly read-only** from a business state perspective.
-- **Screens** (`src/presentation/screens/`):
-  - `HomeScreen`: Displays dynamically computed net balances and current remaining telecom packages.
-  - `TelecomScreen`: Reads active `BalancePackageEntity` stats from the database.
-  - `TransactionScreen`: Reads `TransactionEntity` history with **color-coded income/expense cards** (emerald for income, rose for expense).
-  - `SettingsScreen`: Manages UI configuration (theme, language, transaction sources).
+The project maintains a dual-interface architecture where historical mocked screens exist for Capacitor web-view fallback, but primary execution occurs via **High-Fidelity Jetpack Compose Native UIs**.
+- **Screens** (`android/app/src/main/java/.../ui/screens/`):
+  - `HomeScreen`: Complete Dashboard reflecting a dynamic dual-tracking summary with an animated dark-theme Telecom Assets hero-card featuring canvas-drawn (`drawBehind`) radial gradient glows.
+  - `TransactionScreen`: Fully native dynamic interface with horizontally scrollable pill filters for time, custom mapped cyclic Source chips, and an expandable financial summary header.
+  - `SettingsScreen`: A deeply modular configuration view containing floating Profile Avatars, interactive Theme and Language selection grids, and unified Bottom-Sheet dialogues.
 
-- **Components** (`src/presentation/components/`):
-  - `TransactionItem`: Renders individual transactions with type-aware coloring:
-    - **Income**: emerald background (`bg-emerald-50/40`), emerald icon container, green amount text (`text-emerald-600`).
-    - **Expense**: rose background (`bg-rose-50/40`), rose icon container, red amount text (`text-rose-600`).
-  - `PackageCard`: Renders telecom package cards including bonus type.
+- **Components** (`android/app/src/main/java/.../ui/components/`):
+  - `TransactionItem`: Automatically expands via `AnimatedVisibility` drop-down grids, injecting dynamically formatted Material Icons categorized based on historical financial contexts (Emerald themes for INCOME, Rose themes for EXPENSES).
+  - `PackageCard` & `Chip`: Modern, native tracking components for telecommunication validity checking.
 
 ### 2. State Management Layer (`useNativeData`)
 React strictly prohibits telecom packages and transactions from residing in a Javascript `store`.

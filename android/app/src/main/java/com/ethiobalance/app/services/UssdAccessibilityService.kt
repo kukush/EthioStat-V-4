@@ -11,87 +11,129 @@ import com.ethiobalance.app.data.UssdEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.concurrent.Executors
 
+/**
+ * Reads USSD popup dialog text after the user triggers *804#.
+ *
+ * Setup required for user:
+ *   Settings → Accessibility → EthioStat → Enable.
+ *
+ * Scope: limited to "com.android.phone" package (declared in ussd_service_config.xml)
+ * so we never read popups from other apps.
+ *
+ * Compatible with Android 5.0+ (API 21+).
+ * The deprecated `recycle()` call is intentionally removed — the framework
+ * automatically recycles nodes obtained via `AccessibilityEvent.source` and
+ * `AccessibilityNodeInfo.getChild()` on Android 9+ without explicit recycling.
+ */
 class UssdAccessibilityService : AccessibilityService() {
 
-    private val executor = Executors.newSingleThreadExecutor()
-
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString() ?: ""
-            if (packageName.contains(AppConstants.PHONE_APP_PACKAGE)) {
-                harvestUssdText(event.source)
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val pkg = event.packageName?.toString() ?: return
+        // Only act on the phone dialer package (scoped in XML config too, belt-and-suspenders)
+        if (!pkg.contains(AppConstants.PHONE_APP_PACKAGE, ignoreCase = true)) return
+
+        // Try harvesting from event text first (fastest path, works on most devices)
+        val eventTexts = (0 until event.text.size).mapNotNull { event.text.getOrNull(it)?.toString() }
+        val eventText = eventTexts.filter { it.length > 5 }.joinToString(" ").trim()
+        if (eventText.isNotEmpty()) {
+            Log.d(TAG, "Captured USSD via event.text: $eventText")
+            onUssdCaptured(eventText)
+            return
+        }
+
+        // Fallback: walk the accessibility node tree
+        val root = rootInActiveWindow ?: event.source
+        if (root != null) {
+            val collected = mutableListOf<String>()
+            harvestText(root, collected)
+            val harvested = collected.filter { it.length > 5 }.joinToString(" ").trim()
+            if (harvested.isNotEmpty()) {
+                Log.d(TAG, "Captured USSD via node tree: $harvested")
+                onUssdCaptured(harvested)
+                attemptDismiss(root)
             }
         }
     }
 
-    private fun harvestUssdText(node: AccessibilityNodeInfo?) {
-        if (node == null) return
-
+    /**
+     * Recursively walk the view tree collecting any non-trivial text.
+     * Does NOT call recycle() — safe on all modern Android versions.
+     */
+    private fun harvestText(node: AccessibilityNodeInfo, out: MutableList<String>) {
+        val text = node.text?.toString()
+        if (!text.isNullOrBlank() && text.length > 3) {
+            out.add(text)
+        }
+        val desc = node.contentDescription?.toString()
+        if (!desc.isNullOrBlank() && desc.length > 3 && desc != text) {
+            out.add(desc)
+        }
         for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
-            if (child != null) {
-                if (child.text != null) {
-                    val text = child.text.toString()
-                    Log.d(TAG, "Harvested Text: $text")
-                    
-                    if (text.length > 5) {
-                        saveUssdResponse(text)
-                        attemptDismiss(node)
-                    }
-                }
-                harvestUssdText(child)
-                child.recycle()
-            }
+            val child = node.getChild(i) ?: continue
+            harvestText(child, out)
         }
     }
 
-    private fun saveUssdResponse(response: String) {
-        executor.execute {
-            val db = AppDatabase.getDatabase(this)
-            
-            // Save to DB
-            db.ussdDao().insert(UssdEntity(
-                AppConstants.USSD_REQUEST_LABEL,
-                response,
-                System.currentTimeMillis(),
-                AppConstants.DEFAULT_SIM_SLOT
-            ))
-
-            // Dual-Tracking: Let the engine parse the USSD string as if it's an SMS
-            CoroutineScope(Dispatchers.IO).launch {
-                ReconciliationEngine.processSms("USSD", response, System.currentTimeMillis(), db)
-            }
-
-            // Broadcast locally for UI string presentation if needed
-            val intent = Intent(AppConstants.ACTION_USSD_RESPONSE)
-            intent.putExtra("ussd_text", response)
-            sendBroadcast(intent)
-        }
-    }
-
+    /**
+     * Auto-dismiss the USSD dialog by clicking the OK / Cancel button.
+     */
     private fun attemptDismiss(node: AccessibilityNodeInfo) {
         for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
-            if (child != null) {
-                if ("android.widget.Button" == child.className) {
-                    val btnText = child.text?.toString()?.lowercase() ?: ""
-                    if (btnText.contains("ok") || btnText.contains("dismiss") || btnText.contains("cancel")) {
-                        child.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    }
+            val child = node.getChild(i) ?: continue
+            val btnText = child.text?.toString()?.lowercase() ?: ""
+            if (child.className?.contains("Button") == true &&
+                (btnText.contains("ok") || btnText.contains("cancel") || btnText.contains("dismiss"))) {
+                child.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+            attemptDismiss(child)
+        }
+    }
+
+    private fun onUssdCaptured(response: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = AppDatabase.getDatabase(this@UssdAccessibilityService)
+
+                // Persist raw USSD response
+                db.ussdDao().insert(
+                    UssdEntity(
+                        AppConstants.USSD_REQUEST_LABEL,
+                        response,
+                        System.currentTimeMillis(),
+                        AppConstants.DEFAULT_SIM_SLOT
+                    )
+                )
+
+                // Run through the dual-tracking reconciliation pipeline
+                ReconciliationEngine.processSms("804", response, System.currentTimeMillis(), db)
+
+                // Broadcast to UI for real-time display
+                val intent = Intent(AppConstants.ACTION_USSD_RESPONSE).apply {
+                    putExtra("ussd_text", response)
+                    setPackage(packageName) // explicit package to avoid implicit broadcast warning
                 }
-                attemptDismiss(child)
-                child.recycle()
+                sendBroadcast(intent)
+
+                Log.d(TAG, "USSD response persisted and broadcast sent.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to process USSD response: ${e.message}", e)
             }
         }
     }
 
     override fun onInterrupt() {
-        Log.e(TAG, "Service Interrupted")
+        Log.w(TAG, "AccessibilityService interrupted")
     }
 
     companion object {
         private const val TAG = "UssdAccessibility"
+
+        /** Call this from SettingsScreen to open the system accessibility settings page. */
+        fun buildSettingsIntent(): Intent =
+            Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
     }
 }

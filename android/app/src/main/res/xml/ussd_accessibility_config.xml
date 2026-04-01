@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Accessibility Service configuration for EthioStat USSD popup reader.
+
+    Scope: ONLY "com.android.phone" package. This prevents the service from
+    intercepting events from any other app, protecting user privacy and battery.
+
+    Flags:
+      - flagDefault: standard accessibility event delivery
+      - flagIncludeNotImportantViews: ensures we see all TextViews inside the dialog,
+        not just "important" (focusable) ones — critical for capturing USSD text.
+      - flagRetrieveInteractiveWindows: allows rootInActiveWindow access, needed on
+        Android 9+ for the fallback node-tree harvest path.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_service_description"
-    android:packageNames="com.android.phone"
-    android:notificationTimeout="100" />
+    android:packageNames="com.android.phone,com.google.android.dialer,com.samsung.android.dialer,com.huawei.phone"
+    android:notificationTimeout="100"
+    android:settingsActivity="com.ethiobalance.app.MainActivity" />

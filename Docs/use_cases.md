@@ -154,4 +154,15 @@ EthioStat functions strictly as an offline-first analytical tool, enforcing accu
 | `Income` | Recharge, airtime received | Income |
 
 ---
+
+## UI Rendering & State Architecture
+
+### Component Data Binding
+The algorithms defined above deterministically generate accurate database state variables. These states now directly bind to the **pure native Jetpack Compose UIs**:
+- **Dual-Tracking Summary Dashboard**: Net Cache Flow states and individual Total Income / Total Expense stats are aggregated from transaction logs in real time to power the interactive sliding widgets on `HomeScreen`.
+- **Granular Package Cards**: As the engine captures Internet, Voice, SMS, or Bonus segments individually, `HomeScreen` aggregates and sums these raw data units and binds them to the dark-mode 'Telecom Asset' cards using visually dynamic data bars.
+- **Source Differentiation**: `TransactionScreen` directly polls the dynamically resolved `uniqueSources` whitelist, enabling circular graphical pill sorting without additional mapping layer dependencies.
+
+---
 *For live testing, execute `sh scripts/test-workflow.sh` with an Android device connected, or `npm test` for the web parser test suite.*
+

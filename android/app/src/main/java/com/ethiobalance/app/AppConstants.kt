@@ -166,7 +166,7 @@ object AppConstants {
         val upper = sender.uppercase()
         
         // Telebirr
-        if (upper.contains("TELEBIRR") || TELEBIRR_SENDERS.contains(sender)) return "Telebirr"
+        if (upper.contains("TELEBIRR") || TELEBIRR_SENDERS.contains(sender)) return SOURCE_TELEBIRR
         
         // Commercial Bank of Ethiopia (CBE)
         if (upper.contains("CBE") || sender == "847") return "CBE"

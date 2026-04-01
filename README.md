@@ -11,7 +11,7 @@ EthioBalance is a privacy-focused, offline-first financial and telecom asset man
 - **Transaction Management**: Categorize and filter transactions by source, search through history, and export data to CSV.
 - **Telecom Management**: Monitor active packages, expiry dates, and get recommendations for new bundles.
 - **Multilingual Support**: Available in English, Amharic, and Afaan Oromoo.
-- **Native Performance**: Built with Kotlin and Jetpack Compose for a smooth, responsive UI.
+- **Native Performance**: Completely re-written High-Fidelity UI leveraging 100% Kotlin & Jetpack Compose, featuring smooth transition animations, dynamic color-coding, and custom canvas-drawn gradient effects.
 
 ## Architecture
 
@@ -37,6 +37,8 @@ The application follows **MVVM (Model-View-ViewModel)** with Clean Architecture 
 4. **Manage SIMs**: Register your phone numbers in Settings to link data to specific SIM cards.
 
 ## Development
+
+This project employs a fully modernized **Kotlin DSL (`.gradle.kts`)** build system, eschewing legacy Groovy variable injection in favor of strict-typing.
 
 ### Prerequisites
 

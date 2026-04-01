@@ -6,10 +6,12 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.repository.SettingsRepository
 import com.ethiobalance.app.repository.TransactionRepository
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -24,6 +26,10 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     val language: StateFlow<String> = settingsRepo.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
+
+    // Scanning state — shown as spinner on the Refresh button
+    private val _isScanningHistory = MutableStateFlow(false)
+    val isScanningHistory: StateFlow<Boolean> = _isScanningHistory.asStateFlow()
 
     // Filter state
     private val _timeFilter = MutableStateFlow("allTime")
@@ -49,9 +55,12 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
             else -> filtered
         }
 
-        // Source filter
+        // Source filter — normalize stored source before comparing
+        // so that old "127" records still match a "TELEBIRR" filter
         if (source != null) {
-            filtered = filtered.filter { it.source.equals(source, ignoreCase = true) }
+            filtered = filtered.filter {
+                AppConstants.resolveSource(it.source).equals(source, ignoreCase = true)
+            }
         }
 
         // Search query
@@ -79,7 +88,12 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         allTransactions,
         settingsRepo.getTransactionSources()
     ) { transactions, sources ->
-        val transactionSources = transactions.map { it.source }.distinct().filter { it != "Unknown" }
+        // Normalize all stored source values through resolveSource so that
+        // numeric senders like "127" and alpha "TELEBIRR" both become "TELEBIRR"
+        val transactionSources = transactions
+            .map { AppConstants.resolveSource(it.source) }
+            .distinct()
+            .filter { it != "Unknown" && it.isNotBlank() }
         val configuredSources = sources.map { it.name }
         (transactionSources + configuredSources).distinct().sorted()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -87,6 +101,23 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     fun setTimeFilter(filter: String) { _timeFilter.value = filter }
     fun setSourceFilter(source: String?) { _sourceFilter.value = source }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    /**
+     * Trigger a full 90-day historical SMS scan across all known senders
+     * (AppConstants whitelist + user-configured sources).
+     * Shows a loading state while running.
+     */
+    fun scanSmsHistory() {
+        if (_isScanningHistory.value) return
+        viewModelScope.launch {
+            _isScanningHistory.value = true
+            try {
+                transactionRepo.smsRepo.scanAllTransactionSources(days = 90)
+            } finally {
+                _isScanningHistory.value = false
+            }
+        }
+    }
 
     fun exportToCsv(context: Context) {
         val transactions = filteredTransactions.value

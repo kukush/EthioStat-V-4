@@ -200,7 +200,21 @@ fun TelecomScreen(
         )
         Spacer(Modifier.height(12.dp))
 
-        val activePackages = packages.filter { it.expiryDate > System.currentTimeMillis() }
+        val now = System.currentTimeMillis()
+        val activePackages = packages
+            .filter { it.expiryDate > now }
+            .sortedBy { pkg ->
+                // Priority order: airtime → internet → voice → sms → bonus → other
+                when (pkg.type.lowercase()) {
+                    "airtime"           -> 0
+                    "internet", "data"  -> 1
+                    "voice"            -> 2
+                    "sms"              -> 3
+                    "bonus"            -> 4
+                    else               -> 5
+                }
+            }
+
         if (activePackages.isEmpty()) {
             Surface(
                 shape = RoundedCornerShape(24.dp),
@@ -219,10 +233,25 @@ fun TelecomScreen(
             }
         } else {
             activePackages.forEach { pkg ->
-                PackageCard(pkg = pkg, language = language)
+                val diffMs = maxOf(0L, pkg.expiryDate - now)
+                val daysLeft = kotlin.math.ceil(diffMs.toDouble() / (1000 * 60 * 60 * 24)).toInt()
+                val totalDays = 30
+
+                PackageCard(
+                    type = pkg.type,
+                    value = pkg.remainingAmount,
+                    total = pkg.totalAmount,
+                    unit = pkg.unit,
+                    label = pkg.type.replaceFirstChar { it.uppercase() },
+                    expiryMs = pkg.expiryDate,
+                    daysLeft = daysLeft,
+                    totalDays = totalDays,
+                    language = language
+                )
                 Spacer(Modifier.height(12.dp))
             }
         }
+
 
         Spacer(Modifier.height(100.dp))
     }

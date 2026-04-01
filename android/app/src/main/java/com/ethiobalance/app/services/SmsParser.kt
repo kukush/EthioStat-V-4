@@ -80,43 +80,47 @@ object SmsParser {
             }
         }
         
-        // Parse data/MB/GB - more flexible patterns for balance messages
+        // ── Internet / Data ───────────────────────────────────────────────────────
+        // Covers all observed real-world message formats:
+        //  "5GB Monthly Internet package"  → Telebirr purchase confirmation
+        //  "You have 450MB data remaining" → EthioTelecom balance query
+        //  "ኢንተርኔት 500MB"                  → Amharic format
+        //  "Intarneetii 1GB"               → Afaan Oromo format
+        //  "remaining data: 1.5GB"         → generic balance format
+        //  "Internet: 2GB"                 → compact status format
         val dataPatterns = listOf(
-            Regex("""(?:data|internet|ኢንተርኔት|remaining)[\s:]*([\d,.]+)\s*(?:MB|GB)""", RegexOption.IGNORE_CASE),
-            Regex("""([\d,.]+)\s*(?:MB|GB)\s*(?:data|internet|remaining)""", RegexOption.IGNORE_CASE),
-            Regex("""(?:you have|remaining|left)[\s:]*([\d,.]+)\s*(?:MB|GB)""", RegexOption.IGNORE_CASE),
-            Regex("""(?:data|internet)[\s:]+([\d,.]+)""", RegexOption.IGNORE_CASE)
+            // Amount then unit then keyword  →  "5GB Monthly Internet"
+            Regex("""([\d,.]+)\s*(MB|GB)\s*(?:\w+\s+)*?(?:internet|internate|data|Intarneetii|ኢንተርኔት)""", RegexOption.IGNORE_CASE),
+            // Keyword then amount+unit  →  "Internet: 2.5GB", "data remaining 450MB"
+            Regex("""(?:internet|internate|data|Intarneetii|ኢንተርኔት)[\s:,]*([\d,.]+)\s*(MB|GB)""", RegexOption.IGNORE_CASE),
+            // "remaining X MB/GB" or "You have X MB/GB"
+            Regex("""(?:remaining|you\s+have|left|balance)[\s:]+([\d,.]+)\s*(MB|GB)""", RegexOption.IGNORE_CASE),
+            // Standalone number+unit anywhere (last resort)
+            Regex("""([\d,.]+)\s*(MB|GB)""", RegexOption.IGNORE_CASE)
         )
-        
+
         var dataFound = false
         for (pattern in dataPatterns) {
             if (dataFound) break
-            val match = pattern.find(body)
-            if (match != null) {
-                val dataValue = match.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
-                if (dataValue > 0) {
-                    // Determine unit from the match
-                    val unitMatch = Regex("""(MB|GB)""", RegexOption.IGNORE_CASE).find(match.value)
-                    val unit = unitMatch?.groupValues?.get(1)?.uppercase() ?: "MB"
-                    val dataInMB = if (unit == "GB") dataValue * 1024 else dataValue
-                    
-                    addOrReplace(BalancePackageEntity(
-                        id = "internet-sim1",
-                        simId = "sim1",
-                        type = "internet",
-                        totalAmount = dataInMB,
-                        remainingAmount = dataInMB,
-                        unit = "MB",
-                        expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
-                        isActive = true,
-                        source = "SMS",
-                        lastUpdated = now
-                    ))
-                    dataFound = true
-                }
+            val match = pattern.find(body) ?: continue
+            // Capture group 1 = number, group 2 = unit (MB/GB)
+            val rawNum  = match.groupValues[1].replace(",", "")
+            val rawUnit = match.groupValues[2].uppercase().ifEmpty {
+                Regex("(MB|GB)", RegexOption.IGNORE_CASE).find(match.value)?.groupValues?.get(1)?.uppercase() ?: "MB"
             }
+            val dataValue = rawNum.toDoubleOrNull() ?: 0.0
+            if (dataValue <= 0) continue
+            val dataInMB = if (rawUnit == "GB") dataValue * 1024.0 else dataValue
+
+            addOrReplace(BalancePackageEntity(
+                id = "internet-sim1", simId = "sim1", type = "internet",
+                totalAmount = dataInMB, remainingAmount = dataInMB, unit = "MB",
+                expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                isActive = true, source = "SMS", lastUpdated = now
+            ))
+            dataFound = true
         }
-        
+
         // Parse SMS - more flexible patterns
         val smsPatterns = listOf(
             Regex("""(?:sms|ኤስኤምኤስ|text)[\s:]*([\d,.]+)""", RegexOption.IGNORE_CASE),
@@ -281,39 +285,67 @@ object SmsParser {
                 }
             }
         } else {
-            // Single-match fallback for simple purchase/gift/recharge messages
-            val dataMatch = Regex("([\\d,.]+)\\s*(MB|GB)(?:\\s+\\w+)*\\s*(?:data|internet|remaining|ኢንተርኔት|Intarneetii)", RegexOption.IGNORE_CASE).find(body)
-            if (dataMatch != null) {
-                val amount = dataMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
-                val unit = dataMatch.groupValues[2].uppercase()
+            // ── Single-message fallback (purchase / gift / recharge confirmations) ─────
+
+            // Internet / Data — ordered by precision (most specific first):
+            //  1. Telebirr purchase: "paid X ETB for 5GB internet / Monthly Internet"
+            //  2. "5GB Monthly Internet package"
+            //  3. "You have 450MB data remaining until ..."
+            //  4. Generic "X MB/GB" anywhere in the body
+            val dataSinglePatterns = listOf(
+                Regex("""for\s+([\d,.]+)\s*(MB|GB)\s*(?:\w+\s+)*?(?:internet|internate|data|Intarneetii|ኢንተርኔት)""", RegexOption.IGNORE_CASE),
+                Regex("""([\d,.]+)\s*(MB|GB)\s*(?:\w+\s+)*?(?:internet|internate|data|Intarneetii|ኢንተርኔት)\s*(?:package|bundle|plan)?""", RegexOption.IGNORE_CASE),
+                Regex("""(?:internet|internate|data|Intarneetii|ኢንተርኔት)[\s:,]+([\d,.]+)\s*(MB|GB)""", RegexOption.IGNORE_CASE),
+                Regex("""(?:remaining|you\s+have|left)[\s:]+([\d,.]+)\s*(MB|GB)""", RegexOption.IGNORE_CASE),
+                Regex("""([\d,.]+)\s*(MB|GB)""", RegexOption.IGNORE_CASE)
+            )
+            for (pat in dataSinglePatterns) {
+                val m = pat.find(body) ?: continue
+                val rawNum  = m.groupValues[1].replace(",", "")
+                val rawUnit = m.groupValues[2].uppercase().ifEmpty {
+                    Regex("(MB|GB)", RegexOption.IGNORE_CASE).find(m.value)?.groupValues?.get(1)?.uppercase() ?: "MB"
+                }
+                val amount = rawNum.toDoubleOrNull() ?: 0.0
+                if (amount <= 0) continue
+                val amountMB = if (rawUnit == "GB") amount * 1024.0 else amount
                 result.packages.add(BalancePackageEntity(
                     id = "internet-sim1", simId = "sim1", type = "internet",
-                    totalAmount = amount, remainingAmount = amount, unit = unit,
-                    expiryDate = now + (24 * 60 * 60 * 1000L), isActive = true, source = "SMS", lastUpdated = now
+                    totalAmount = amountMB, remainingAmount = amountMB, unit = "MB",
+                    expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                    isActive = true, source = "SMS", lastUpdated = now
                 ))
                 confidenceScore = 0.8f
+                break
             }
 
-            val voiceMatch = Regex("([\\d,.]+)\\s*(?:Min(?:ute)?|ደቂቃ|Daqiiqaa)", RegexOption.IGNORE_CASE).find(body)
+            // Voice minutes
+            val voiceMatch = Regex("([\\d,.]+)\\s*(?:Min(?:ute)?s?|ደቂቃ|Daqiiqaa)", RegexOption.IGNORE_CASE).find(body)
             if (voiceMatch != null) {
                 val amount = voiceMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
-                result.packages.add(BalancePackageEntity(
-                    id = "voice-sim1", simId = "sim1", type = "voice",
-                    totalAmount = amount, remainingAmount = amount, unit = "MIN",
-                    expiryDate = now + (24 * 60 * 60 * 1000L), isActive = true, source = "SMS", lastUpdated = now
-                ))
-                confidenceScore = 0.8f
+                if (amount > 0) {
+                    result.packages.add(BalancePackageEntity(
+                        id = "voice-sim1", simId = "sim1", type = "voice",
+                        totalAmount = amount, remainingAmount = amount, unit = "MIN",
+                        expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                        isActive = true, source = "SMS", lastUpdated = now
+                    ))
+                    confidenceScore = 0.8f
+                }
             }
 
+            // SMS messages
             val smsMatch = Regex("([\\d,.]+)\\s*(?:SMS|ኤስኤምኤስ)", RegexOption.IGNORE_CASE).find(body)
             if (smsMatch != null) {
                 val amount = smsMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
-                result.packages.add(BalancePackageEntity(
-                    id = "sms-sim1", simId = "sim1", type = "sms",
-                    totalAmount = amount, remainingAmount = amount, unit = "SMS",
-                    expiryDate = now + (24 * 60 * 60 * 1000L), isActive = true, source = "SMS", lastUpdated = now
-                ))
-                confidenceScore = 0.8f
+                if (amount > 0) {
+                    result.packages.add(BalancePackageEntity(
+                        id = "sms-sim1", simId = "sim1", type = "sms",
+                        totalAmount = amount, remainingAmount = amount, unit = "SMS",
+                        expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                        isActive = true, source = "SMS", lastUpdated = now
+                    ))
+                    confidenceScore = 0.8f
+                }
             }
         }
 

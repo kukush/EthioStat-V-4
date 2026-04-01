@@ -87,6 +87,7 @@ fun EthioBalanceApp() {
                         val timeFilter by transactionVM.timeFilter.collectAsState()
                         val sourceFilter by transactionVM.sourceFilter.collectAsState()
                         val searchQuery by transactionVM.searchQuery.collectAsState()
+                        val isScanning by transactionVM.isScanningHistory.collectAsState()
 
                         TransactionScreen(
                             language = language,
@@ -97,17 +98,15 @@ fun EthioBalanceApp() {
                             timeFilter = timeFilter,
                             sourceFilter = sourceFilter,
                             searchQuery = searchQuery,
+                            isScanningHistory = isScanning,
                             onTimeFilterChange = { transactionVM.setTimeFilter(it) },
                             onSourceFilterChange = { transactionVM.setSourceFilter(it) },
                             onSearchChange = { transactionVM.setSearchQuery(it) },
                             onExportCsv = { transactionVM.exportToCsv(context) },
-                            onScanAll = { 
-                                transactionVM.viewModelScope.launch {
-                                    transactionVM.transactionRepo.smsRepo.scanAllTransactionSources()
-                                }
-                            }
+                            onScanAll = { transactionVM.scanSmsHistory() }
                         )
                     }
+
 
                     "settings" -> {
                         val userName by settingsVM.userName.collectAsState()

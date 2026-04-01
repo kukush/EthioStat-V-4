@@ -1,203 +1,187 @@
 package com.ethiobalance.app.ui.components
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ethiobalance.app.data.BalancePackageEntity
-import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
+import com.ethiobalance.app.ui.Translations
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun PackageCard(
-    pkg: BalancePackageEntity,
+    type: String, // "internet", "voice", "sms", "bonus"
+    value: Double,
+    total: Double,
+    unit: String,
+    label: String,
+    expiryMs: Long,
+    daysLeft: Int,
+    totalDays: Int,
     language: String,
     modifier: Modifier = Modifier
 ) {
-    val typeColors = mapOf(
-        "DATA" to Pair(Blue600, Blue50),
-        "VOICE" to Pair(Green600, Green50),
-        "SMS" to Pair(Purple600, Color(0xFFF3E8FF)),
-        "BONUS" to Pair(Amber500, Color(0xFFFFFBEB)),
-        "AIRTIME" to Pair(Blue600, Blue50),
-        "DATA_AIRTIME" to Pair(Blue600, Blue50),
-        "INTERNET" to Pair(Blue600, Blue50)
-    )
-
-    val (accentColor, _) = typeColors[pkg.type.uppercase()] ?: Pair(Blue600, Blue50)
-    val bgColor = accentColor.copy(alpha = 0.08f)
-
-    val usagePercent = if (pkg.totalAmount > 0) {
-        (pkg.remainingAmount / pkg.totalAmount).coerceIn(0.0, 1.0).toFloat()
-    } else 0f
-
-    val now = System.currentTimeMillis()
-    val daysLeft = if (pkg.expiryDate > now) {
-        ((pkg.expiryDate - now) / (24L * 60 * 60 * 1000)).toInt()
-    } else 0
-
-    val totalDays = if (pkg.lastUpdated > 0 && pkg.expiryDate > pkg.lastUpdated) {
-        ((pkg.expiryDate - pkg.lastUpdated) / (24L * 60 * 60 * 1000)).toInt().coerceAtLeast(1)
-    } else 30
-
-    val expiryPercent = (daysLeft.toFloat() / totalDays).coerceIn(0f, 1f)
-
-    val typeLabel = when (pkg.type.uppercase()) {
-        "DATA", "DATA_AIRTIME", "INTERNET" -> Translations.t(language, "data")
-        "VOICE" -> Translations.t(language, "voice")
-        "SMS" -> Translations.t(language, "sms")
-        "BONUS" -> Translations.t(language, "bonus")
-        "AIRTIME" -> Translations.t(language, "availableAirtime")
-        else -> pkg.type
+    // Determine Theme based on type
+    val theme = when (type.lowercase()) {
+        "internet", "data" -> PackageTheme(Blue600, Color.White, Blue400.copy(alpha=0.3f), Color.White, Blue100, Blue400.copy(alpha=0.3f), Color.White)
+        "voice" -> PackageTheme(Green600, Color.White, Green400.copy(alpha=0.3f), Color.White, Green100, Green400.copy(alpha=0.3f), Color.White)
+        "sms" -> PackageTheme(Purple600, Color.White, Purple400.copy(alpha=0.3f), Color.White, Purple100, Purple400.copy(alpha=0.3f), Color.White)
+        "bonus" -> PackageTheme(Amber500, Color.White, Amber300.copy(alpha=0.3f), Color.White, Amber50, Amber300.copy(alpha=0.3f), Color.White)
+        else -> PackageTheme(Blue600, Color.White, Blue400.copy(alpha=0.3f), Color.White, Blue100, Blue400.copy(alpha=0.3f), Color.White)
     }
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = bgColor
+    val percentage = if (total > 0) Math.min(100.0, (value / total) * 100) else 0.0
+    val expiryPercentage = if (totalDays > 0) Math.min(100.0, (daysLeft.toDouble() / totalDays) * 100) else 0.0
+
+    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.US)
+    val expiryDateStr = if (expiryMs > 0) dateFormat.format(Date(expiryMs)) else "N/A"
+    
+    val translatedType = Translations.t(language, type.lowercase())
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(32.dp))
+            .background(theme.bg)
+            .padding(20.dp)
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left side: Info
+            // Left Content
             Column(modifier = Modifier.weight(1f)) {
-                // Type badge
                 Text(
-                    text = typeLabel.uppercase(),
-                    fontSize = 9.sp,
+                    text = translatedType.uppercase(),
+                    color = theme.accent,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = accentColor,
-                    letterSpacing = 1.5.sp
+                    letterSpacing = 2.sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Package name
-                val displayName = when {
-                    pkg.id.contains("-sim") -> {
-                        val type = pkg.id.split("-").firstOrNull() ?: ""
-                        when (type.lowercase()) {
-                            "voice" -> "Voice Package"
-                            "sms" -> "SMS Package"
-                            "internet", "data" -> "Data Package"
-                            "bonus" -> "Bonus Balance"
-                            else -> type.replaceFirstChar { it.uppercase() }
-                        }
-                    }
-                    pkg.id.contains("_") -> pkg.id.split("_").joinToString(" ") { 
-                        it.replaceFirstChar { c -> if (c.isLowerCase()) c.uppercase() else c.toString() }
-                    }
-                    else -> pkg.id.replaceFirstChar { it.uppercase() }
-                }
                 Text(
-                    text = displayName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Slate900
+                    text = label, 
+                    color = theme.text,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Value + unit
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = String.format("%.1f", pkg.remainingAmount),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Slate900
+                        text = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString(),
+                        color = theme.text,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Black
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = pkg.unit,
+                        text = unit,
+                        color = theme.text.copy(alpha=0.8f),
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Slate400,
-                        modifier = Modifier.padding(bottom = 4.dp)
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
 
-                // Expiry progress bar
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(16.dp))
+
+                // Validity Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(Translations.t(language, "validity").uppercase().takeIf { it.isNotEmpty() } ?: "VALIDITY", fontSize = 9.sp, fontWeight = FontWeight.Black, color = theme.text.copy(alpha=0.6f))
+                    Text("$daysLeft / $totalDays ${Translations.t(language, "daysLeft")}", fontSize = 10.sp, fontWeight = FontWeight.Black, color = theme.text)
+                }
+                Spacer(Modifier.height(4.dp))
+                // Linear Progress
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(theme.barBg)
+                ) {
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(accentColor.copy(alpha = 0.2f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(expiryPercent)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(accentColor)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "$daysLeft ${Translations.t(language, "daysLeft")}",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Slate400
+                            .fillMaxWidth((expiryPercentage / 100f).toFloat())
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(theme.barFg)
                     )
                 }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${Translations.t(language, "expires").uppercase().takeIf { it.isNotEmpty() } ?: "EXPIRES"}: $expiryDateStr",
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = theme.text.copy(alpha=0.6f)
+                )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(Modifier.width(16.dp))
 
-            // Right side: Circular progress ring
+            // Right Circular Progress
             Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier.size(96.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Canvas(modifier = Modifier.size(72.dp)) {
-                    val strokeWidth = 6.dp.toPx()
-                    val radius = (size.minDimension - strokeWidth) / 2
-                    val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
-                    val arcSize = Size(radius * 2, radius * 2)
-
-                    // Background ring
-                    drawArc(
-                        color = accentColor.copy(alpha = 0.15f),
-                        startAngle = -90f,
-                        sweepAngle = 360f,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                // Circle Drawing
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .drawBehind {
+                            drawArc(
+                                color = theme.progressBg,
+                                startAngle = 0f,
+                                sweepAngle = 360f,
+                                useCenter = false,
+                                style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                            )
+                            drawArc(
+                                color = theme.progressFg,
+                                startAngle = -90f,
+                                sweepAngle = (percentage * 3.6).toFloat(),
+                                useCenter = false,
+                                style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                            )
+                        }
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "${percentage.toInt()}%",
+                        color = theme.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black
                     )
-                    // Progress ring
-                    drawArc(
-                        color = accentColor,
-                        startAngle = -90f,
-                        sweepAngle = 360f * usagePercent,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    Text(
+                        text = Translations.t(language, "left").uppercase().takeIf { it.isNotEmpty() } ?: "LEFT",
+                        color = theme.text.copy(alpha=0.6f),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                Text(
-                    text = "${(usagePercent * 100).toInt()}%",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black,
-                    color = accentColor
-                )
             }
         }
     }
 }
+
+data class PackageTheme(
+    val bg: Color,
+    val text: Color,
+    val progressBg: Color,
+    val progressFg: Color,
+    val accent: Color,
+    val barBg: Color,
+    val barFg: Color
+)
