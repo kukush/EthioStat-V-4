@@ -12,4 +12,10 @@ interface SmsLogDao {
 
     @Update
     suspend fun update(log: SmsLogEntity)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM sms_logs WHERE sender = :sender AND timestamp = :timestamp AND bodyHash = :bodyHash LIMIT 1)")
+    suspend fun existsByHash(sender: String, timestamp: Long, bodyHash: Int): Boolean
+
+    @Query("SELECT MAX(timestamp) FROM sms_logs WHERE sender = :sender")
+    suspend fun getLastTimestampForSender(sender: String): Long?
 }

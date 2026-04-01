@@ -40,6 +40,115 @@ object SmsParser {
         return "en"
     }
 
+    private fun parseBalancePackages(body: String, now: Long, result: ParsedSmsResult) {
+        fun addOrReplace(pkg: BalancePackageEntity) {
+            val existing = result.packages.find { it.type == pkg.type }
+            if (existing != null) {
+                result.packages.remove(existing)
+            }
+            result.packages.add(pkg)
+        }
+        
+        // Parse voice minutes - more flexible patterns
+        val voicePatterns = listOf(
+            Regex("""(?:voice|minutes?|min|ደቂቃ)[\s:]*([\d,.]+)""", RegexOption.IGNORE_CASE),
+            Regex("""([\d,.]+)\s*(?:min|minutes?)""", RegexOption.IGNORE_CASE),
+            Regex("""(?:you have|remaining|left)[\s:]*([\d,.]+)\s*(?:min|minutes?)""", RegexOption.IGNORE_CASE)
+        )
+        
+        var voiceFound = false
+        for (pattern in voicePatterns) {
+            if (voiceFound) break
+            val match = pattern.find(body)
+            if (match != null) {
+                val minutes = match.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
+                if (minutes > 0) {
+                    addOrReplace(BalancePackageEntity(
+                        id = "voice-sim1",
+                        simId = "sim1",
+                        type = "voice",
+                        totalAmount = minutes,
+                        remainingAmount = minutes,
+                        unit = "MIN",
+                        expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                        isActive = true,
+                        source = "SMS",
+                        lastUpdated = now
+                    ))
+                    voiceFound = true
+                }
+            }
+        }
+        
+        // Parse data/MB/GB - more flexible patterns for balance messages
+        val dataPatterns = listOf(
+            Regex("""(?:data|internet|ኢንተርኔት|remaining)[\s:]*([\d,.]+)\s*(?:MB|GB)""", RegexOption.IGNORE_CASE),
+            Regex("""([\d,.]+)\s*(?:MB|GB)\s*(?:data|internet|remaining)""", RegexOption.IGNORE_CASE),
+            Regex("""(?:you have|remaining|left)[\s:]*([\d,.]+)\s*(?:MB|GB)""", RegexOption.IGNORE_CASE),
+            Regex("""(?:data|internet)[\s:]+([\d,.]+)""", RegexOption.IGNORE_CASE)
+        )
+        
+        var dataFound = false
+        for (pattern in dataPatterns) {
+            if (dataFound) break
+            val match = pattern.find(body)
+            if (match != null) {
+                val dataValue = match.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
+                if (dataValue > 0) {
+                    // Determine unit from the match
+                    val unitMatch = Regex("""(MB|GB)""", RegexOption.IGNORE_CASE).find(match.value)
+                    val unit = unitMatch?.groupValues?.get(1)?.uppercase() ?: "MB"
+                    val dataInMB = if (unit == "GB") dataValue * 1024 else dataValue
+                    
+                    addOrReplace(BalancePackageEntity(
+                        id = "internet-sim1",
+                        simId = "sim1",
+                        type = "internet",
+                        totalAmount = dataInMB,
+                        remainingAmount = dataInMB,
+                        unit = "MB",
+                        expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                        isActive = true,
+                        source = "SMS",
+                        lastUpdated = now
+                    ))
+                    dataFound = true
+                }
+            }
+        }
+        
+        // Parse SMS - more flexible patterns
+        val smsPatterns = listOf(
+            Regex("""(?:sms|ኤስኤምኤስ|text)[\s:]*([\d,.]+)""", RegexOption.IGNORE_CASE),
+            Regex("""([\d,.]+)\s*(?:sms|ኤስኤምኤስ)""", RegexOption.IGNORE_CASE),
+            Regex("""(?:you have|remaining|left)[\s:]*([\d,.]+)\s*(?:sms|ኤስኤምኤስ)""", RegexOption.IGNORE_CASE)
+        )
+        
+        var smsFound = false
+        for (pattern in smsPatterns) {
+            if (smsFound) break
+            val match = pattern.find(body)
+            if (match != null) {
+                val sms = match.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
+                if (sms > 0) {
+                    addOrReplace(BalancePackageEntity(
+                        id = "sms-sim1",
+                        simId = "sim1",
+                        type = "sms",
+                        totalAmount = sms,
+                        remainingAmount = sms,
+                        unit = "SMS",
+                        expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                        isActive = true,
+                        source = "SMS",
+                        lastUpdated = now
+                    ))
+                    smsFound = true
+                }
+            }
+        }
+    }
+
     fun parse(sender: String, body: String, timestamp: Long): ParsedSmsResult {
         detectLanguage(body)
         val result = ParsedSmsResult(scenario = SmsScenario.UNKNOWN, confidence = 0f)
@@ -254,6 +363,10 @@ object SmsParser {
                         source = "SMS",
                         lastUpdated = now
                     ))
+                    
+                    // Also parse package details from balance query responses
+                    parseBalancePackages(body, now, result)
+                    
                     scenario = SmsScenario.BALANCE_QUERY
                     confidenceScore = 0.85f
                 }

@@ -11,5 +11,6 @@ data class SmsLogEntity(
     val parsedType: String?, // FULL_BALANCE, DELTA, TRANSACTION, UNKNOWN
     val confidence: Float,
     val processed: Boolean,
-    val timestamp: Long
+    val timestamp: Long,
+    val bodyHash: Int = 0
 )

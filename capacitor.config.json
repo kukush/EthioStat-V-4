@@ -1,6 +1,0 @@
-{
-  "appId": "com.ethiobalance.app",
-  "appName": "EthioBalance",
-  "webDir": "dist",
-  "bundledWebRuntime": false
-}

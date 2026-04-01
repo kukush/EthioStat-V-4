@@ -166,7 +166,7 @@ object AppConstants {
         val upper = sender.uppercase()
         
         // Telebirr
-        if (upper.contains("TELEBIRR") || TELEBIRR_SENDERS.contains(sender)) return SOURCE_TELEBIRR
+        if (upper.contains("TELEBIRR") || TELEBIRR_SENDERS.contains(sender)) return "Telebirr"
         
         // Commercial Bank of Ethiopia (CBE)
         if (upper.contains("CBE") || sender == "847") return "CBE"
@@ -189,13 +189,13 @@ object AppConstants {
     }
 
     // -------------------------------------------------------------------------
-    // USSD Codes
+    // USSD Codes — sourced from gradle.properties via BuildConfig
     // -------------------------------------------------------------------------
-    const val USSD_BALANCE_CHECK = "*804#"  // Main airtime balance query
-    const val USSD_RECHARGE_SELF = "*805#" // Recharge own account
-    const val USSD_RECHARGE_OTHER = "*805*" // Recharge for others (needs recipient)
-    const val USSD_TRANSFER_AIRTIME = "*806*" // Airtime transfer between subscribers
-    const val USSD_GIFT_PACKAGE = "*999#"   // Gift packages
+    val USSD_BALANCE_CHECK: String get() = BuildConfig.USSD_BALANCE_CHECK
+    val USSD_RECHARGE_SELF: String get() = BuildConfig.USSD_RECHARGE_SELF
+    val USSD_RECHARGE_OTHER: String get() = BuildConfig.USSD_RECHARGE_OTHER
+    val USSD_TRANSFER_AIRTIME: String get() = BuildConfig.USSD_TRANSFER_AIRTIME
+    val USSD_GIFT_PACKAGE: String get() = BuildConfig.USSD_GIFT_PACKAGE
     
     // -------------------------------------------------------------------------
     // Broadcast Actions
@@ -220,7 +220,7 @@ object AppConstants {
     // USSD Harvesting
     // Package name of the Android phone/dialer app whose windows carry USSD popups.
     // -------------------------------------------------------------------------
-    const val PHONE_APP_PACKAGE = "com.android.phone"
+    val PHONE_APP_PACKAGE: String get() = BuildConfig.PHONE_APP_PACKAGE
 
     // -------------------------------------------------------------------------
     // USSD Response DB label
