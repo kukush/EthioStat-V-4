@@ -1,13 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import SmsMonitor from '../../data/smsMonitorPlugin';
 import { ETHIOPIAN_BANKS } from '../../constants/banks';
 
 // EthioTelecom & Telebirr short-codes that deliver telecom package/balance SMS.
 // These are scanned on every startup regardless of which banks the user has configured.
-const ALWAYS_SCAN_SENDERS = ['127', '251994', '804', '810', '994', '830'];
+// We'll fetch these from native AppConstants to avoid hardcoding
+let ALWAYS_SCAN_SENDERS: string[] = [];
 
 export const useNativeBridge = (sources: string[] = []) => {
+  const [ussdCodes, setUssdCodes] = useState<any>({});
+
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
@@ -26,6 +29,26 @@ export const useNativeBridge = (sources: string[] = []) => {
         }
 
         await SmsMonitor.startMonitoring();
+
+        // Get USSD codes and sender list from native AppConstants
+        try {
+          const [ussdResult, sendersResult] = await Promise.all([
+            SmsMonitor.getUssdCodes(),
+            SmsMonitor.getSmsSenders()
+          ]);
+          setUssdCodes(ussdResult);
+          ALWAYS_SCAN_SENDERS = sendersResult.senders || ['127', '251994'];
+        } catch (error) {
+          console.error('Failed to get constants from native:', error);
+          // Fallback values
+          setUssdCodes({
+            BALANCE_CHECK: '*804#',
+            RECHARGE_SELF: '*805#',
+            TRANSFER_AIRTIME: '*806*',
+            GIFT_PACKAGE: '*999#'
+          });
+          ALWAYS_SCAN_SENDERS = ['127', '251994'];
+        }
 
         // Always scan EthioTelecom/Telebirr senders for telecom asset messages
         ALWAYS_SCAN_SENDERS.forEach(senderId => {
@@ -49,7 +72,7 @@ export const useNativeBridge = (sources: string[] = []) => {
   }, []);
 
   const transferAirtime = (recipient: string, amount: number) => {
-    const code = `*806*${recipient}*${amount}#`;
+    const code = `${ussdCodes.TRANSFER_AIRTIME || '*806*'}${recipient}*${amount}#`;
     if (Capacitor.isNativePlatform()) {
       SmsMonitor.dialUssd({ code });
     } else {
@@ -58,7 +81,7 @@ export const useNativeBridge = (sources: string[] = []) => {
   };
 
   const rechargeForOther = (voucher: string, recipient: string) => {
-    const code = `*805*${voucher}*${recipient}#`;
+    const code = `${ussdCodes.RECHARGE_OTHER || '*805*'}${voucher}*${recipient}#`;
     if (Capacitor.isNativePlatform()) {
       SmsMonitor.dialUssd({ code });
     } else {
@@ -67,7 +90,7 @@ export const useNativeBridge = (sources: string[] = []) => {
   };
 
   const rechargeSelf = (voucher: string) => {
-    const code = `*805*${voucher}#`;
+    const code = `${ussdCodes.RECHARGE_SELF || '*805#'}${voucher}#`;
     if (Capacitor.isNativePlatform()) {
       SmsMonitor.dialUssd({ code });
     } else {
@@ -76,7 +99,7 @@ export const useNativeBridge = (sources: string[] = []) => {
   };
 
   const giftPackage = (sequence: string, recipient: string) => {
-    const code = `*999#`; 
+    const code = ussdCodes.GIFT_PACKAGE || '*999#'; 
     if (Capacitor.isNativePlatform()) {
       SmsMonitor.dialUssd({ code });
     } else {
@@ -107,12 +130,12 @@ export const useNativeBridge = (sources: string[] = []) => {
         return result;
       } catch (error) {
         console.error('Failed to get USSD codes:', error);
-        // Fallback to hardcoded codes
-        return { BALANCE_CHECK: '*804#', MAIN_MENU: '*999#' };
+        // Return empty object as fallback - let the calling component handle it
+        return {};
       }
     } else {
-      // Web fallback
-      return { BALANCE_CHECK: '*804#', MAIN_MENU: '*999#' };
+      // Web fallback - return empty object
+      return {};
     }
   };
 

@@ -41,7 +41,7 @@ object AppConstants {
         "810",           // *810# (shared with ACSI)
         "830",           // CRBT — Caller Ring Back Tone subscription / management
         "806",           // Airtime / Credit Transfer between subscribers
-        "8994",          // SMS-based Inquiry and Support
+      
         // NOTE: *999# (Voice/Data/SMS package menu) is a USSD *dial* code,
         // not an SMS sender — it is handled by UssdAccessibilityService.
 
@@ -192,7 +192,10 @@ object AppConstants {
     // USSD Codes
     // -------------------------------------------------------------------------
     const val USSD_BALANCE_CHECK = "*804#"  // Main airtime balance query
-    const val USSD_MAIN_MENU = "*999#"     // Voice/Data/SMS packages menu
+    const val USSD_RECHARGE_SELF = "*805#" // Recharge own account
+    const val USSD_RECHARGE_OTHER = "*805*" // Recharge for others (needs recipient)
+    const val USSD_TRANSFER_AIRTIME = "*806*" // Airtime transfer between subscribers
+    const val USSD_GIFT_PACKAGE = "*999#"   // Gift packages
     
     // -------------------------------------------------------------------------
     // Broadcast Actions

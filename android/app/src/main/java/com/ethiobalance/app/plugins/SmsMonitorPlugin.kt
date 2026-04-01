@@ -300,8 +300,22 @@ class SmsMonitorPlugin : Plugin() {
     fun getUssdCodes(call: PluginCall) {
         val ret = JSObject()
         ret.put("BALANCE_CHECK", com.ethiobalance.app.AppConstants.USSD_BALANCE_CHECK)
-        ret.put("MAIN_MENU", com.ethiobalance.app.AppConstants.USSD_MAIN_MENU)
+        ret.put("RECHARGE_SELF", com.ethiobalance.app.AppConstants.USSD_RECHARGE_SELF)
+        ret.put("RECHARGE_OTHER", com.ethiobalance.app.AppConstants.USSD_RECHARGE_OTHER)
+        ret.put("TRANSFER_AIRTIME", com.ethiobalance.app.AppConstants.USSD_TRANSFER_AIRTIME)
+        ret.put("GIFT_PACKAGE", com.ethiobalance.app.AppConstants.USSD_GIFT_PACKAGE)
         call.resolve(ret)
+    }
+
+    @PluginMethod
+    fun getSmsSenders(call: PluginCall) {
+        val ret = JSArray()
+        com.ethiobalance.app.AppConstants.SMS_SENDER_WHITELIST.forEach { sender ->
+            ret.put(sender)
+        }
+        val result = JSObject()
+        result.put("senders", ret)
+        call.resolve(result)
     }
 
     override fun handleOnDestroy() {

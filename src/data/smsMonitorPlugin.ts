@@ -17,7 +17,8 @@ export interface SmsMonitorPlugin {
   getTransactions(): Promise<{ transactions: Transaction[] }>;
   dialUssd(options: { code: string }): Promise<void>;
   sendUssdRequest(options: { code: string }): Promise<{ response: string }>;
-  getUssdCodes(): Promise<{ BALANCE_CHECK: string; MAIN_MENU: string }>;
+  getUssdCodes(): Promise<{ BALANCE_CHECK: string; RECHARGE_SELF: string; RECHARGE_OTHER: string; TRANSFER_AIRTIME: string; GIFT_PACKAGE: string }>;
+  getSmsSenders(): Promise<{ senders: string[] }>;
   updateTransactionSources(options: { sources: { abbreviation: string; name: string; ussd: string; senderId?: string; isEnabled?: boolean }[] }): Promise<void>;
 }
 

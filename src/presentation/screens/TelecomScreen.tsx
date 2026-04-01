@@ -18,11 +18,10 @@ interface TelecomScreenProps {
 export const TelecomScreen: React.FC<TelecomScreenProps> = ({ 
   packages, recommendedBundles, balance, language, dispatch 
 }) => {
-  const [showSyncModal, setShowSyncModal] = useState(false);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const { rechargeSelf, sendUssdRequest, getUssdCodes } = useNativeBridge();
   const [voucherNumber, setVoucherNumber] = useState('');
-  const [ussdCodes, setUssdCodes] = useState({ BALANCE_CHECK: '*804#', MAIN_MENU: '*999#' });
+  const [ussdCodes, setUssdCodes] = useState({ BALANCE_CHECK: '*804#' });
   const t = useTranslation(language);
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
         dispatch({ type: 'PARSE_USSD_RESPONSE', response });
       }
     });
-    setShowSyncModal(false);
   };
 
 
@@ -102,16 +100,10 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
         <h1 className="text-4xl font-black tracking-tight text-slate-900">{t('telecom')}</h1>
         <div className="flex gap-2">
           <button 
-            onClick={() => setShowSyncModal(true)}
-            className="p-4 bg-white text-slate-900 rounded-2xl shadow-xl shadow-slate-200 hover:bg-slate-50 transition-all active:scale-95 border border-slate-100"
-          >
-            <RefreshCw size={24} />
-          </button>
-          <button 
-            onClick={() => setShowSyncModal(true)}
+            onClick={handleSync}
             className="p-4 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
           >
-            <MessageSquare size={24} />
+            <RefreshCw size={24} />
           </button>
         </div>
       </header>
@@ -294,61 +286,6 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
         )}
       </AnimatePresence>
       
-      {/* Sync Modal */}
-      <AnimatePresence>
-        {showSyncModal && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowSyncModal(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              className="relative w-full max-w-lg bg-white rounded-t-[3rem] sm:rounded-[3rem] p-8 shadow-2xl space-y-6"
-            >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-black text-slate-900">{t('syncBalance')}</h3>
-                  <p className="text-sm text-slate-500">Dial USSD code to sync your main airtime balance</p>
-                </div>
-                <button 
-                  onClick={() => setShowSyncModal(false)}
-                  className="p-2 bg-slate-100 rounded-full text-slate-400 hover:text-slate-600"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-2xl flex gap-3">
-                  <Zap size={24} className="text-blue-600 shrink-0" />
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-blue-700 font-medium leading-relaxed">
-                      This will dial the USSD balance check code to get your main airtime balance.
-                    </p>
-                    <p className="text-[10px] text-blue-700 font-medium leading-relaxed">
-                      Package details (SMS, voice, internet) will be updated automatically from 251994 messages.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <button 
-                onClick={handleSync}
-                className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-              >
-                <Zap size={18} />
-                {t('syncViaUSSD')}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
