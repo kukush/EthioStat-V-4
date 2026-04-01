@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PackageCard } from '@/presentation/components/PackageCard';
-import { GiftSender } from '@/presentation/components/GiftSender';
-import { TelecomPackage, RecommendedBundle, Language, GiftRequest, PackageType } from '@/types';
+import { TelecomPackage, RecommendedBundle, Language, PackageType } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Phone, Globe, Zap, MessageSquare, X, Send, ShieldCheck, Info, Plus, Check } from 'lucide-react';
+import { RefreshCw, Phone, Globe, Zap, MessageSquare, X, ShieldCheck, Info, Plus, Check } from 'lucide-react';
 import { useTranslation } from '@/translations';
 import { cn } from '@/lib/utils';
-import { PhoneInput, normalizePhone } from '@/presentation/components/PhoneInput';
 import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
 
 interface TelecomScreenProps {
@@ -14,107 +12,53 @@ interface TelecomScreenProps {
   recommendedBundles: RecommendedBundle[];
   balance: number;
   language: Language;
-  giftRequests: GiftRequest[];
   dispatch: any;
 }
 
 export const TelecomScreen: React.FC<TelecomScreenProps> = ({ 
-  packages, recommendedBundles, balance, language, giftRequests, dispatch 
+  packages, recommendedBundles, balance, language, dispatch 
 }) => {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [syncMethod, setSyncMethod] = useState<'ussd' | 'sms'>('ussd');
-  const [transferMethod, setTransferMethod] = useState<'ussd' | 'telebirr'>('ussd');
-  const { rechargeSelf, transferAirtime } = useNativeBridge();
-  const [recipientNumber, setRecipientNumber] = useState('');
-  const [transferAmount, setTransferAmount] = useState('');
-  const [smsText, setSmsText] = useState('');
-  const [senderId, setSenderId] = useState('');
+  const { rechargeSelf, sendUssdRequest, getUssdCodes } = useNativeBridge();
   const [voucherNumber, setVoucherNumber] = useState('');
-  const [rechargeMethod, setRechargeMethod] = useState<'ussd' | 'telebirr'>('ussd');
+  const [ussdCodes, setUssdCodes] = useState({ BALANCE_CHECK: '*804#', MAIN_MENU: '*999#' });
   const t = useTranslation(language);
 
+  useEffect(() => {
+    // Fetch USSD codes from native AppConstants
+    const loadUssdCodes = async () => {
+      try {
+        const codes = await getUssdCodes();
+        setUssdCodes(codes);
+      } catch (error) {
+        console.error('Failed to load USSD codes:', error);
+      }
+    };
+    loadUssdCodes();
+  }, [getUssdCodes]);
+
   const handleSync = () => {
-    if (syncMethod === 'sms' && smsText.trim()) {
-      dispatch({ type: 'PARSE_SMS', text: smsText, senderId: senderId || undefined });
-      setSmsText('');
-      setSenderId('');
-      setShowSyncModal(false);
-    } else if (syncMethod === 'ussd') {
-      // Simulate USSD sync
-      dispatch({ type: 'SYNC_USSD' });
-      setShowSyncModal(false);
-    }
-  };
-
-  const handleBalanceTransfer = () => {
-    if (transferMethod === 'ussd') {
-      const amount = parseFloat(transferAmount);
-      if (isNaN(amount) || amount < 5 || amount > 1000) {
-        alert(t('invalidTransferAmount'));
-        return;
+    // Dial USSD code to get main airtime balance
+    sendUssdRequest(ussdCodes.BALANCE_CHECK, (response) => {
+      if (response) {
+        // Parse the USSD response for airtime balance
+        dispatch({ type: 'PARSE_USSD_RESPONSE', response });
       }
-
-      if (balance - amount < 5) {
-        alert(t('insufficientBalanceForTransfer'));
-        return;
-      }
-
-      // Dial *806*RecipientNumber*Amount# (normalize phone number)
-      const normalizedPhone = normalizePhone(recipientNumber).replace('+251', '');
-      const ussdCode = `*806*${normalizedPhone}*${amount}#`;
-      dispatch({ type: 'DIAL_USSD', code: ussdCode });
-    } else {
-      // Telebirr transfer - try to open app with fallback
-      handleTelebirrRedirect();
-    }
-
-    setShowTransferModal(false);
-    setRecipientNumber('');
-    setTransferAmount('');
+    });
+    setShowSyncModal(false);
   };
 
-  const handleTelebirrRedirect = () => {
-    // Try to open Telebirr app
-    const telebirrUrl = 'telebirr://';
-    const fallbackUrl = 'https://play.google.com/store/apps/details?id=com.ethiotelecom.telebirr';
-    
-    // Create a hidden iframe to test if the app opens
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = telebirrUrl;
-    document.body.appendChild(iframe);
-    
-    // Set a timeout to show fallback message if app doesn't open
-    const timeout = setTimeout(() => {
-      document.body.removeChild(iframe);
-      alert('Telebirr app not found on your device. Please install Telebirr from the app store to continue with mobile transfers.');
-    }, 2000);
-    
-    // Clean up if user returns quickly (app opened successfully)
-    window.addEventListener('blur', () => {
-      clearTimeout(timeout);
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 1000);
-    }, { once: true });
-  };
+
 
   const handleRecharge = () => {
-    if (rechargeMethod === 'ussd') {
-      const cleanVoucher = voucherNumber.replace(/[^0-9]/g, '');
-      // EthioTelecom vouchers are 13 or 14 digits. We only dial if it looks like a valid voucher.
-      if (cleanVoucher.length < 13) {
-        alert(t('invalidVoucher') || "Voucher must be at least 13 digits.");
-        return;
-      }
-      rechargeSelf(cleanVoucher);
-    } else if (rechargeMethod === 'telebirr') {
-      handleTelebirrRedirect();
+    const cleanVoucher = voucherNumber.replace(/[^0-9]/g, '');
+    // EthioTelecom vouchers are 13 or 14 digits. We only dial if it looks like a valid voucher.
+    if (cleanVoucher.length < 13) {
+      alert(t('invalidVoucher') || "Voucher must be at least 13 digits.");
+      return;
     }
+    rechargeSelf(cleanVoucher);
 
     setShowRechargeModal(false);
     setVoucherNumber('');
@@ -229,17 +173,10 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <button 
-              onClick={() => setShowTransferModal(true)}
-              className="flex-1 py-5 bg-white/10 hover:bg-white/20 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-3"
-            >
-              <Send size={18} />
-              {t('transfer')}
-            </button>
+          <div className="pt-4">
             <button 
               onClick={() => setShowRechargeModal(true)}
-              className="flex-1 py-5 bg-blue-600 hover:bg-blue-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-2xl shadow-blue-500/40"
+              className="w-full py-5 bg-blue-600 hover:bg-blue-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-2xl shadow-blue-500/40"
             >
               {t('recharge')}
             </button>
@@ -291,14 +228,6 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
         </div>
       </section>
 
-      {/* Gift Sender */}
-      <GiftSender 
-        recommendedBundles={recommendedBundles} 
-        language={language} 
-        balance={balance} 
-        giftRequests={giftRequests}
-        dispatch={dispatch}
-      />
 
       {/* Recharge Modal */}
       <AnimatePresence>
@@ -330,66 +259,35 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 </button>
               </div>
 
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setRechargeMethod('ussd')}
-                  className={cn(
-                    "flex-1 py-4 rounded-2xl text-xs font-bold transition-all border",
-                    rechargeMethod === 'ussd' ? "bg-slate-900 text-white border-slate-900 shadow-lg" : "bg-white text-slate-600 border-slate-100"
-                  )}
-                >
-                  {t('ussdVoucher')}
-                </button>
-                <button 
-                  onClick={() => setRechargeMethod('telebirr')}
-                  className={cn(
-                    "flex-1 py-4 rounded-2xl text-xs font-bold transition-all border",
-                    rechargeMethod === 'telebirr' ? "bg-slate-900 text-white border-slate-900 shadow-lg" : "bg-white text-slate-600 border-slate-100"
-                  )}
-                >
-                  Telebirr
-                </button>
-              </div>
 
-              {rechargeMethod === 'ussd' ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('voucherNumber')}</label>
-                    <input 
-                      type="tel"
-                      value={voucherNumber}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, '');
-                        if (val.length <= 15) setVoucherNumber(val);
-                      }}
-                      placeholder={t('enterVoucher')}
-                      className="w-full px-6 py-5 bg-slate-50 border-none rounded-[2rem] text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    />
-                  </div>
-                  <div className="p-4 bg-blue-50 rounded-2xl flex gap-3">
-                    <Info size={18} className="text-blue-600 shrink-0" />
-                    <p className="text-[10px] text-blue-700 font-medium leading-relaxed">
-                      {t('ussdRechargeInfo')}
-                    </p>
-                  </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('voucherNumber')}</label>
+                  <input 
+                    type="tel"
+                    value={voucherNumber}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      if (val.length <= 15) setVoucherNumber(val);
+                    }}
+                    placeholder={t('enterVoucher')}
+                    className="w-full px-6 py-5 bg-slate-50 border-none rounded-[2rem] text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-2xl flex gap-3">
-                    <Zap size={24} className="text-blue-600 shrink-0" />
-                    <p className="text-[10px] text-blue-700 font-medium leading-relaxed">
-                      {t('telebirrRechargeInfo')}
-                    </p>
-                  </div>
+                <div className="p-4 bg-blue-50 rounded-2xl flex gap-3">
+                  <Info size={18} className="text-blue-600 shrink-0" />
+                  <p className="text-[10px] text-blue-700 font-medium leading-relaxed">
+                    {t('ussdRechargeInfo')}
+                  </p>
                 </div>
-              )}
+              </div>
 
               <button 
                 onClick={handleRecharge}
-                disabled={rechargeMethod === 'ussd' && !voucherNumber.trim()}
+                disabled={!voucherNumber.trim()}
                 className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-200"
               >
-                {rechargeMethod === 'ussd' ? t('rechargeViaUSSD') : t('openTelebirr')}
+                {t('rechargeViaUSSD')}
               </button>
             </motion.div>
           </div>
@@ -416,7 +314,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <h3 className="text-2xl font-black text-slate-900">{t('syncBalance')}</h3>
-                  <p className="text-sm text-slate-500">Choose your preferred sync method</p>
+                  <p className="text-sm text-slate-500">Dial USSD code to sync your main airtime balance</p>
                 </div>
                 <button 
                   onClick={() => setShowSyncModal(false)}
@@ -426,175 +324,26 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 </button>
               </div>
 
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setSyncMethod('ussd')}
-                  className={cn(
-                    "flex-1 py-4 rounded-2xl text-xs font-bold transition-all border",
-                    syncMethod === 'ussd' ? "bg-slate-900 text-white border-slate-900 shadow-lg" : "bg-white text-slate-600 border-slate-100"
-                  )}
-                >
-                  {t('ussdDefault')}
-                </button>
-                <button 
-                  onClick={() => setSyncMethod('sms')}
-                  className={cn(
-                    "flex-1 py-4 rounded-2xl text-xs font-bold transition-all border",
-                    syncMethod === 'sms' ? "bg-slate-900 text-white border-slate-900 shadow-lg" : "bg-white text-slate-600 border-slate-100"
-                  )}
-                >
-                  {t('smsOption')}
-                </button>
-              </div>
-              
-              {syncMethod === 'ussd' ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-2xl flex gap-3">
-                    <Zap size={24} className="text-blue-600 shrink-0" />
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 rounded-2xl flex gap-3">
+                  <Zap size={24} className="text-blue-600 shrink-0" />
+                  <div className="space-y-2">
                     <p className="text-[10px] text-blue-700 font-medium leading-relaxed">
-                      {t('ussdSyncInfo')}
+                      This will dial the USSD balance check code to get your main airtime balance.
+                    </p>
+                    <p className="text-[10px] text-blue-700 font-medium leading-relaxed">
+                      Package details (SMS, voice, internet) will be updated automatically from 251994 messages.
                     </p>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('senderIdLabel')}</label>
-                    <input 
-                      type="text"
-                      value={senderId}
-                      onChange={(e) => setSenderId(e.target.value)}
-                      placeholder="e.g., CBE, Telebirr, *847#"
-                      className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('smsContentLabel')}</label>
-                    <textarea 
-                      value={smsText}
-                      onChange={(e) => setSmsText(e.target.value)}
-                      placeholder={t('smsContentPlaceholder')}
-                      className="w-full h-32 p-6 bg-slate-50 border-none rounded-[2rem] text-sm font-medium focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
-                    />
-                  </div>
-                </div>
-              )}
+              </div>
               
               <button 
                 onClick={handleSync}
-                disabled={syncMethod === 'sms' && !smsText.trim()}
-                className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:grayscale shadow-lg shadow-blue-200"
+                className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
               >
-                {syncMethod === 'ussd' ? <Zap size={18} /> : <Send size={18} />}
-                {syncMethod === 'ussd' ? t('syncViaUSSD') : t('processSMS')}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-      {/* Balance Transfer Modal */}
-      <AnimatePresence>
-        {showTransferModal && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowTransferModal(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              className="relative w-full max-w-lg bg-white rounded-t-[3rem] sm:rounded-[3rem] p-8 shadow-2xl space-y-6"
-            >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-black text-slate-900">{t('sendAirtime')}</h3>
-                  <p className="text-sm text-slate-500">{t('transferAirtimeInfo')}</p>
-                </div>
-                <button 
-                  onClick={() => setShowTransferModal(false)}
-                  className="p-2 bg-slate-100 rounded-full text-slate-400 hover:text-slate-600"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setTransferMethod('ussd')}
-                  className={cn(
-                    "flex-1 py-4 rounded-2xl text-xs font-bold transition-all border",
-                    transferMethod === 'ussd' ? "bg-slate-900 text-white border-slate-900 shadow-lg" : "bg-white text-slate-600 border-slate-100"
-                  )}
-                >
-                  {t('ussdCode')}
-                </button>
-                <button 
-                  onClick={() => setTransferMethod('telebirr')}
-                  className={cn(
-                    "flex-1 py-4 rounded-2xl text-xs font-bold transition-all border",
-                    transferMethod === 'telebirr' ? "bg-slate-900 text-white border-slate-900 shadow-lg" : "bg-white text-slate-600 border-slate-100"
-                  )}
-                >
-                  Telebirr
-                </button>
-              </div>
-
-              {transferMethod === 'ussd' ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('recipientNumber')}</label>
-                    <PhoneInput
-                      value={recipientNumber}
-                      onChange={setRecipientNumber}
-                      placeholder="9XX XXX XXXX"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('amountEtb')}</label>
-                    <input 
-                      type="number"
-                      value={transferAmount}
-                      onChange={(e) => setTransferAmount(e.target.value)}
-                      placeholder="5 - 1000"
-                      className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    />
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-2xl space-y-2">
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                      <span className="text-slate-400">{t('minTransfer')}</span>
-                      <span className="text-slate-900">5 ETB</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                      <span className="text-slate-400">{t('maxTransfer')}</span>
-                      <span className="text-slate-900">1000 ETB</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                      <span className="text-slate-400">{t('minBalanceAfter')}</span>
-                      <span className="text-slate-900">5 ETB</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-6 bg-blue-50 rounded-[2rem] border border-blue-100 space-y-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                    <Info size={24} />
-                  </div>
-                  <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                    {t('telebirrRechargeInfo')}
-                  </p>
-                </div>
-              )}
-
-              <button 
-                onClick={handleBalanceTransfer}
-                disabled={transferMethod === 'ussd' && (!recipientNumber.trim() || !transferAmount.trim())}
-                className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg shadow-blue-200"
-              >
-                {transferMethod === 'ussd' ? t('transferViaUSSD') : t('openTelebirr')}
+                <Zap size={18} />
+                {t('syncViaUSSD')}
               </button>
             </motion.div>
           </div>

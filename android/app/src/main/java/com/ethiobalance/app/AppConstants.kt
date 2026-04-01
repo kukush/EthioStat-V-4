@@ -189,6 +189,12 @@ object AppConstants {
     }
 
     // -------------------------------------------------------------------------
+    // USSD Codes
+    // -------------------------------------------------------------------------
+    const val USSD_BALANCE_CHECK = "*804#"  // Main airtime balance query
+    const val USSD_MAIN_MENU = "*999#"     // Voice/Data/SMS packages menu
+    
+    // -------------------------------------------------------------------------
     // Broadcast Actions
     // -------------------------------------------------------------------------
     const val ACTION_USSD_RESPONSE = "com.ethiobalance.app.ACTION_USSD_RESPONSE"

@@ -4,6 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.telephony.TelephonyManager
+import android.telephony.TelephonyManager.UssdResponseCallback
+import android.os.Handler
+import android.os.Looper
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.AppDatabase
 import com.ethiobalance.app.data.TransactionSourceEntity
@@ -254,6 +258,50 @@ class SmsMonitorPlugin : Plugin() {
         
         context.startActivity(intent)
         call.resolve()
+    }
+
+    @PluginMethod
+    fun sendUssdRequest(call: PluginCall) {
+        val code = call.getString("code")
+        if (code == null) {
+            call.reject("USSD code is required")
+            return
+        }
+        
+        try {
+            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            
+            val ussdCallback = object : UssdResponseCallback() {
+                override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
+                    // Send response back to JavaScript via callback
+                    Handler(Looper.getMainLooper()).post {
+                        val ret = JSObject()
+                        ret.put("response", response.toString())
+                        call.resolve(ret)
+                    }
+                }
+                
+                override fun onReceiveUssdResponseFailed(telephonyManager: TelephonyManager, request: String, failureCode: Int) {
+                    Handler(Looper.getMainLooper()).post {
+                        call.reject("USSD request failed with code: $failureCode")
+                    }
+                }
+            }
+            
+            telephonyManager.sendUssdRequest(code, ussdCallback, Handler(Looper.getMainLooper()))
+            
+        } catch (e: Exception) {
+            android.util.Log.e("SmsMonitorPlugin", "sendUssdRequest failed: ${e.message}", e)
+            call.reject("Failed to send USSD request: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun getUssdCodes(call: PluginCall) {
+        val ret = JSObject()
+        ret.put("BALANCE_CHECK", com.ethiobalance.app.AppConstants.USSD_BALANCE_CHECK)
+        ret.put("MAIN_MENU", com.ethiobalance.app.AppConstants.USSD_MAIN_MENU)
+        call.resolve(ret)
     }
 
     override fun handleOnDestroy() {

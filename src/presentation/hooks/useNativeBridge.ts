@@ -84,5 +84,37 @@ export const useNativeBridge = (sources: string[] = []) => {
     }
   };
 
-  return { transferAirtime, rechargeForOther, rechargeSelf, giftPackage };
+  const sendUssdRequest = (code: string, callback: (response: string) => void) => {
+    if (Capacitor.isNativePlatform()) {
+      // Use TelephonyManager.UssdResponseCallback for direct USSD response
+      SmsMonitor.sendUssdRequest({ code }).then((result) => {
+        if (result.response) {
+          callback(result.response);
+        }
+      }).catch((error) => {
+        console.error('USSD request failed:', error);
+      });
+    } else {
+      // Fallback for web - just dial the code
+      window.location.href = `tel:${encodeURIComponent(code)}`;
+    }
+  };
+
+  const getUssdCodes = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await SmsMonitor.getUssdCodes();
+        return result;
+      } catch (error) {
+        console.error('Failed to get USSD codes:', error);
+        // Fallback to hardcoded codes
+        return { BALANCE_CHECK: '*804#', MAIN_MENU: '*999#' };
+      }
+    } else {
+      // Web fallback
+      return { BALANCE_CHECK: '*804#', MAIN_MENU: '*999#' };
+    }
+  };
+
+  return { transferAirtime, rechargeForOther, rechargeSelf, giftPackage, sendUssdRequest, getUssdCodes };
 };

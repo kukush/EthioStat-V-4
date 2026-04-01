@@ -16,6 +16,8 @@ export interface SmsMonitorPlugin {
   getBalances(): Promise<{ packages: TelecomPackage[], netBalance: number }>;
   getTransactions(): Promise<{ transactions: Transaction[] }>;
   dialUssd(options: { code: string }): Promise<void>;
+  sendUssdRequest(options: { code: string }): Promise<{ response: string }>;
+  getUssdCodes(): Promise<{ BALANCE_CHECK: string; MAIN_MENU: string }>;
   updateTransactionSources(options: { sources: { abbreviation: string; name: string; ussd: string; senderId?: string; isEnabled?: boolean }[] }): Promise<void>;
 }
 
