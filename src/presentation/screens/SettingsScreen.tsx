@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Globe, Shield, Bell, Smartphone, HelpCircle, LogOut, Palette, Database, Plus, X, Check, Trash2, AlertCircle, Cloud, Zap, Moon, Sun, CreditCard, FlaskConical, Search, Landmark } from 'lucide-react';
+import { Globe, Shield, Bell, Smartphone, HelpCircle, LogOut, Palette, Database, Plus, X, Check, Trash2, AlertCircle, Cloud, Zap, Moon, Sun, CreditCard, FlaskConical, Search, Landmark, Edit2, ChevronRight, MoreVertical, TrendingUp, TrendingDown, Calendar, ArrowRight, History, Wallet, Download, User } from 'lucide-react';
 import { Language, Theme, AppState, TelecomPackage, Transaction, Intent } from '@/domain/types';
 import { useTranslation } from '@/translations';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,8 @@ import { DEFAULT_AVATARS, FALLBACK_AVATAR } from '@/constants/avatars';
 import { getBankIcon } from '@/constants/bankIcons';
 import { PhoneInput, formatEthiopianPhone, normalizePhone } from '@/presentation/components/PhoneInput';
 import SmsMonitor from '@/data/smsMonitorPlugin';
+import SimDetection from '@/data/simDetectionPlugin';
+import { useEffect } from 'react';
 
 interface SettingsScreenProps {
   state: AppState;
@@ -35,18 +37,70 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
     });
   }, [searchBank, state.transactionSources]);
 
+  // Sync Transaction Sources to Native SMS Filter (Whitelist)
+  useEffect(() => {
+    const sources = state.transactionSources.map(abbrev => {
+      const bank = ETHIOPIAN_BANKS.find(b => b.abbreviation === abbrev);
+      return {
+        abbreviation: abbrev,
+        name: bank?.name || abbrev,
+        ussd: bank?.ussd || '',
+        senderId: bank?.senderId ?? abbrev,
+        isEnabled: true
+      };
+    });
+    SmsMonitor.updateTransactionSources({ sources });
+  }, [state.transactionSources]);
+
+  // Auto-detect SIM cards on mount
+  useEffect(() => {
+    const detectSims = async () => {
+      try {
+        const result = await SimDetection.getSimCards();
+        if (result.sims && result.sims.length > 0) {
+          const sims = result.sims.map(s => ({
+            id: s.id,
+            phoneNumber: s.phoneNumber,
+            label: s.slotIndex === 0 ? 'SIM 1' : 'SIM 2',
+            isPrimary: s.isPrimary,
+            provider: s.carrierName
+          }));
+          dispatch({ type: 'SET_SIMS', sims });
+        }
+      } catch (err) {
+        console.error('SIM detection failed:', err);
+      }
+    };
+    detectSims();
+  }, []);
+
   const handleAddSource = (source: string) => {
     if (source.trim()) {
       const cleanSource = source.trim();
       dispatch({ type: 'ADD_TRANSACTION_SOURCE', source: cleanSource });
       
-      // Trigger 7-day historical scan for this new source
-      SmsMonitor.scanHistory({ senderId: cleanSource, days: 7 });
+      // We don't need to manually call updateTransactionSources here 
+      // because the useEffect above will trigger automatically 
+      // when state.transactionSources changes.
+      
+      // Trigger 7-day historical scan using the real SMS sender number, not the abbreviation
+      const bank = ETHIOPIAN_BANKS.find(b => b.abbreviation === cleanSource);
+      const senderId = bank?.senderId ?? cleanSource;
+      SmsMonitor.scanHistory({ senderId, days: 7 });
       
       setNewSource('');
       setSearchBank('');
       setShowAddSource(false);
     }
+  };
+
+  const handleRemoveSource = (source: string) => {
+    dispatch({ type: 'REMOVE_TRANSACTION_SOURCE', source });
+  };
+
+  const handleSetPrimarySim = (id: string) => {
+    dispatch({ type: 'SET_PRIMARY_SIM', id });
+    SimDetection.setPrimarySim({ id });
   };
 
   const handleInjectMockData = () => {
@@ -67,6 +121,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [newSim, setNewSim] = useState({ phoneNumber: '', label: '', provider: 'Ethio Telecom' as any });
   const [profileName, setProfileName] = useState(state.userProfile?.name || '');
+  const [profilePhone, setProfilePhone] = useState(state.userProfile?.phoneNumber || '');
   const [selectedAvatar, setSelectedAvatar] = useState(state.userProfile?.avatarUrl || '');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
@@ -76,7 +131,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
       profile: { 
         name: profileName, 
         avatarUrl: selectedAvatar, 
-        phoneNumber: state.userProfile?.phoneNumber || '' 
+        phoneNumber: profilePhone 
       } 
     });
     setShowSaveSuccess(true);
@@ -88,6 +143,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
 
   const openEditProfile = () => {
     setProfileName(state.userProfile?.name || '');
+    setProfilePhone(state.userProfile?.phoneNumber || '');
     setSelectedAvatar(state.userProfile?.avatarUrl || '');
     setShowEditProfile(true);
   };
@@ -132,9 +188,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
           </div>
           <button 
             onClick={openEditProfile}
-            className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-lg border-2 border-white hover:bg-blue-700 transition-all active:scale-95"
+            className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all active:scale-90"
           >
-            <Plus size={14} />
+            <Edit2 size={14} />
           </button>
         </div>
         <h2 className="text-xl font-black text-slate-900 mt-4">{state.userProfile?.name || 'User'}</h2>
@@ -191,7 +247,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
               <div className="flex items-center gap-2">
                 {!sim.isPrimary && (
                   <button 
-                    onClick={() => dispatch({ type: 'SET_PRIMARY_SIM', id: sim.id })}
+                    onClick={() => handleSetPrimarySim(sim.id)}
                     className="p-2 text-slate-300 hover:text-blue-600 transition-colors"
                     title="Set as Primary"
                   >
@@ -311,7 +367,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
                   </div>
                 </div>
                 <button 
-                  onClick={() => dispatch({ type: 'REMOVE_TRANSACTION_SOURCE', source })}
+                  onClick={() => handleRemoveSource(source)}
                   className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
                 >
                   <Trash2 size={18} />
@@ -364,86 +420,104 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ state, dispatch 
       {/* Edit Profile Modal */}
       <AnimatePresence>
         {showEditProfile && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
-              className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
+              className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col mx-4"
             >
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-black text-slate-900">Edit Profile</h3>
-                  <button 
-                    onClick={() => setShowEditProfile(false)}
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
+              {/* Modal Header - Fixed */}
+              <div className="p-6 border-b border-slate-50 flex justify-between items-center shrink-0">
+                <h3 className="text-xl font-black text-slate-900">Edit Profile</h3>
+                <button 
+                  onClick={() => setShowEditProfile(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Content - Scrollable */}
+              <div className="p-6 overflow-y-auto grow space-y-8">
+                {/* Name Input */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none font-bold text-slate-900 transition-all text-lg"
+                  />
                 </div>
 
-                <div className="space-y-6">
-                  {/* Name Input */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="Enter your name"
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:outline-none font-bold text-slate-900 transition-all"
-                    />
-                  </div>
+                {/* Phone Number Input */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                    Primary Phone Number
+                  </label>
+                  <PhoneInput
+                    value={profilePhone}
+                    onChange={setProfilePhone}
+                    placeholder="Enter your phone number"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-2 italic">
+                    This number will be bound to your Primary SIM for tracking and dashboard display.
+                  </p>
+                </div>
 
-                  {/* Avatar Selection */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
-                      Choose Avatar
-                    </label>
-                    <div className="grid grid-cols-3 gap-4">
-                      {DEFAULT_AVATARS.map((avatar) => (
-                        <button
-                          key={avatar.id}
-                          onClick={() => setSelectedAvatar(avatar.url)}
-                          className={cn(
-                            "relative aspect-square rounded-2xl overflow-hidden border-4 transition-all",
-                            selectedAvatar === avatar.url ? "border-blue-600 scale-105 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
-                          )}
-                        >
-                          <img src={avatar.url} alt={avatar.label} className="w-full h-full object-cover" />
-                          {selectedAvatar === avatar.url && (
-                            <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
-                              <div className="bg-blue-600 text-white rounded-full p-1">
-                                <Check size={12} />
-                              </div>
+                {/* Avatar Selection */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">
+                    Choose Avatar
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {DEFAULT_AVATARS.map((avatar) => (
+                      <button
+                        key={avatar.id}
+                        onClick={() => setSelectedAvatar(avatar.url)}
+                        className={cn(
+                          "relative aspect-square rounded-2xl overflow-hidden border-4 transition-all",
+                          selectedAvatar === avatar.url ? "border-blue-600 scale-105 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
+                        )}
+                      >
+                        <img src={avatar.url} alt={avatar.label} className="w-full h-full object-cover" />
+                        {selectedAvatar === avatar.url && (
+                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                            <div className="bg-blue-600 text-white rounded-full p-1">
+                              <Check size={12} />
                             </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                          </div>
+                        )}
+                      </button>
+                    ))}
                   </div>
-
-                  <button
-                    onClick={handleUpdateProfile}
-                    disabled={showSaveSuccess}
-                    className={cn(
-                      "w-full py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95",
-                      showSaveSuccess
-                        ? "bg-emerald-500 text-white"
-                        : "bg-slate-900 text-white hover:bg-slate-800"
-                    )}
-                  >
-                    {showSaveSuccess ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Check size={18} /> Saved!
-                      </span>
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </button>
                 </div>
+              </div>
+
+              {/* Modal Footer - Fixed */}
+              <div className="p-6 border-t border-slate-50 shrink-0">
+                <button
+                  onClick={handleUpdateProfile}
+                  disabled={showSaveSuccess}
+                  className={cn(
+                    "w-full py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all active:scale-95 text-sm",
+                    showSaveSuccess
+                      ? "bg-emerald-500 text-white"
+                      : "bg-slate-900 text-white hover:bg-slate-800"
+                  )}
+                >
+                  {showSaveSuccess ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Check size={20} /> Saved!
+                    </span>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
               </div>
             </motion.div>
           </div>

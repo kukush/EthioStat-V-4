@@ -1,4 +1,5 @@
-import { useReducer, useEffect } from 'react';
+import { useReducer, useEffect, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { HomeScreen } from './presentation/screens/HomeScreen';
 import { TelecomScreen } from './presentation/screens/TelecomScreen';
 import { TransactionScreen } from './presentation/screens/TransactionScreen';
@@ -7,54 +8,83 @@ import { BottomNav } from './presentation/components/BottomNav';
 import { Bell, User } from 'lucide-react';
 import { reducer, initialState } from './store';
 import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
+import { useNativeData } from '@/presentation/hooks/useNativeData';
 import { cn } from './lib/utils';
 import { persistenceService } from './data/persistenceService';
-import { useQueryState, parseAsStringLiteral } from 'nuqs';
+import SimDetection from './data/simDetectionPlugin';
 
 export default function App() {
   const savedState = persistenceService.loadState();
-  const mergedState = savedState ? { ...initialState, ...savedState } : initialState;
-  
-  // Deduplicate transactions to fix existing key errors in saved state
-  if (mergedState.transactions) {
-    const seenIds = new Set();
-    mergedState.transactions = mergedState.transactions.filter(t => {
-      if (seenIds.has(t.id)) return false;
-      seenIds.add(t.id);
-      return true;
-    });
-  }
+  const mergedState = useMemo(() => {
+    if (!savedState) return initialState;
+    return {
+      ...initialState,
+      ...savedState,
+      // Deep merge userProfile to avoid losing fields like 'name' from previous versions
+      userProfile: {
+        ...initialState.userProfile,
+        ...(savedState.userProfile || {})
+      }
+    };
+  }, [savedState]);
   
   const [state, dispatch] = useReducer(reducer, mergedState);
+  const { packages, transactions: rawTransactions, netBalance, isLoading } = useNativeData();
 
-  // nuqs: Sync active tab with URL search params for deep-linking
-  const tabOptions = (import.meta.env.VITE_TAB_OPTIONS || 'home,telecom,transactions,settings').split(',') as readonly string[];
-  const [urlTab, setUrlTab] = useQueryState(
-    'tab',
-    parseAsStringLiteral(tabOptions).withDefault('home')
+  // Globally filter out AIRTIME transactions so they don't pollute any screen's UI or summaries
+  const transactions = useMemo(() => 
+    rawTransactions.filter(t => t?.source?.toUpperCase() !== 'AIRTIME'),
+    [rawTransactions]
   );
 
-  // Sync URL → reducer on mount and when URL changes
-  useEffect(() => {
-    if (urlTab && urlTab !== state.activeTab) {
-      dispatch({ type: 'SET_TAB', tab: urlTab as any });
-    }
-  }, [urlTab]);
+  // Extract airtime balance from native packages (type='airtime') for the top card
+  const airtimeBalance = useMemo(
+    () => packages.find((p: any) => p.type === 'airtime')?.value ?? (state as any).telecomBalance ?? 0,
+    [packages, (state as any).telecomBalance]
+  );
 
-  // Sync reducer → URL when tab changes via BottomNav
-  useEffect(() => {
-    if (state.activeTab !== urlTab) {
-      setUrlTab(state.activeTab);
-    }
-  }, [state.activeTab]);
+  // Memoized sources — case-insensitive dedup so "Telebirr" and "TELEBIRR" don't both appear
+  const sources = useMemo(() => {
+    const seen = new Map<string, string>();
+    [...state.transactionSources, ...transactions.map(t => t.source)].forEach(s => {
+      const key = s.toLowerCase();
+      if (!seen.has(key)) seen.set(key, s);
+    });
+    return Array.from(seen.values());
+  }, [state.transactionSources, transactions]);
 
-  // Initialize Native SMS/USSD Bridge
-  useNativeBridge(dispatch);
+  // Initialize Native SMS/USSD Bridge and trigger startup 7-day scan for all configured sources
+  useNativeBridge(state.transactionSources);
 
   // Persistence
   useEffect(() => {
     persistenceService.saveState(state);
   }, [state]);
+
+  // Synchronization will now be handled inside the reducer via SET_SIMS/SET_PRIMARY_SIM cases.
+  useEffect(() => {
+    const detectSims = async () => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const { sims } = await SimDetection.getSimCards();
+          if (sims && sims.length > 0) {
+            // Map SimCardInfo to our domain SimCard type
+            const domainSims = sims.map(s => ({
+              id: s.id,
+              phoneNumber: s.phoneNumber,
+              label: s.carrierName,
+              isPrimary: s.isPrimary,
+              provider: s.carrierName
+            }));
+            dispatch({ type: 'SET_SIMS', sims: domainSims });
+          }
+        }
+      } catch (err) {
+        console.error("SIM detection failed:", err);
+      }
+    };
+    detectSims();
+  }, []); // Only on mount
 
   // Apply theme to body
   useEffect(() => {
@@ -112,13 +142,16 @@ export default function App() {
           )}>
             <Bell size={20} />
           </button>
-          <button className={cn(
-            "w-10 h-10 flex items-center justify-center rounded-xl transition-colors",
-            state.theme === 'dark' ? "bg-slate-800 text-slate-400 hover:text-white" : 
-            state.theme === 'vibrant' ? "bg-indigo-500 text-indigo-200 hover:text-white" : 
-            state.theme === 'midnight' ? "bg-slate-900 text-slate-400 hover:text-white" :
-            state.theme === 'forest' ? "bg-emerald-800 text-emerald-200 hover:text-white" : "bg-slate-50 text-slate-400 hover:text-slate-600"
-          )}>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={cn(
+              "w-10 h-10 flex items-center justify-center rounded-xl transition-colors",
+              state.theme === 'dark' ? "bg-slate-800 text-slate-400 hover:text-white" : 
+              state.theme === 'vibrant' ? "bg-indigo-500 text-indigo-200 hover:text-white" : 
+              state.theme === 'midnight' ? "bg-slate-900 text-slate-400 hover:text-white" :
+              state.theme === 'forest' ? "bg-emerald-800 text-emerald-200 hover:text-white" : "bg-slate-50 text-slate-400 hover:text-slate-600"
+            )}
+          >
             <User size={20} />
           </button>
         </div>
@@ -126,30 +159,37 @@ export default function App() {
 
       {/* Main Content */}
       <main className="pt-28 px-6 max-w-lg mx-auto">
+        {isLoading && Capacitor.isNativePlatform() && (
+          <div className="flex flex-col items-center justify-center py-24 gap-4 opacity-60">
+            <div className="w-8 h-8 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold uppercase tracking-widest">Scanning SMS…</p>
+          </div>
+        )}
         {state.activeTab === 'home' && (
           <HomeScreen 
-            packages={state.telecomPackages} 
-            transactions={state.transactions} 
-            telecomBalance={state.telecomBalance} 
+            packages={packages} 
+            transactions={transactions} 
+            telecomBalance={airtimeBalance} 
             language={state.language}
             userName={state.userProfile?.name}
+            userPhoneNumber={state.userProfile?.phoneNumber}
           />
         )}
         {state.activeTab === 'telecom' && (
           <TelecomScreen 
-            packages={state.telecomPackages} 
-            recommendedBundles={state.recommendedBundles}
-            balance={state.telecomBalance} 
+            packages={packages} 
+            recommendedBundles={[]}
+            balance={airtimeBalance} 
             language={state.language}
-            giftRequests={state.giftRequests}
+            giftRequests={[]}
             dispatch={dispatch}
           />
         )}
         {state.activeTab === 'transactions' && (
           <TransactionScreen 
-            transactions={state.transactions} 
+            transactions={transactions} 
             language={state.language}
-            sources={state.transactionSources}
+            sources={sources}
           />
         )}
         {state.activeTab === 'settings' && (
@@ -161,7 +201,7 @@ export default function App() {
       <BottomNav 
         activeTab={state.activeTab} 
         onTabChange={setActiveTab} 
-        pendingGiftsCount={(state.giftRequests || []).filter(r => r.status === 'pending').length}
+        pendingGiftsCount={0}
         language={state.language}
       />
     </div>

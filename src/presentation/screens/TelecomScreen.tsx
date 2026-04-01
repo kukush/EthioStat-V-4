@@ -7,6 +7,7 @@ import { RefreshCw, Phone, Globe, Zap, MessageSquare, X, Send, ShieldCheck, Info
 import { useTranslation } from '@/translations';
 import { cn } from '@/lib/utils';
 import { PhoneInput, normalizePhone } from '@/presentation/components/PhoneInput';
+import { useNativeBridge } from '@/presentation/hooks/useNativeBridge';
 
 interface TelecomScreenProps {
   packages: TelecomPackage[];
@@ -23,10 +24,9 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [rechargeDetails, setRechargeDetails] = useState<{ amount: number; method: string; newBalance: number } | null>(null);
   const [syncMethod, setSyncMethod] = useState<'ussd' | 'sms'>('ussd');
   const [transferMethod, setTransferMethod] = useState<'ussd' | 'telebirr'>('ussd');
+  const { rechargeSelf, transferAirtime } = useNativeBridge();
   const [recipientNumber, setRecipientNumber] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [smsText, setSmsText] = useState('');
@@ -104,35 +104,53 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
   };
 
   const handleRecharge = () => {
-    let amount = 0;
-    if (rechargeMethod === 'ussd' && voucherNumber.trim()) {
-      amount = 50;
-      dispatch({ type: 'RECHARGE', amount, method: 'ussd' });
-      setVoucherNumber('');
+    if (rechargeMethod === 'ussd') {
+      const cleanVoucher = voucherNumber.replace(/[^0-9]/g, '');
+      // EthioTelecom vouchers are 13 or 14 digits. We only dial if it looks like a valid voucher.
+      if (cleanVoucher.length < 13) {
+        alert(t('invalidVoucher') || "Voucher must be at least 13 digits.");
+        return;
+      }
+      rechargeSelf(cleanVoucher);
     } else if (rechargeMethod === 'telebirr') {
-      amount = 100;
       handleTelebirrRedirect();
-      dispatch({ type: 'RECHARGE', amount, method: 'telebirr' });
     }
 
-    if (amount > 0) {
-      setRechargeDetails({
-        amount,
-        method: rechargeMethod === 'ussd' ? 'USSD Voucher' : 'Telebirr',
-        newBalance: balance + amount
-      });
-      setShowRechargeModal(false);
-      setTimeout(() => setShowSuccessModal(true), 500);
-    }
+    setShowRechargeModal(false);
+    setVoucherNumber('');
   };
 
   const packageTypes: PackageType[] = ['internet', 'voice', 'sms', 'bonus'];
 
   const totals = {
-    internet: packages.filter(p => p.type === 'internet').reduce((acc, p) => acc + p.value, 0),
-    voice: packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + p.value, 0),
-    sms: packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + p.value, 0),
+    internet: packages.filter(p => p.type === 'internet').reduce((acc, p) => {
+      const val = Number(p.value) || 0;
+      const valueMB = (p.unit || '').toUpperCase() === 'GB' ? val * 1024 : val;
+      return acc + valueMB;
+    }, 0),
+    voice: packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + (Number(p.value) || 0), 0),
+    sms: packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + (Number(p.value) || 0), 0),
   };
+
+  const totalCapacity = {
+    internet: packages.filter(p => p.type === 'internet').reduce((acc, p) => {
+      const tot = Number(p.total) || 0;
+      const totMB = (p.unit || '').toUpperCase() === 'GB' ? tot * 1024 : tot;
+      return acc + totMB;
+    }, 0),
+    voice: packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + (Number(p.total) || 0), 0),
+    sms: packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + (Number(p.total) || 0), 0),
+  };
+
+  const summaryPct = {
+    internet: totalCapacity.internet > 0 ? Math.min(100, (totals.internet / totalCapacity.internet) * 100) : 0,
+    voice: totalCapacity.voice > 0 ? Math.min(100, (totals.voice / totalCapacity.voice) * 100) : 0,
+    sms: totalCapacity.sms > 0 ? Math.min(100, (totals.sms / totalCapacity.sms) * 100) : 0,
+  };
+
+  const formattedInternet = totals.internet >= 1024 
+    ? { value: (totals.internet / 1024).toFixed(1), unit: 'GB' }
+    : { value: totals.internet.toFixed(0), unit: 'MB' };
 
   return (
     <div className="space-y-8 pb-32">
@@ -185,10 +203,10 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
             <div className="space-y-3">
               <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">{t('data')}</p>
               <p className="text-sm font-black tracking-tight">
-                {totals.internet} <span className="text-[10px] opacity-60">MB</span>
+                {formattedInternet.value} <span className="text-[10px] opacity-60">{formattedInternet.unit}</span>
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: '70%' }} />
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${summaryPct.internet.toFixed(0)}%` }} />
               </div>
             </div>
             <div className="space-y-3">
@@ -197,7 +215,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 {totals.voice} <span className="text-[10px] opacity-60">Min</span>
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '45%' }} />
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${summaryPct.voice.toFixed(0)}%` }} />
               </div>
             </div>
             <div className="space-y-3">
@@ -206,7 +224,7 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                 {totals.sms} <span className="text-[10px] opacity-60">SMS</span>
               </p>
               <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 rounded-full" style={{ width: '60%' }} />
+                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${summaryPct.sms.toFixed(0)}%` }} />
               </div>
             </div>
           </div>
@@ -244,8 +262,8 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
         </div>
         
         <div className="grid gap-4">
-          {(packages || []).length > 0 ? (
-            (packages || []).map((pkg) => (
+          {(packages || []).filter(p => p.type !== 'airtime').length > 0 ? (
+            (packages || []).filter(p => p.type !== 'airtime').map((pkg) => (
               <PackageCard
                 key={pkg.id}
                 type={pkg.type}
@@ -338,9 +356,12 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">{t('voucherNumber')}</label>
                     <input 
-                      type="text"
+                      type="tel"
                       value={voucherNumber}
-                      onChange={(e) => setVoucherNumber(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        if (val.length <= 15) setVoucherNumber(val);
+                      }}
                       placeholder={t('enterVoucher')}
                       className="w-full px-6 py-5 bg-slate-50 border-none rounded-[2rem] text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
                     />
@@ -575,63 +596,6 @@ export const TelecomScreen: React.FC<TelecomScreenProps> = ({
               >
                 {transferMethod === 'ussd' ? t('transferViaUSSD') : t('openTelebirr')}
               </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Recharge Success Modal */}
-      <AnimatePresence>
-        {showSuccessModal && rechargeDetails && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowSuccessModal(false)}
-              className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
-              
-              <div className="flex flex-col items-center text-center space-y-6">
-                <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
-                  <Check size={40} />
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-slate-900">{t('rechargeSuccessful')}</h3>
-                  <p className="text-sm text-slate-500 font-medium">{t('accountCredited')}</p>
-                </div>
-
-                <div className="w-full bg-slate-50 rounded-3xl p-6 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('amount')}</span>
-                    <span className="text-lg font-black text-slate-900">ETB {rechargeDetails.amount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('method')}</span>
-                    <span className="text-sm font-bold text-slate-600">{rechargeDetails.method}</span>
-                  </div>
-                  <div className="h-px bg-slate-200 w-full" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t('newBalance')}</span>
-                    <span className="text-lg font-black text-emerald-600">ETB {rechargeDetails.newBalance.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowSuccessModal(false)}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl text-xs font-bold uppercase tracking-[0.2em] shadow-lg shadow-slate-200 active:scale-95 transition-all"
-                >
-                  {t('done')}
-                </button>
-              </div>
             </motion.div>
           </div>
         )}

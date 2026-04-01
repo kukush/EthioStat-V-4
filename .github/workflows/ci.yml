@@ -16,7 +16,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
         cache: 'npm'
 
     - name: Install dependencies
@@ -32,6 +32,7 @@ jobs:
       run: npm run build
 
     - name: Set up JDK 17
+      id: setup-java
       uses: actions/setup-java@v4
       with:
         java-version: '17'
@@ -45,4 +46,6 @@ jobs:
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew -Dorg.gradle.java.home=${{ steps.setup-java.outputs.path }} assembleDebug
+      env:
+        JAVA_HOME: ${{ steps.setup-java.outputs.path }}

@@ -1,76 +1,91 @@
 # EthioStat Architecture
 
 ## Overview
-EthioStat (EthioBalance) is a hybrid mobile application built with React, Vite, and Tailwind CSS, wrapped in Capacitor to deploy natively on Android and iOS. 
+EthioStat is a telecom-grade, dual-tracking hybrid mobile application designed to function as an offline-first billing engine. Built with React and Capacitor, its business logic operates primarily in Android native memory, ensuring deterministic state processing.
 
-The application tracks a user's telecom balances (internet, voice, SMS, and bonuses), processes transaction histories (income and expenses), and provides a user-friendly dashboard to view financial and telecom data.
-
-## Technology Stack
-- **Frontend Framework**: React 19
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS, lucide-react (icons), motion (animations)
-- **State Management**: React Context / `useReducer` with a centralized store (`src/store.ts`)
-- **Native Wrapper**: Capacitor (iOS & Android)
-- **Language**: TypeScript
+The app tracks a user's telecom balances (Assets: internet, voice, SMS, airtime, and bonuses) separately from its financial history (Transactions: income and expenses).
 
 ## System Architecture
 
 ### 1. Presentation Layer (UI)
-The presentation layer is composed of React functional components categorized into complete screens and reusable UI elements.
-- **Screens** (`src/screens/`):
-  - `HomeScreen`: Main dashboard showing a summary of telecom packages and recent transactions.
-  - `TelecomScreen`: Detailed view of telecom balances, active packages, and recommended bundles.
-  - `TransactionScreen`: Transaction history, filtering by source and category.
-  - `SettingsScreen`: App configuration (theme, language, sim preferences).
-- **Components** (`src/components/`):
-  - `BottomNav`, Modals, Cards, and other reusable UI elements.
+React functional components are **strictly read-only** from a business state perspective.
+- **Screens** (`src/presentation/screens/`):
+  - `HomeScreen`: Displays dynamically computed net balances and current remaining telecom packages.
+  - `TelecomScreen`: Reads active `BalancePackageEntity` stats from the database.
+  - `TransactionScreen`: Reads `TransactionEntity` history with **color-coded income/expense cards** (emerald for income, rose for expense).
+  - `SettingsScreen`: Manages UI configuration (theme, language, transaction sources).
 
-### 2. State Management Layer
-Centralized state management is implemented in `src/store.ts` using the `useReducer` hook.
-- It manages:
-  - App state (Theme, Language, Active Tab)
-  - Data collections (SimCards, TelecomPackages, Transactions, Requests)
-  - User details & Telecom Balances.
+- **Components** (`src/presentation/components/`):
+  - `TransactionItem`: Renders individual transactions with type-aware coloring:
+    - **Income**: emerald background (`bg-emerald-50/40`), emerald icon container, green amount text (`text-emerald-600`).
+    - **Expense**: rose background (`bg-rose-50/40`), rose icon container, red amount text (`text-rose-600`).
+  - `PackageCard`: Renders telecom package cards including bonus type.
 
-### 3. Service Layer
-The business logic and data processing are decoupled into service modules (`src/services/`):
-- `smsParser.ts`: Logic to parse SMS messages (e.g., from banks or telecom providers) to extract transaction records and balances. Supports English, Amharic, and Afaan Oromo.
-- `mockDataService.ts`: Provides mock data for development and testing.
-- `persistenceService.ts`: Standardizes state sync between React memory and native Room DB.
+### 2. State Management Layer (`useNativeData`)
+React strictly prohibits telecom packages and transactions from residing in a Javascript `store`.
+- React state relies on `useNativeData.ts`, which polls or observes Capacitor Plugins to pull directly from the native SQLite standard.
 
-### 4. Native Integration Layer (Capacitor & Room)
-Native Android components provide high-reliability background processing:
-- **Room Database**: The **primary source of truth** for all transactions and balances. 100% offline and local.
-- **SmsForegroundService**: A background-eligible service that monitors incoming SMS messages in real-time without polling.
-- **UssdAccessibilityService**: A fallback mechanism to capture USSD response text when standard callbacks are suppressed.
-- **SmsMonitorPlugin**: The Capacitor bridge that syncs Room data to the React layer and triggers historical scans.
+### 3. Native Integration Layer (Capacitor Bridge)
+- **SmsMonitorPlugin** (`plugins/SmsMonitorPlugin.kt`):
+  - `getBalances()` / `getTransactions()`: Query Room Database and return structured JSON.
+  - `scanHistory({ senderId, days })`: Reads historical SMS from Android Telephony Provider and feeds them through `ReconciliationEngine` for idempotent processing.
+  - `checkPermissions()` / `requestPermissions()`: Capacitor built-in permission flow for `READ_SMS` + `RECEIVE_SMS`.
+  - `startMonitoring()`: No-op (permissions fully owned by Capacitor's built-in flow from JS).
+  - `updateTransactionSources()`: Persists user-configured bank/financial senders to the whitelist.
+  - `dialUssd()`: Opens the Android dialer with an encoded USSD code.
+
+- **useNativeBridge** (`src/presentation/hooks/useNativeBridge.ts`):
+  - On mount: `checkPermissions()` → `requestPermissions()` → `startMonitoring()` → `scanHistory()` for all `ALWAYS_SCAN_SENDERS` and user-configured sources.
+  - `ALWAYS_SCAN_SENDERS`: `['127', '251994', '804', '810', '994', '830']` (EthioTelecom/Telebirr system senders).
+
+### 4. Native Android Layer (The Single Source of Truth)
+All computing executes offline in Kotlin.
+- **Room Database**: Consists of explicit entities:
+  - `BalancePackageEntity` (STATE) — telecom asset balances with canonical IDs (`airtime-sim1`, `internet-sim1`, `voice-sim1`, `sms-sim1`, `bonus-sim1`).
+  - `TransactionEntity` (EVENTS) — financial income/expense records.
+  - `SmsLogEntity` (AUDIT) — raw SMS strings for replayability.
+  - `TransactionSourceEntity` — user-configured bank/financial senders.
+
+- **SmsForegroundService**: Background service capturing all incoming SMS signals.
+
+- **SmsReceiver**: BroadcastReceiver that filters incoming SMS by whitelist (system senders + user-configured + "TELEBIRR" keyword).
+
+- **SmsParser**: Smart Regex engine with the following capabilities:
+  - **Multi-segment parsing**: Handles Telebirr balance-status SMS with `;`-delimited segments for internet, voice, SMS, and **bonus** packages.
+  - **Largest-total-wins strategy** (`addOrReplace`): Prevents bonus/partial segments from overwriting main packages.
+  - **Trilingual regex**: English, Amharic (ሒሳ\S*, ቀሪ, ብር, ደቂቃ, ኤስኤምኤስ), and Afaan Oromo (Daqiiqaa, Intarneetii).
+  - **ETB-before-amount support**: All financial regexes accept both `"transferred ETB 220.00"` (real Telebirr format) and `"transferred 220.00 ETB"` via `(?:ETB\s*)?` prefix before capture groups.
+  - **SmsScenario enum**: `SELF_PURCHASE`, `EXPENSE`, `GIFT_SENT`, `RECHARGE_OR_GIFT_RECEIVED`, `LOAN_TAKEN`, `INCOME`, `BALANCE_UPDATE`, `BALANCE_QUERY`, `UNKNOWN`.
+  - **Financial transaction regexes**: loan, repayment, credit, debit, payment, transfer, fee, recharge — each with `transactionCategory` for granular classification.
+  - **Bonus parsing**: Multi-segment (`"Bonus Fund is 7.50 Birr"`) and standalone (`"awarded an ETB 7.50 bonus"`).
+  - **Airtime balance**: Handles `"balance is 500 ETB"`, `"new balance is ETB 1,234.56"`, `"balance after transaction is ETB X"`.
+
+- **ReconciliationEngine**: The heart of the system. Processes `ParsedSmsResult` by scenario:
+  - `SELF_PURCHASE` / `BALANCE_UPDATE` / `BALANCE_QUERY`: Upsert packages via `insertOrUpdate`.
+  - `INCOME`: Insert `TransactionEntity(type="INCOME")`.
+  - `EXPENSE`: Insert `TransactionEntity(type="EXPENSE")` with category (PURCHASE, GIFT, REPAYMENT, FEE, EXPENSE) + upsert any associated packages.
+  - `GIFT_SENT`: Insert expense transaction (no asset gain).
+  - `RECHARGE_OR_GIFT_RECEIVED`: Upsert packages (asset gain, no financial transaction unless recharge).
+  - `LOAN_TAKEN`: Insert income transaction.
 
 ## Data Flow
-1. **Initialization**: App loads `persistenceService` to retrieve existing state from local storage.
-2. **Action Dispatch**: User interactions trigger actions dispatched to the `reducer`.
-3. **State Update**: The reducer computes the new state.
-4. **Persistence**: `useEffect` hooks listen to state changes and persist them locally.
-5. **Native Operations**: Capacitor plugins read SMS messages and execute USSD codes through native Android services.
 
-## Project Status & Implementation
+### Real-Time SMS Processing
+1. **Event Reception**: SMS received by `SmsReceiver` → forwarded to `SmsForegroundService`.
+2. **Audit Tracking**: Raw string logged to `SmsLogEntity` for replayability.
+3. **Parse & Confidence Check**: `SmsParser` maps strings to `SmsScenario` enums (threshold > 0.70).
+4. **Reconciliation**: `ReconciliationEngine` segregates assets from financial transactions.
+5. **UI Rendering**: `SmsMonitorPlugin.getBalances()` returns packages + computed `NetBalance`.
 
-### Completed Features
-- **MVI Architecture**: Project refactored to align with Model-View-Intent architecture pattern
-- **Native Integration**: SMS monitoring and USSD capture implemented via Capacitor plugins
-- **Multilingual Support**: Smart parsing for English, Amharic, and Afaan Oromo languages
-- **Background Processing**: Foreground service for reliable SMS monitoring
-- **Historical Scanning**: 7-day SMS history scan when adding new transaction sources
-- **Room Database**: Native SQLite storage for 100% offline functionality
+### Historical SMS Scanning (App Startup)
+1. **Permission Check**: `useNativeBridge` calls `checkPermissions()` / `requestPermissions()` via Capacitor built-in flow.
+2. **Scan Trigger**: On `READ_SMS` grant, `scanHistory()` fires for each sender in `ALWAYS_SCAN_SENDERS` + user sources.
+3. **Native Query**: `SmsMonitorPlugin.performSmsScan()` queries `content://sms/inbox` with `address LIKE %senderId%` and 7-day cutoff.
+4. **Idempotent Processing**: Each message fed to `ReconciliationEngine.processSms()` — canonical IDs ensure upsert deduplication.
 
-### Build Fixes Applied
-- **Duplicate Switch Case**: Resolved Vite build warning in `src/store.ts`
-- **Gradle Optimization**: Updated Android build configuration for better metadata support
-- **Permissions**: Added required SMS and phone permissions to AndroidManifest.xml
-
-### Native Capabilities
-- **SMS Monitoring**: Real-time background SMS processing via SmsForegroundService
-- **USSD Capture**: Accessibility service for capturing USSD responses
-- **Room Persistence**: Primary source of truth for all transactions and balances
-- **Capacitor Bridge**: SmsMonitorPlugin syncs native data with React layer
-
-For detailed deployment instructions, see [deployment-guide.md](./deployment-guide.md).
+## Web Parser Parity
+A TypeScript mirror parser (`src/data/smsParser.ts`) maintains feature parity with the Kotlin `SmsParser`:
+- Same regex patterns for all financial transactions with `(?:ETB\s*)?` prefix support.
+- Same multi-segment parsing with bonus segment handling.
+- Same `addOrReplace` largest-total-wins strategy.
+- Validated by 33+ automated test cases (`src/data/smsParser.test.ts`).

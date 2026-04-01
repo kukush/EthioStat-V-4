@@ -7,22 +7,37 @@
   "userProfile": {
     "name": "Jane Doe",
     "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200",
-    "phoneNumber": "+251987654321"
+    "phoneNumber": "+251911223344"
   },
   "simCards": [
-    { "id": "sim-mock-1", "phoneNumber": "+251987654321", "label": "Business SIM", "isPrimary": true, "provider": "Ethio Telecom" }
+    { "id": "sim-mock-1", "phoneNumber": "+251911223344", "label": "Business SIM", "isPrimary": true, "provider": "Ethio Telecom" },
+    { "id": "sim-mock-2", "phoneNumber": "+251922334455", "label": "Personal SIM", "isPrimary": false, "provider": "Safaricom" }
   ],
-  "transactionSources": ["CBE", "Telebirr", "Zamen"],
+  "transactionSources": ["CBE", "Telebirr", "Awash", "Dashen", "Zamen", "Abyssinia"],
   "telecomPackages": [
     { "id": "pkg-1", "simId": "sim-mock-1", "type": "internet", "value": 850, "total": 2048, "unit": "MB", "label": "Monthly Data", "expiryDate": "Nov 15, 2026", "daysLeft": 20, "totalDays": 30 },
-    { "id": "pkg-2", "simId": "sim-mock-1", "type": "voice", "value": 45, "total": 60, "unit": "Min", "label": "Weekly Voice", "expiryDate": "Oct 28, 2026", "daysLeft": 4, "totalDays": 7 }
+    { "id": "pkg-2", "simId": "sim-mock-1", "type": "internet", "value": 2.5, "total": 5, "unit": "GB", "label": "Social Media Pack", "expiryDate": "Nov 02, 2026", "daysLeft": 7, "totalDays": 7 },
+    { "id": "pkg-3", "simId": "sim-mock-1", "type": "voice", "value": 45, "total": 60, "unit": "Min", "label": "Weekly Voice", "expiryDate": "Oct 28, 2026", "daysLeft": 4, "totalDays": 7 },
+    { "id": "pkg-4", "simId": "sim-mock-1", "type": "voice", "value": 120, "total": 300, "unit": "Min", "label": "Monthly Voice", "expiryDate": "Nov 10, 2026", "daysLeft": 15, "totalDays": 30 },
+    { "id": "pkg-5", "simId": "sim-mock-1", "type": "sms", "value": 28, "total": 50, "unit": "SMS", "label": "Daily SMS", "expiryDate": "Oct 25, 2026", "daysLeft": 1, "totalDays": 1 },
+    { "id": "pkg-6", "simId": "sim-mock-1", "type": "bonus", "value": 15.5, "total": 25, "unit": "ETB", "label": "Recharge Bonus", "expiryDate": "Oct 30, 2026", "daysLeft": 5, "totalDays": 7 }
   ],
   "recommendedBundles": [
-    { "id": "r1", "type": "internet", "label": "1GB Monthly", "price": 100, "description": "1GB Data for 30 days" }
+    { "id": "r1", "type": "internet", "label": "1GB Monthly", "price": 100, "description": "1GB Data for 30 days" },
+    { "id": "r2", "type": "voice", "label": "100 Min Weekly", "price": 50, "description": "100 Minutes to all networks" },
+    { "id": "r3", "type": "combo", "label": "Premium Combo", "price": 250, "description": "2GB + 200 Min + 100 SMS" }
   ],
   "transactions": [
-    { "id": "tx-1", "simId": "sim-mock-1", "type": "income", "amount": 12000, "source": "CBE", "description": "Salary", "timestamp": "10:00 AM", "category": "Income" },
-    { "id": "tx-2", "simId": "sim-mock-1", "type": "expense", "amount": 500, "source": "Telebirr", "description": "Groceries", "timestamp": "Yesterday", "category": "Food" }
+    { "id": "tx-1", "simId": "sim-mock-1", "type": "income", "amount": 12500.50, "source": "CBE", "description": "Salary Deposit", "timestamp": "2026-03-25T10:00:00Z", "category": "Salary" },
+    { "id": "tx-2", "simId": "sim-mock-1", "type": "expense", "amount": 1200.75, "source": "Telebirr", "description": "Supermarket Purchase", "timestamp": "2026-03-26T14:30:00Z", "category": "Food" },
+    { "id": "tx-3", "simId": "sim-mock-1", "type": "expense", "amount": 3500, "source": "Awash", "description": "House Rent", "timestamp": "2026-03-27T09:00:00Z", "category": "Housing" },
+    { "id": "tx-4", "simId": "sim-mock-1", "type": "income", "amount": 2000, "source": "Dashen", "description": "Freelance Work", "timestamp": "2026-03-28T16:15:00Z", "category": "Business" },
+    { "id": "tx-5", "simId": "sim-mock-1", "type": "expense", "amount": 450.25, "source": "Zamen", "description": "Fuel Refill", "timestamp": "2026-03-29T11:45:00Z", "category": "Transport" },
+    { "id": "tx-6", "simId": "sim-mock-1", "type": "expense", "amount": 15000, "source": "Abyssinia", "description": "Laptop Purchase (High Amount Edge Case)", "timestamp": "2026-03-30T10:00:00Z", "category": "Electronics" },
+    { "id": "tx-7", "simId": "sim-mock-1", "type": "income", "amount": 5.25, "source": "Telebirr", "description": "Small Cashback (Low Amount Edge Case)", "timestamp": "2026-03-30T12:00:00Z", "category": "Cashback" },
+    { "id": "tx-8", "simId": "sim-mock-2", "type": "expense", "amount": 85.50, "source": "M-PESA", "description": "Personal SIM Expense", "timestamp": "2026-03-30T13:00:00Z", "category": "Other" }
   ],
-  "giftRequests": []
+  "giftRequests": [
+    { "id": "gr-1", "senderNumber": "0912345678", "bundleId": "r1", "timestamp": "2026-03-30T10:30:00Z", "status": "pending" }
+  ]
 }

@@ -13,9 +13,10 @@ interface HomeScreenProps {
   telecomBalance: number;
   language: Language;
   userName?: string;
+  userPhoneNumber?: string;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, telecomBalance, language, userName }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, telecomBalance, language, userName, userPhoneNumber }) => {
   const t = useTranslation(language);
 
   // Extract unique sources from transactions
@@ -35,7 +36,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
     <div className="space-y-8 pb-32">
       <header className="space-y-2">
         <h1 className="text-3xl font-black tracking-tight text-slate-900">{t('dashboard')}</h1>
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('welcome')}, {userName || 'User'}</p>
+        <div className="flex flex-col">
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('welcome')}, {userName || 'User'}</p>
+          {userPhoneNumber && userPhoneNumber !== 'Unknown' ? (
+            <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">{userPhoneNumber}</p>
+          ) : (
+            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">Primary SIM Active</p>
+          )}
+        </div>
       </header>
 
       {/* Dual-Tracking Summary */}
@@ -106,7 +114,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
                   <div>
                     <p className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t('data')}</p>
                     <p className="text-xs font-black">
-                      {packages.filter(p => p.type === 'internet').reduce((acc, p) => acc + (p.unit === 'GB' ? p.value : p.value / 1024), 0).toFixed(1)} 
+                      {packages.filter(p => p.type === 'internet').reduce((acc, p) => {
+                        const val = Number(p.value) || 0;
+                        return acc + (p.unit?.toUpperCase() === 'GB' ? val : val / 1024);
+                      }, 0).toFixed(1)} 
                       <span className="text-[8px] opacity-60 ml-1">GB</span>
                     </p>
                   </div>
@@ -116,7 +127,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
                   <div>
                     <p className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t('audio')}</p>
                     <p className="text-xs font-black">
-                      {packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + p.value, 0)} 
+                      {packages.filter(p => p.type === 'voice').reduce((acc, p) => acc + (Number(p.value) || 0), 0)} 
                       <span className="text-[8px] opacity-60 ml-1">Min</span>
                     </p>
                   </div>
@@ -126,7 +137,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ packages, transactions, 
                   <div>
                     <p className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t('sms')}</p>
                     <p className="text-xs font-black">
-                      {packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + p.value, 0)} 
+                      {packages.filter(p => p.type === 'sms').reduce((acc, p) => acc + (Number(p.value) || 0), 0)} 
                       <span className="text-[8px] opacity-60 ml-1">SMS</span>
                     </p>
                   </div>

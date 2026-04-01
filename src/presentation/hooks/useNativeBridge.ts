@@ -1,26 +1,88 @@
-import React, { useEffect } from 'react';
-import SmsMonitor from '@/data/smsMonitorPlugin';
-import { Intent } from '@/domain/types';
+import { useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import SmsMonitor from '../../data/smsMonitorPlugin';
+import { ETHIOPIAN_BANKS } from '../../constants/banks';
 
-export const useNativeBridge = (dispatch: React.Dispatch<Intent>) => {
+// EthioTelecom & Telebirr short-codes that deliver telecom package/balance SMS.
+// These are scanned on every startup regardless of which banks the user has configured.
+const ALWAYS_SCAN_SENDERS = ['127', '251994', '804', '810', '994', '830'];
+
+export const useNativeBridge = (sources: string[] = []) => {
   useEffect(() => {
-    // Start native monitoring
-    SmsMonitor.startMonitoring();
+    if (!Capacitor.isNativePlatform()) return;
 
-    // Listen for USSD capture events
-    const ussdListener = SmsMonitor.addListener('ussdReceived', (data) => {
-      console.log('Native Bridge: USSD Received', data.text);
-      dispatch({ type: 'PARSE_USSD', text: data.text });
-    });
+    // Use Capacitor's built-in checkPermissions/requestPermissions so scans only
+    // fire after Android has definitively confirmed READ_SMS is granted.
+    (async () => {
+      try {
+        let { sms } = await SmsMonitor.checkPermissions();
+        if (sms !== 'granted') {
+          const result = await SmsMonitor.requestPermissions();
+          sms = result.sms;
+        }
+        if (sms !== 'granted') {
+          console.warn('[EthioStat] READ_SMS permission denied — SMS scanning disabled');
+          return;
+        }
 
-    // Listen for Historical SMS scan results
-    const smsListener = SmsMonitor.addListener('smsFound', (data) => {
-      console.log('Native Bridge: SMS Found', data.sender);
-      dispatch({ type: 'PARSE_SMS', text: data.body, senderId: data.sender });
-    });
+        await SmsMonitor.startMonitoring();
 
-    return () => {
-      // Cleanup if needed
-    };
-  }, [dispatch]);
+        // Always scan EthioTelecom/Telebirr senders for telecom asset messages
+        ALWAYS_SCAN_SENDERS.forEach(senderId => {
+          SmsMonitor.scanHistory({ senderId, days: 7 });
+        });
+
+        // Trigger a 7-day historical scan for every user-configured source on startup
+        sources.forEach(abbreviation => {
+          const bank = ETHIOPIAN_BANKS.find(b => b.abbreviation === abbreviation);
+          const senderId = bank?.senderId ?? abbreviation;
+          // Skip if already covered by ALWAYS_SCAN_SENDERS
+          if (!ALWAYS_SCAN_SENDERS.includes(senderId)) {
+            SmsMonitor.scanHistory({ senderId, days: 7 });
+          }
+        });
+      } catch (err) {
+        console.warn('[EthioStat] Permission or scan init failed:', err);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const transferAirtime = (recipient: string, amount: number) => {
+    const code = `*806*${recipient}*${amount}#`;
+    if (Capacitor.isNativePlatform()) {
+      SmsMonitor.dialUssd({ code });
+    } else {
+      window.location.href = `tel:${encodeURIComponent(code)}`;
+    }
+  };
+
+  const rechargeForOther = (voucher: string, recipient: string) => {
+    const code = `*805*${voucher}*${recipient}#`;
+    if (Capacitor.isNativePlatform()) {
+      SmsMonitor.dialUssd({ code });
+    } else {
+      window.location.href = `tel:${encodeURIComponent(code)}`;
+    }
+  };
+
+  const rechargeSelf = (voucher: string) => {
+    const code = `*805*${voucher}#`;
+    if (Capacitor.isNativePlatform()) {
+      SmsMonitor.dialUssd({ code });
+    } else {
+      window.location.href = `tel:${encodeURIComponent(code)}`;
+    }
+  };
+
+  const giftPackage = (sequence: string, recipient: string) => {
+    const code = `*999#`; 
+    if (Capacitor.isNativePlatform()) {
+      SmsMonitor.dialUssd({ code });
+    } else {
+      window.location.href = `tel:${encodeURIComponent(code)}`;
+    }
+  };
+
+  return { transferAirtime, rechargeForOther, rechargeSelf, giftPackage };
 };

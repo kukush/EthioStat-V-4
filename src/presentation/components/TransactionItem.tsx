@@ -18,7 +18,8 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
   const t = useTranslation(language as Language);
   const isIncome = transaction.type === 'income';
 
-  const getTranslatedSource = (source: string) => {
+  const getTranslatedSource = (source?: string) => {
+    if (!source) return 'Unknown';
     const key = source.toLowerCase().replace(/\s+/g, '_');
     // @ts-ignore - dynamic key access
     const translated = t(key);
@@ -32,7 +33,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
       return getBankIcon(transaction.source, 32);
     }
 
-    const category = transaction.category.toLowerCase();
+    const category = (transaction.category || '').toLowerCase();
     switch (category) {
       case 'utility':
       case 'utilities':
@@ -63,14 +64,22 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
     <div 
       onClick={() => setIsExpanded(!isExpanded)}
       className={cn(
-        'bg-white p-4 rounded-2xl transition-all duration-300 border border-transparent cursor-pointer overflow-hidden',
-        isExpanded ? 'shadow-lg shadow-slate-200/50 border-slate-100 scale-[1.02]' : 'hover:bg-slate-50 hover:border-slate-100',
+        'p-4 rounded-2xl transition-all duration-300 border cursor-pointer overflow-hidden',
+        isIncome
+          ? 'bg-emerald-50/40 border-emerald-100/60'
+          : 'bg-rose-50/40 border-rose-100/60',
+        isExpanded
+          ? (isIncome ? 'shadow-lg shadow-emerald-100/50 scale-[1.02]' : 'shadow-lg shadow-rose-100/50 scale-[1.02]')
+          : (isIncome ? 'hover:bg-emerald-50/60 hover:border-emerald-200/60' : 'hover:bg-rose-50/60 hover:border-rose-200/60'),
         className
       )}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
+          <div className={cn(
+            "w-12 h-12 rounded-xl flex items-center justify-center",
+            isIncome ? 'bg-emerald-100/60' : 'bg-rose-100/60'
+          )}>
             {getIcon()}
           </div>
           <div>
@@ -84,7 +93,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, l
           <div className="text-right">
             <p className={cn(
               'font-black',
-              isIncome ? 'text-green-600' : 'text-slate-900'
+              isIncome ? 'text-emerald-600' : 'text-rose-600'
             )}>
               {isIncome ? '+' : '-'} ETB {Math.abs(transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </p>
