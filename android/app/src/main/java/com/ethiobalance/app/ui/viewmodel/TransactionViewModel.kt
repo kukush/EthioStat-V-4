@@ -42,9 +42,14 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     val filteredTransactions: StateFlow<List<TransactionEntity>> = combine(
-        allTransactions, _timeFilter, _sourceFilter, _searchQuery
-    ) { transactions, time, source, query ->
-        var filtered = transactions
+        allTransactions, _timeFilter, _sourceFilter, _searchQuery, settingsRepo.getTransactionSources()
+    ) { transactions, time, source, query, configuredSources ->
+        // Start by removing AIRTIME and filtering by configured sources (Case-Insensitive)
+        val enabledNormalised = configuredSources.map { it.name.lowercase() }.toSet()
+        var filtered = transactions.filter {
+            val resolved = AppConstants.resolveSource(it.source).lowercase()
+            resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledNormalised.contains(resolved)
+        }
 
         // Time filter
         val now = System.currentTimeMillis()
@@ -55,8 +60,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
             else -> filtered
         }
 
-        // Source filter — normalize stored source before comparing
-        // so that old "127" records still match a "TELEBIRR" filter
+        // Source filter
         if (source != null) {
             filtered = filtered.filter {
                 AppConstants.resolveSource(it.source).equals(source, ignoreCase = true)
@@ -84,19 +88,13 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         list.filter { it.type == "EXPENSE" }.sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val uniqueSources: StateFlow<List<String>> = combine(
-        allTransactions,
-        settingsRepo.getTransactionSources()
-    ) { transactions, sources ->
-        // Normalize all stored source values through resolveSource so that
-        // numeric senders like "127" and alpha "TELEBIRR" both become "TELEBIRR"
-        val transactionSources = transactions
-            .map { AppConstants.resolveSource(it.source) }
-            .distinct()
-            .filter { it != "Unknown" && it.isNotBlank() }
-        val configuredSources = sources.map { it.name }
-        (transactionSources + configuredSources).distinct().sorted()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val uniqueSources: StateFlow<List<String>> = settingsRepo.getTransactionSources()
+        .map { sources ->
+            sources.map { it.name }
+                .filter { it != AppConstants.SOURCE_AIRTIME }
+                .distinct()
+                .sorted()
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setTimeFilter(filter: String) { _timeFilter.value = filter }
     fun setSourceFilter(source: String?) { _sourceFilter.value = source }

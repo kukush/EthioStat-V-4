@@ -49,7 +49,19 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setUserProfile(name: String, phone: String, avatar: String) {
-        viewModelScope.launch { settingsRepo.setUserProfile(name, phone, avatar) }
+        viewModelScope.launch {
+            settingsRepo.setUserProfile(name, phone, avatar)
+            
+            // Automatically find and set primary SIM if number matches
+            val currentSims = simRepo.getAllSimCards().first()
+            val match = currentSims.find { it.phoneNumber.contains(phone) || phone.contains(it.phoneNumber) }
+            if (match != null) {
+                simRepo.setPrimary(match.id)
+            } else if (currentSims.isNotEmpty()) {
+                // If no phone match but SIMs exist, default the first one to primary as a fallback
+                simRepo.setPrimary(currentSims.first().id)
+            }
+        }
     }
 
     fun detectSimCards() {
@@ -69,7 +81,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun addTransactionSource(source: TransactionSourceEntity) {
-        viewModelScope.launch { settingsRepo.addTransactionSource(source) }
+        viewModelScope.launch {
+            settingsRepo.addTransactionSource(source)
+            // Read 90 days of history for the new source, forcing reparse of previously ignored SMS
+            transactionRepo.smsRepo.scanHistory(source.senderId, days = 90, forceReparse = true)
+        }
     }
 
     fun removeTransactionSource(abbreviation: String) {

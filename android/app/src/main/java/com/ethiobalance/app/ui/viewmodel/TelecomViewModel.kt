@@ -50,11 +50,11 @@ class TelecomViewModel(application: Application) : AndroidViewModel(application)
                     _syncError.value = error ?: "Failed to initiate USSD call."
                     return@launch
                 }
-                // After a short delay, scan for any new SMS from 804 sender
-                kotlinx.coroutines.delay(3000)
-                val scanned = smsRepo.scanHistory("804", days = 1)
+                // After a short delay, scan for any new SMS from telecom senders
+                kotlinx.coroutines.delay(9000)
+                val scanned = smsRepo.scanTelecomHistory(days = 1)
                 if (scanned == 0) {
-                    _syncError.value = "No balance SMS found. Ensure USSD response was received."
+                    _syncError.value = "Balance capture pending. Please wait for SMS from EthioTelecom."
                 }
             } catch (e: Exception) {
                 _syncError.value = e.message ?: "Sync failed"

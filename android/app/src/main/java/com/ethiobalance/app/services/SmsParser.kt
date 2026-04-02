@@ -24,7 +24,8 @@ data class ParsedSmsResult(
     val addedAmount: Double? = null,
     val isRecharge: Boolean = false,
     val airtimeBalance: Double? = null,
-    val transactionCategory: String? = null
+    val transactionCategory: String? = null,
+    val reference: String? = null
 )
 
 object SmsParser {
@@ -162,6 +163,7 @@ object SmsParser {
         var addedAmount: Double? = null
         var isRecharge = false
         var transactionCategory: String? = null
+        var reference: String? = null
         val now = System.currentTimeMillis()
         
         // Generate a deterministic base ID so historical rescans don't duplicate entities
@@ -431,7 +433,7 @@ object SmsParser {
 
             // Bank credit / income ("credited with 15,500.00 ETB", "credit of X ETB")
             val creditMatch = Regex(
-                """(?:credited|credit of|has been credited)\s*(?:with\s+)?(?:ETB\s*)?([\d,]+\.?\d*)""",
+                """(?:credited|credit of|has been credited|received\s+a\s+gift\s+of|received\s+ETB|transferred\s+to\s+you)\s*(?:with\s+)?(?:ETB\s*)?([\d,]+\.?\d*)""",
                 RegexOption.IGNORE_CASE
             ).find(body)
             if (creditMatch != null && loanMatch == null) {
@@ -484,17 +486,32 @@ object SmsParser {
                 addedAmount = rechargeMatch.groupValues[1].replace(",", "").toDoubleOrNull()
                 confidenceScore = 0.9f
             }
+
+            // 4. Extract Reference / Trans ID
+            val refMatch = Regex("""(?:Trans\s*ID|Transaction\s*ID|Ref\s*No|Reference|TRX\s*ID|Trx)[:\s]*([A-Z0-9]+)""", RegexOption.IGNORE_CASE).find(body)
+            if (refMatch != null && refMatch.groupValues[1].length > 4) {
+                reference = refMatch.groupValues[1]
+                if (scenario == SmsScenario.UNKNOWN) {
+                    confidenceScore = 0.5f // Reference found implies it's a real event, just generic
+                }
+            }
         }  
 
-        // Inference logic if scenario is still UNKNOWN but packages exist
-        if (scenario == SmsScenario.UNKNOWN && result.packages.isNotEmpty()) {
+        // Inference logic if scenario is still UNKNOWN
+        if (scenario == SmsScenario.UNKNOWN) {
             if (isGiftReceived) {
                 scenario = SmsScenario.RECHARGE_OR_GIFT_RECEIVED
-            } else {
+                confidenceScore = 0.8f
+            } else if (result.packages.isNotEmpty()) {
                 // Determine if it's just a balance query vs a package update.
                 // If there's no deducted amount found but packages are found, it's a BALANCE_UPDATE.
                 scenario = SmsScenario.BALANCE_UPDATE
+                confidenceScore = 0.8f
             }
+        }
+
+        if (sender == "127") {
+            android.util.Log.i("SmsParser", "Checking 127: scenario=$scenario, trusted=$isTrustedSender, confidence=$confidenceScore, body snippet=${body.take(30)}")
         }
 
         return result.copy(
@@ -504,7 +521,8 @@ object SmsParser {
             addedAmount = addedAmount,
             isRecharge = isRecharge,
             airtimeBalance = airtimeBalance,
-            transactionCategory = transactionCategory
+            transactionCategory = transactionCategory,
+            reference = reference
         )
     }
 }

@@ -25,14 +25,16 @@ class SmsRepository(private val context: Context) {
      * The address LIKE clause uses both the raw sender and the normalized form
      * so that "+251127", "251127", "0127", and "127" are all matched.
      */
-    suspend fun scanHistory(senderId: String, days: Int = 90): Int = withContext(Dispatchers.IO) {
+    suspend fun scanHistory(senderId: String, days: Int = 90, forceReparse: Boolean = false): Int = withContext(Dispatchers.IO) {
         val normalized = ReconciliationEngine.normalizeSender(senderId)
         val lastTimestamp = db.smsLogDao().getLastTimestampForSender(normalized)
 
         // Use the OLDER of: (now - days) vs last known scan timestamp.
-        // This ensures a wider first-run or a re-widened window is honoured.
+        // If forceReparse is true, force scanning the ENTIRE 90 days window without being artificially bottlenecked.
+        // Wait, if lastTimestamp is very old, we still want to scan everything from 90 days ago OR older.
+        // Actually, if we forceReparse, we only care about the last 90 days.
         val windowStart = System.currentTimeMillis() - (days * 24L * 60L * 60L * 1000L)
-        val cutoffTime = if (lastTimestamp != null) minOf(lastTimestamp, windowStart) else windowStart
+        val cutoffTime = if (lastTimestamp != null && !forceReparse) minOf(lastTimestamp, windowStart) else windowStart
 
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
@@ -73,7 +75,7 @@ class SmsRepository(private val context: Context) {
                 val body      = it.getString(bodyIdx)    ?: continue
                 val timestamp = it.getLong(dateIdx)
                 try {
-                    ReconciliationEngine.processSms(sender, body, timestamp, db)
+                    ReconciliationEngine.processSms(sender, body, timestamp, db, forceReparse)
                     matchCount++
                 } catch (e: Exception) {
                     Log.e("SmsRepository", "Failed to process SMS from $sender: ${e.message}")
@@ -104,6 +106,16 @@ class SmsRepository(private val context: Context) {
         }
         Log.d("SmsRepository", "scanAllTransactionSources done: $totalScanned total")
         totalScanned
+    }
+
+    /**
+     * Specifically scans for EthioTelecom (804, etc.) balance responses.
+     */
+    suspend fun scanTelecomHistory(days: Int = 1): Int = withContext(Dispatchers.IO) {
+        val telecomSenders = setOf("804")
+        var total = 0
+        telecomSenders.forEach { total += scanHistory(it, days) }
+        total
     }
 
     /**

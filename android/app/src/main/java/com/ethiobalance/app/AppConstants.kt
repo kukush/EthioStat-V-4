@@ -151,8 +151,8 @@ object AppConstants {
     )
 
     // Source labels used in TransactionEntity.source
-    const val SOURCE_TELEBIRR = "TELEBIRR"
-    const val SOURCE_AIRTIME  = "AIRTIME"
+    const val SOURCE_TELEBIRR = "TeleBirr"
+    const val SOURCE_AIRTIME  = "AIRTIME" // Used for Telecom Assets, excluded from Financials
 
     /**
      * Resolves a human-readable source label from a raw SMS sender number.
@@ -165,11 +165,11 @@ object AppConstants {
     fun resolveSource(sender: String): String {
         val upper = sender.uppercase()
         
-        // Telebirr
+        // Telebirr (Normalize all variants to "TeleBirr")
         if (upper.contains("TELEBIRR") || TELEBIRR_SENDERS.contains(sender)) return SOURCE_TELEBIRR
         
         // Commercial Bank of Ethiopia (CBE)
-        if (upper.contains("CBE") || sender == "847") return "CBE"
+        if (upper.contains("CBE") || sender == "847" || upper.contains("CBEBIRR")) return "CBE"
         
         // Awash Bank
         if (upper.contains("AWASH") || sender == "901") return "AWASH"
@@ -180,11 +180,11 @@ object AppConstants {
         // Coopbank
         if (upper.contains("COOP") || sender == "896") return "COOPBANK"
         
-        // EthioTelecom (Airtime) natively restricted to its real numbers
+        // EthioTelecom (Airtime / Telecom Assets)
         val ethioTelecomSenders = setOf("804", "805", "806", "810", "830", "994", "251994", "8994")
-        if (ethioTelecomSenders.contains(sender)) return SOURCE_AIRTIME
+        if (ethioTelecomSenders.contains(sender) || upper.contains("ETHIOTELECOM") || upper.contains("ETHIO TELECOM")) return SOURCE_AIRTIME
 
-        // Fallback to literal sender identity
+        // Fallback to literal sender identity (title-cased)
         return sender
     }
 

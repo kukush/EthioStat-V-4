@@ -4,7 +4,7 @@ import androidx.room.*
 
 @Dao
 interface SmsLogDao {
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(log: SmsLogEntity)
 
     @Query("SELECT * FROM sms_logs ORDER BY timestamp ASC")

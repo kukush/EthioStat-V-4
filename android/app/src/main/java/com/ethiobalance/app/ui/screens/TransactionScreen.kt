@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.ui.Translations
+import com.ethiobalance.app.ui.components.SummaryCard
 import com.ethiobalance.app.ui.components.TransactionItem
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
@@ -103,25 +104,6 @@ fun TransactionScreen(
                             color = Slate900,
                             letterSpacing = (-1).sp
                         )
-                        IconButton(
-                            onClick = { if (!isScanningHistory) onScanAll() },
-                            modifier = Modifier
-                                .background(Color.White, CircleShape)
-                                .border(1.dp, if (isScanningHistory) Blue200 else Slate100, CircleShape)
-                        ) {
-                            if (isScanningHistory) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = Blue600
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Refresh, "Scan SMS",
-                                    tint = Slate400, modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -156,7 +138,7 @@ fun TransactionScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Time Period Filters
                     Row(
@@ -181,7 +163,7 @@ fun TransactionScreen(
                                 Text(
                                     text = Translations.t(language, translationKey)
                                         .takeIf { it.isNotEmpty() } ?: translationKey.uppercase(),
-                                    fontSize = 10.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Black,
                                     color = if (isSelected) Color.White else Slate400,
                                     letterSpacing = 2.sp
@@ -190,7 +172,7 @@ fun TransactionScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     // Source Filter Chips
                     Row(
@@ -226,8 +208,7 @@ fun TransactionScreen(
                         sourceFilter = sourceFilter,
                         lastActivity = lastActivity,
                         showAmounts = showAmounts,
-                        onToggleAmounts = { showAmounts = !showAmounts },
-                        fmt = fmt
+                        onToggleAmounts = { showAmounts = !showAmounts }
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -255,7 +236,7 @@ fun TransactionScreen(
                 }
             }
 
-            // ── EMPTY STATE ───────────────────────────────────────────────────
+            // ── EMPTY STATE OR LIST ───────────────────────────────────────────
             if (transactions.isEmpty()) {
                 item {
                     Box(
@@ -273,7 +254,7 @@ fun TransactionScreen(
                                 modifier = Modifier.size(64.dp).clip(CircleShape).background(Slate50),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.AccountBalanceWallet, null, tint = Slate300, modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.Payments, null, tint = Slate300, modifier = Modifier.size(32.dp))
                             }
                             Spacer(Modifier.height(16.dp))
                             Text("No transactions found", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate900)
@@ -331,7 +312,7 @@ fun TransactionScreen(
                             ) {
                                 Text(
                                     Translations.t(language, key).takeIf { it.isNotEmpty() } ?: key.uppercase(),
-                                    fontSize = 9.sp, fontWeight = FontWeight.Black,
+                                    fontSize = 7.sp, fontWeight = FontWeight.Black,
                                     color = if (isSel) Color.White else Slate400,
                                     letterSpacing = 1.sp
                                 )
@@ -393,161 +374,5 @@ private fun SourceChip(label: String, isSelected: Boolean, onClick: () -> Unit) 
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-    }
-}
-
-// ── Summary Card ──────────────────────────────────────────────────────────────
-@Composable
-private fun SummaryCard(
-    language: String,
-    netBalance: Double,
-    totalIncome: Double,
-    totalExpense: Double,
-    transactionCount: Int,
-    timeFilter: String,
-    sourceFilter: String?,
-    lastActivity: String,
-    showAmounts: Boolean,
-    onToggleAmounts: () -> Unit,
-    fmt: NumberFormat
-) {
-    Surface(
-        shape = RoundedCornerShape(40.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
-        shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth().animateContentSize()
-    ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(32.dp).clip(CircleShape).background(Blue50),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.History, null, tint = Blue600, modifier = Modifier.size(16.dp))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    val sourceLabel = sourceFilter
-                        ?: (Translations.t(language, "overallSummary").takeIf { it.isNotEmpty() } ?: "OVERALL SUMMARY")
-                    Text(
-                        text = sourceLabel.uppercase(),
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp, color = Slate400
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onToggleAmounts, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            if (showAmounts) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            null, tint = Slate400, modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Default.CalendarToday, null, tint = Slate400, modifier = Modifier.size(12.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        timeFilter.uppercase(),
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp, color = Slate400
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        Translations.t(language, "netCashFlow").takeIf { it.isNotEmpty() }?.uppercase() ?: "NET BALANCE",
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = if (showAmounts) fmt.format(netBalance) else "••••••",
-                            fontSize = 24.sp, fontWeight = FontWeight.Black,
-                            color = if (netBalance >= 0) Emerald600 else Rose600
-                        )
-                        if (showAmounts) {
-                            Text(
-                                " ETB", fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                                color = if (netBalance >= 0) Emerald600 else Rose600,
-                                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
-                            )
-                        }
-                    }
-                }
-                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text(
-                        Translations.t(language, "transactions").uppercase(),
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = transactionCount.toString(),
-                        fontSize = 24.sp, fontWeight = FontWeight.Black, color = Slate900
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = Slate50)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(Emerald50),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            Translations.t(language, "income").uppercase(),
-                            fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
-                        )
-                        Text(
-                            if (showAmounts) "+${fmt.format(totalIncome)}" else "••••",
-                            fontSize = 14.sp, fontWeight = FontWeight.Black, color = Emerald600
-                        )
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(Rose50),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.TrendingDown, null, tint = Rose600, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            Translations.t(language, "expense").uppercase(),
-                            fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
-                        )
-                        Text(
-                            if (showAmounts) "-${fmt.format(totalExpense)}" else "••••",
-                            fontSize = 14.sp, fontWeight = FontWeight.Black, color = Rose600
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "LAST ACTIVITY: $lastActivity",
-                fontSize = 8.sp, fontWeight = FontWeight.Bold,
-                color = Slate300, letterSpacing = 2.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-        }
     }
 }

@@ -107,7 +107,7 @@ fun BottomNavBar(
 
                         Text(
                             text = Translations.t(language, tab.labelKey),
-                            fontSize = 9.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isActive) tab.activeColor else Slate400,
                             textAlign = TextAlign.Center,

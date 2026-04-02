@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.ui.Translations
+import com.ethiobalance.app.ui.components.SummaryCard
+import com.ethiobalance.app.ui.components.TelecomAssetCard
 import com.ethiobalance.app.ui.components.TransactionItem
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
@@ -47,7 +49,17 @@ fun HomeScreen(
         maximumFractionDigits = 2
     }
 
-    val uniqueSources = transactions.map { it.source }.distinct().filter { it != "Unknown" }
+    // Group transactions by resolved source name to normalize ("127" and "Telebirr" become "TeleBirr")
+    // and filter out "AIRTIME" transactions from financial summaries.
+    val financialTransactions = transactions.filter { 
+        com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME 
+    }
+    
+    val groupedTransactions = financialTransactions.groupBy { 
+        com.ethiobalance.app.AppConstants.resolveSource(it.source) 
+    }
+    
+    val uniqueSources = groupedTransactions.keys.filter { it != "Unknown" }.sorted()
 
     // Telecom Package computations
     val internetPkgs = packages.filter { it.type.contains("internet", ignoreCase = true) || it.type.contains("data", ignoreCase = true) }
@@ -112,166 +124,23 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         // Financial Summary Card
-        Surface(
-            shape = RoundedCornerShape(40.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
-            shadowElevation = 2.dp
-        ) {
-            Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(Blue50), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.AccountBalanceWallet, null, tint = Blue600, modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            Translations.t(language, "financialSummary").takeIf { it.isNotEmpty() }?.uppercase() ?: "FINANCIAL SUMMARY",
-                            fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
-                        )
-                    }
-                    Text("HISTORY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Blue600, letterSpacing = 2.sp)
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                    Column {
-                        Text("NET CASH FLOW", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("ETB", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate400, modifier = Modifier.padding(bottom = 6.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                fmt.format(netBalance),
-                                fontSize = 32.sp, fontWeight = FontWeight.Black,
-                                color = if (netBalance >= 0) Emerald600 else Rose600,
-                                letterSpacing = (-1).sp
-                            )
-                        }
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(12.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("+${fmt.format(totalIncome)}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Emerald600)
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingDown, null, tint = Rose600, modifier = Modifier.size(12.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("-${fmt.format(totalExpense)}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Rose600)
-                        }
-                    }
-                }
-            }
-        }
+        SummaryCard(
+            language = language,
+            netBalance = netBalance,
+            totalIncome = totalIncome,
+            totalExpense = totalExpense
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         // Telecom Assets Card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(40.dp))
-                .background(Slate900)
-                .drawBehind {
-                    // Decorative glow effects matching "blur-3xl" logic
-                    drawCircle(
-                        brush = Brush.radialGradient(listOf(Blue600.copy(alpha=0.3f), Color.Transparent)),
-                        radius = size.width * 0.4f,
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.9f, size.height * 0.1f)
-                    )
-                    drawCircle(
-                        brush = Brush.radialGradient(listOf(Purple600.copy(alpha=0.3f), Color.Transparent)),
-                        radius = size.width * 0.4f,
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.9f)
-                    )
-                }
-        ) {
-            Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.White.copy(alpha=0.1f)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Bolt, null, tint = Blue400, modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            Translations.t(language, "telecomAssets").takeIf { it.isNotEmpty() }?.uppercase() ?: "TELECOM ASSETS",
-                            fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha=0.6f), letterSpacing = 2.sp
-                        )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Language, null, tint = Blue400, modifier = Modifier.size(12.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("ETHIO TELECOM", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Blue400, letterSpacing = 2.sp)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Left Column: Airtime
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            Translations.t(language, "availableAirtime").takeIf { it.isNotEmpty() }?.uppercase() ?: "AVAILABLE AIRTIME",
-                            fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha=0.6f), letterSpacing = 2.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text("ETB", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha=0.6f), modifier = Modifier.padding(bottom=4.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                fmt.format(telecomBalance),
-                                fontSize = 28.sp, fontWeight = FontWeight.Black,
-                                color = Color.White, letterSpacing = (-1).sp
-                            )
-                        }
-                    }
-
-                    // Right Column: Package Summaries
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.width(4.dp).height(24.dp).clip(CircleShape).background(Blue500))
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text("DATA", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha=0.6f), letterSpacing = 2.sp)
-                                Row(verticalAlignment = Alignment.Bottom) {
-                                    Text("%.1f".format(Locale.US, dataVol), fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White)
-                                    Text(" GB", fontSize = 8.sp, color = Color.White.copy(alpha=0.6f), modifier = Modifier.padding(bottom=1.dp))
-                                }
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.width(4.dp).height(24.dp).clip(CircleShape).background(Emerald500))
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text("AUDIO", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha=0.6f), letterSpacing = 2.sp)
-                                Row(verticalAlignment = Alignment.Bottom) {
-                                    Text(fmt.format(voiceVol), fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White)
-                                    Text(" Min", fontSize = 8.sp, color = Color.White.copy(alpha=0.6f), modifier = Modifier.padding(bottom=1.dp))
-                                }
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.width(4.dp).height(24.dp).clip(CircleShape).background(Purple500))
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text("SMS", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha=0.6f), letterSpacing = 2.sp)
-                                Row(verticalAlignment = Alignment.Bottom) {
-                                    Text(fmt.format(smsVol), fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White)
-                                    Text(" SMS", fontSize = 8.sp, color = Color.White.copy(alpha=0.6f), modifier = Modifier.padding(bottom=1.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        TelecomAssetCard(
+            language = language,
+            telecomBalance = telecomBalance,
+            dataVol = dataVol,
+            voiceVol = voiceVol,
+            smsVol = smsVol
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -282,7 +151,7 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
             uniqueSources.forEach { src ->
-                val srcTxs = transactions.filter { it.source == src }
+                val srcTxs = groupedTransactions[src] ?: emptyList()
                 val srcInc = srcTxs.filter { it.type.uppercase() == "INCOME" }.sumOf { it.amount }
                 val srcExp = srcTxs.filter { it.type.uppercase() == "EXPENSE" }.sumOf { it.amount }
                 val srcNet = srcInc - srcExp
@@ -330,7 +199,7 @@ fun HomeScreen(
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        val recentTransactions = transactions.take(4)
+        val recentTransactions = financialTransactions.take(4)
         if (recentTransactions.isEmpty()) {
             Surface(
                 shape = RoundedCornerShape(32.dp),

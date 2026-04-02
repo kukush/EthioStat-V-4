@@ -36,11 +36,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "light")
 
     val totalIncome: StateFlow<Double> = transactions.map { list ->
-        list.filter { it.type == "INCOME" }.sumOf { it.amount }
+        list.filter { it.type == "INCOME" && com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME }
+            .sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val totalExpense: StateFlow<Double> = transactions.map { list ->
-        list.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+        list.filter { it.type == "EXPENSE" && com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME }
+            .sumOf { it.amount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val telecomBalance: StateFlow<Double> = packages.map { list ->

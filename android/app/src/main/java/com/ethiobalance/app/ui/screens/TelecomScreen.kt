@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.data.BalancePackageEntity
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.components.PackageCard
+import com.ethiobalance.app.ui.components.TelecomAssetCard
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -64,110 +65,29 @@ fun TelecomScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Balance Card (dark)
-        Surface(shape = RoundedCornerShape(40.dp), color = Slate900) {
-            Box {
-                // Decorative circles
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .offset(x = (-30).dp, y = (-30).dp)
-                        .clip(CircleShape)
-                        .background(Blue600.copy(alpha = 0.1f))
-                )
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .align(Alignment.BottomEnd)
-                        .offset(x = 20.dp, y = 20.dp)
-                        .clip(CircleShape)
-                        .background(Purple600.copy(alpha = 0.1f))
-                )
+        // Telecom Assets Card (reusable component)
+        val dataVol = packages.filter { it.type.uppercase().contains("DATA") || it.type.uppercase().contains("INTERNET") }
+            .sumOf { it.remainingAmount }
+        val voiceVol = packages.filter { it.type.uppercase() == "VOICE" }
+            .sumOf { it.remainingAmount }
+        val smsVol = packages.filter { it.type.uppercase() == "SMS" }
+            .sumOf { it.remainingAmount }
 
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Bolt,
-                            contentDescription = null,
-                            tint = Amber500,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = Translations.t(language, "telecomAssets").uppercase(),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Slate400,
-                            letterSpacing = 2.sp
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            imageVector = Icons.Default.Public,
-                            contentDescription = null,
-                            tint = Slate400,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = Translations.t(language, "ethio_telecom"),
-                            fontSize = 10.sp,
-                            color = Slate400
-                        )
-                    }
+        TelecomAssetCard(
+            language = language,
+            telecomBalance = telecomBalance,
+            dataVol = dataVol,
+            voiceVol = voiceVol,
+            smsVol = smsVol
+        )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        // Airtime balance
-                        Column {
-                            Text(
-                                text = Translations.t(language, "availableAirtime").uppercase(),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Slate400,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = fmt.format(telecomBalance),
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "ETB",
-                                fontSize = 12.sp,
-                                color = Slate400
-                            )
-                        }
-
-                        // Package indicators
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            val dataUsage = packages.filter { it.type.uppercase().contains("DATA") || it.type.uppercase().contains("INTERNET") }
-                                .sumOf { it.remainingAmount }
-                            val voiceUsage = packages.filter { it.type.uppercase() == "VOICE" }
-                                .sumOf { it.remainingAmount }
-                            val smsUsage = packages.filter { it.type.uppercase() == "SMS" }
-                                .sumOf { it.remainingAmount }
-
-                            PackageIndicator(Translations.t(language, "data"), dataUsage, Blue400)
-                            PackageIndicator(Translations.t(language, "voice"), voiceUsage, Green500)
-                            PackageIndicator(Translations.t(language, "sms"), smsUsage, Purple500)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Action buttons row
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ActionButton(Translations.t(language, "sync"), Icons.Default.Refresh, Blue600, isSyncing) { onSync() }
-                        ActionButton(Translations.t(language, "recharge"), Icons.Default.Add, Emerald600) { showRechargeSheet = true }
-                        ActionButton(Translations.t(language, "transfer"), Icons.Default.SwapHoriz, Amber500) { showTransferSheet = true }
-                    }
-                }
-            }
+        // Action buttons row
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionButton(Translations.t(language, "sync"), Icons.Default.Refresh, Blue600, isSyncing) { onSync() }
+            ActionButton(Translations.t(language, "recharge"), Icons.Default.Add, Emerald600) { showRechargeSheet = true }
+            ActionButton(Translations.t(language, "transfer"), Icons.Default.SwapHoriz, Amber500) { showTransferSheet = true }
         }
 
         Spacer(Modifier.height(24.dp))
