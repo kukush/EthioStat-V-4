@@ -1,89 +1,234 @@
 # EthioStat Architecture
 
 ## Overview
-EthioStat is a telecom-grade, dual-tracking hybrid mobile application designed to function as an offline-first billing engine. While initially built with React and Capacitor, the active native Android application operates primarily as a **100% Pure Native Kotlin Application**. It utilizes a modern **MVVM / MVI** architecture via strictly typed **Kotlin DSL (`.kts`)** build processes.
-Its business and parsing logic operates entirely in Android native memory, ensuring deterministic state processing.
+EthioStat is a telecom-grade, dual-tracking native Android application designed to function as an offline-first billing engine. The active application operates as a **100% Pure Native Kotlin Application**, using a **MVVM / MVI** architecture compiled via a strictly typed **Kotlin DSL (`.kts`)** build system.
 
-The app tracks a user's telecom balances (Assets: internet, voice, SMS, airtime, and bonuses) separately from its financial history (Transactions: income and expenses).
+The app tracks a user's telecom balances (Assets: Airtime, Internet, Voice, SMS, Bonus) separately from their financial history (Transactions: Income and Expenses). Every piece of state flows from a single offline-first Room database.
+
+---
 
 ## System Architecture
 
-### 1. Presentation Layer (UI)
-The project maintains a dual-interface architecture where historical mocked screens exist for Capacitor web-view fallback, but primary execution occurs via **High-Fidelity Jetpack Compose Native UIs**.
-- **Screens** (`android/app/src/main/java/.../ui/screens/`):
-  - `HomeScreen`: Complete Dashboard reflecting a dynamic dual-tracking summary with an animated dark-theme Telecom Assets hero-card featuring canvas-drawn (`drawBehind`) radial gradient glows.
-  - `TransactionScreen`: Fully native dynamic interface with horizontally scrollable pill filters for time, custom mapped cyclic Source chips, and an expandable financial summary header.
-  - `SettingsScreen`: A deeply modular configuration view containing floating Profile Avatars, interactive Theme and Language selection grids, and unified Bottom-Sheet dialogues.
+### 1. Presentation Layer (UI — Jetpack Compose)
 
-- **Components** (`android/app/src/main/java/.../ui/components/`):
-  - `TransactionItem`: Automatically expands via `AnimatedVisibility` drop-down grids, injecting dynamically formatted Material Icons categorized based on historical financial contexts (Emerald themes for INCOME, Rose themes for EXPENSES).
-  - `PackageCard` & `Chip`: Modern, native tracking components for telecommunication validity checking.
+All screens are built with 100% native Jetpack Compose. There is no WebView / Capacitor layer in the active codebase.
 
-### 2. State Management Layer (`useNativeData`)
-React strictly prohibits telecom packages and transactions from residing in a Javascript `store`.
-- React state relies on `useNativeData.ts`, which polls or observes Capacitor Plugins to pull directly from the native SQLite standard.
+#### Screens (`android/app/src/main/java/.../ui/screens/`)
 
-### 3. Native Integration Layer (Capacitor Bridge)
-- **SmsMonitorPlugin** (`plugins/SmsMonitorPlugin.kt`):
-  - `getBalances()` / `getTransactions()`: Query Room Database and return structured JSON.
-  - `scanHistory({ senderId, days })`: Reads historical SMS from Android Telephony Provider and feeds them through `ReconciliationEngine` for idempotent processing.
-  - `checkPermissions()` / `requestPermissions()`: Capacitor built-in permission flow for `READ_SMS` + `RECEIVE_SMS`.
-  - `startMonitoring()`: No-op (permissions fully owned by Capacitor's built-in flow from JS).
-  - `updateTransactionSources()`: Persists user-configured bank/financial senders to the whitelist.
-  - `dialUssd()`: Opens the Android dialer with an encoded USSD code.
+| Screen | Description |
+|---|---|
+| `HomeScreen.kt` | Dashboard with dual-tracking Financial Summary card (net cash flow, income, expense) and a dark Telecom Assets hero card (canvas `drawBehind` radial glow). Displays Source Summaries and Recent Activity. |
+| `TransactionScreen.kt` | Scrollable lazy list with a **sticky compact header** that appears on scroll (`derivedStateOf { firstVisibleItemIndex >= 1 }`). Time-period pill filters (All / Today / Week / Month), circular source chips (self-normalizing for Telebirr/127), expandable Summary Card, and CSV export. ↻ button shows a live `CircularProgressIndicator` while the 90-day SMS scan runs. |
+| `TelecomScreen.kt` | Telecom asset detail screen. Packages are sorted **Airtime → Internet → Voice → SMS → Bonus**. Bottom-sheet dialogs for USSD recharge and airtime transfer. Hero balance card with mini package indicator bars. |
+| `SettingsScreen.kt` | Profile editor with avatar grid, theme/language selector, SIM card management, transaction source management, and a **live Accessibility Status Card** (`UssdAccessibilityCard`) that detects whether the USSD service is enabled. |
 
-- **useNativeBridge** (`src/presentation/hooks/useNativeBridge.ts`):
-  - On mount: `checkPermissions()` → `requestPermissions()` → `startMonitoring()` → `scanHistory()` for all `ALWAYS_SCAN_SENDERS` and user-configured sources.
-  - `ALWAYS_SCAN_SENDERS`: `['127', '251994', '804', '810', '994', '830']` (EthioTelecom/Telebirr system senders).
+#### Components (`android/app/src/main/java/.../ui/components/`)
 
-### 4. Native Android Layer (The Single Source of Truth)
-All computing executes offline in Kotlin.
-- **Room Database**: Consists of explicit entities:
-  - `BalancePackageEntity` (STATE) — telecom asset balances with canonical IDs (`airtime-sim1`, `internet-sim1`, `voice-sim1`, `sms-sim1`, `bonus-sim1`).
-  - `TransactionEntity` (EVENTS) — financial income/expense records.
-  - `SmsLogEntity` (AUDIT) — raw SMS strings for replayability.
-  - `TransactionSourceEntity` — user-configured bank/financial senders.
+| Component | Description |
+|---|---|
+| `TransactionItem.kt` | Expandable card with `AnimatedVisibility`. Emerald (income) / Rose (expense) color coding. Rotate-animated chevron. Expanded view shows full date, category, and transaction ID. |
+| `PackageCard.kt` | Rich card with circular arc progress (canvas arc drawing), linear validity bar, and expiry date. |
+| `Chip.kt` | Pill badge with `internet / voice / sms / bonus / default` variants. |
+| `SummaryCard.kt` | Embedded in `TransactionScreen`; shows net balance, income/expense split, transaction count, and last-activity timestamp. Supports amount masking (eye icon toggle). |
 
-- **SmsForegroundService**: Background service capturing all incoming SMS signals.
+---
 
-- **SmsReceiver**: BroadcastReceiver that filters incoming SMS by whitelist (system senders + user-configured + "TELEBIRR" keyword).
+### 2. State Management Layer (ViewModels)
 
-- **SmsParser**: Smart Regex engine with the following capabilities:
-  - **Multi-segment parsing**: Handles Telebirr balance-status SMS with `;`-delimited segments for internet, voice, SMS, and **bonus** packages.
-  - **Largest-total-wins strategy** (`addOrReplace`): Prevents bonus/partial segments from overwriting main packages.
-  - **Trilingual regex**: English, Amharic (ሒሳ\S*, ቀሪ, ብር, ደቂቃ, ኤስኤምኤስ), and Afaan Oromo (Daqiiqaa, Intarneetii).
-  - **ETB-before-amount support**: All financial regexes accept both `"transferred ETB 220.00"` (real Telebirr format) and `"transferred 220.00 ETB"` via `(?:ETB\s*)?` prefix before capture groups.
-  - **SmsScenario enum**: `SELF_PURCHASE`, `EXPENSE`, `GIFT_SENT`, `RECHARGE_OR_GIFT_RECEIVED`, `LOAN_TAKEN`, `INCOME`, `BALANCE_UPDATE`, `BALANCE_QUERY`, `UNKNOWN`.
-  - **Financial transaction regexes**: loan, repayment, credit, debit, payment, transfer, fee, recharge — each with `transactionCategory` for granular classification.
-  - **Bonus parsing**: Multi-segment (`"Bonus Fund is 7.50 Birr"`) and standalone (`"awarded an ETB 7.50 bonus"`).
-  - **Airtime balance**: Handles `"balance is 500 ETB"`, `"new balance is ETB 1,234.56"`, `"balance after transaction is ETB X"`.
+| ViewModel | Key Flows |
+|---|---|
+| `HomeViewModel` | `userName`, `userPhone`, `totalIncome`, `totalExpense`, `telecomBalance`, `packages`, `transactions` |
+| `TelecomViewModel` | `packages`, `telecomBalance`, `isSyncing`, `syncError` |
+| `TransactionViewModel` | `filteredTransactions`, `uniqueSources`, `totalIncome`, `totalExpense`, `timeFilter`, `sourceFilter`, `searchQuery`, **`isScanningHistory`** |
+| `SettingsViewModel` | `userName`, `userPhone`, `userAvatar`, `simCards`, `transactionSources`, `theme`, `language` |
 
-- **ReconciliationEngine**: The heart of the system. Processes `ParsedSmsResult` by scenario:
-  - `SELF_PURCHASE` / `BALANCE_UPDATE` / `BALANCE_QUERY`: Upsert packages via `insertOrUpdate`.
-  - `INCOME`: Insert `TransactionEntity(type="INCOME")`.
-  - `EXPENSE`: Insert `TransactionEntity(type="EXPENSE")` with category (PURCHASE, GIFT, REPAYMENT, FEE, EXPENSE) + upsert any associated packages.
-  - `GIFT_SENT`: Insert expense transaction (no asset gain).
-  - `RECHARGE_OR_GIFT_RECEIVED`: Upsert packages (asset gain, no financial transaction unless recharge).
-  - `LOAN_TAKEN`: Insert income transaction.
+**Source normalization in `TransactionViewModel`:**
+All transaction source values are mapped through `AppConstants.resolveSource()` before deduplication in `uniqueSources` and before comparison in the source filter. This means raw `"127"` stored in the DB and the alpha `"TELEBIRR"` both collapse to a single `TELEBIRR` chip in the UI.
+
+---
+
+### 3. Data Layer (Room Database)
+
+All persistence is local-first via Room. No network calls.
+
+#### Entities
+
+| Entity | Table | Purpose |
+|---|---|---|
+| `BalancePackageEntity` | `balance_packages` | Telecom assets. Canonical IDs: `airtime-sim1`, `internet-sim1`, `voice-sim1`, `sms-sim1`, `bonus-sim1`. |
+| `TransactionEntity` | `transactions` | Financial income/expense events. `source` field holds the resolved sender label (e.g., `"TELEBIRR"`, `"CBE"`). |
+| `SmsLogEntity` | `sms_log` | Audit log of every raw SMS processed. Used for dedup (hash-based) and replayability. |
+| `TransactionSourceEntity` | `transaction_sources` | User-configured financial sender profiles (name, abbreviation, USSD code, senderId). |
+| `UssdEntity` | `ussd_log` | Raw USSD popup text captured by the Accessibility Service. |
+| `SimCardEntity` | `sim_cards` | Detected SIM card slots with phone numbers. |
+
+---
+
+### 4. Service Layer
+
+#### `SmsParser.kt` — Regex Parsing Engine
+
+Multi-language, multi-scenario SMS parser with confidence scoring (threshold: 0.70).
+
+**Detected scenarios (`SmsScenario`):**
+
+| Scenario | Meaning |
+|---|---|
+| `SELF_PURCHASE` | User paid for a telecom package (dual-impact: financial expense + asset gain) |
+| `EXPENSE` | Pure financial expense (payment, transfer, fee) |
+| `GIFT_SENT` | Airtime/money sent to another subscriber (expense) |
+| `RECHARGE_OR_GIFT_RECEIVED` | Airtime or package received (asset gain, no financial record) |
+| `LOAN_TAKEN` | Airtime loan received |
+| `INCOME` | Money received (credit, salary, refund) |
+| `BALANCE_UPDATE` | Package balance update without a transaction |
+| `BALANCE_QUERY` | *804# query response with current airtime balance |
+| `UNKNOWN` | Below confidence threshold; discarded |
+
+**Data parsing — Internet/Data (new patterns added April 2026):**
+- `"5GB Monthly Internet package"` → number+unit before keyword
+- `"paid 100 ETB for 5GB internet"` → Telebirr purchase format
+- `"Internet: 2.5GB"` → keyword before amount+unit
+- `"You have 450MB data remaining"` → remaining-balance format
+- `"ኢንተርኔት 500MB"` → Amharic
+- `"Intarneetii 1GB"` → Afaan Oromo
+- All values normalised to **MB** internally; GB × 1024.
+
+**Multi-segment parsing:**
+Handles Telebirr balance-status SMS in `;`-delimited segments for `voice`, `internet`, `sms`, and `bonus` packages. Uses a "largest-total-wins" `addOrReplace` strategy to prevent bonus/partial segments from overwriting main packages.
+
+#### `ReconciliationEngine.kt` — Dual-Tracking Core
+
+Processes every `ParsedSmsResult` and writes to both the financial and telecom asset tables.
+
+- `normalizeSender()` strips carrier prefixes: `+251127` → `127`, `0127` → `127`
+- Dedup via `existsByHash(sender, timestamp, bodyHash)` — safe for historical rescans
+- Routes each `SmsScenario` to the correct DB write path (transaction insert + package upsert, package upsert only, etc.)
+
+#### `SmsRepository.kt` — Historical SMS Scanner
+
+Scans the Android SMS Inbox (`content://sms/inbox`) for all known senders.
+
+**Key behaviours (updated April 2026):**
+- `scanAllTransactionSources(days = 90)` merges **both** user-configured sources AND `AppConstants.SMS_SENDER_WHITELIST` — Telebirr (`"127"`) is always scanned even if not manually configured by the user.
+- **90-day lookback** (was 7 days) — captures 3 months of history on first run.
+- **Exact address matching** instead of `LIKE '%127%'` — uses `address = "127" OR address = "+251127" OR address = "251127" OR address = "0127"` to avoid false positives.
+- **Wider-window honoring** — `cutoffTime = min(lastTimestamp, windowStart)` ensures that even if a previous scan ran, re-widening the window recovers missed messages.
+
+#### `SmsForegroundService.kt` — Real-time Monitor
+
+Persistent foreground service that listens for incoming SMS via `SmsReceiver` and immediately routes them through `ReconciliationEngine`.
+
+#### `UssdAccessibilityService.kt` — USSD Popup Reader
+
+Captures *804# balance response popups from the phone dialer. Updated April 2026:
+
+- **Removed deprecated `recycle()`** calls (framework handles this on Android 9+)
+- **Dual-path text capture**: fast `event.text` path first, then recursive node-tree walk as fallback (supports Android 5.0+)
+- **Multi-manufacturer dialer support**: `ussd_accessibility_config.xml` now covers `com.android.phone`, `com.google.android.dialer`, `com.samsung.android.dialer`, `com.huawei.phone`
+- Broadcasts result to UI via explicit-package `ACTION_USSD_RESPONSE` intent
+- `buildSettingsIntent()` companion method opens system Accessibility Settings directly
+
+---
+
+### 5. Configuration Layer
+
+#### `AppConstants.kt`
+
+Single source of truth for all sender IDs, source labels, USSD codes, and broadcast action strings.
+
+- `SMS_SENDER_WHITELIST` — complete set of known sender IDs that triggers reconciliation
+- `TELEBIRR_SENDERS = setOf("127")` — numeric senders unified under `SOURCE_TELEBIRR`
+- `resolveSource(sender)` — maps any raw or normalized sender to a human-readable label
+
+#### `AndroidManifest.xml`
+
+- `UssdAccessibilityService` declared with `BIND_ACCESSIBILITY_SERVICE` guard and `@xml/ussd_accessibility_config` metadata
+- Scoped permissions: `READ_SMS`, `RECEIVE_SMS`, `CALL_PHONE`, `READ_PHONE_STATE`, `FOREGROUND_SERVICE`
+
+---
 
 ## Data Flow
 
 ### Real-Time SMS Processing
-1. **Event Reception**: SMS received by `SmsReceiver` → forwarded to `SmsForegroundService`.
-2. **Audit Tracking**: Raw string logged to `SmsLogEntity` for replayability.
-3. **Parse & Confidence Check**: `SmsParser` maps strings to `SmsScenario` enums (threshold > 0.70).
-4. **Reconciliation**: `ReconciliationEngine` segregates assets from financial transactions.
-5. **UI Rendering**: `SmsMonitorPlugin.getBalances()` returns packages + computed `NetBalance`.
+```
+Incoming SMS
+  → SmsReceiver (whitelist filter)
+  → SmsForegroundService
+  → ReconciliationEngine.processSms()
+      → normalizeSender()
+      → dedup check (SmsLogDao.existsByHash)
+      → SmsParser.parse() [confidence > 0.70]
+      → write TransactionEntity and/or upsert BalancePackageEntity
+  → StateFlow updated → Compose UI recomposed
+```
 
-### Historical SMS Scanning (App Startup)
-1. **Permission Check**: `useNativeBridge` calls `checkPermissions()` / `requestPermissions()` via Capacitor built-in flow.
-2. **Scan Trigger**: On `READ_SMS` grant, `scanHistory()` fires for each sender in `ALWAYS_SCAN_SENDERS` + user sources.
-3. **Native Query**: `SmsMonitorPlugin.performSmsScan()` queries `content://sms/inbox` with `address LIKE %senderId%` and 7-day cutoff.
-4. **Idempotent Processing**: Each message fed to `ReconciliationEngine.processSms()` — canonical IDs ensure upsert deduplication.
+### Historical SMS Scan (Manual Refresh or First Run)
+```
+User taps ↻ (or app first launch)
+  → TransactionViewModel.scanSmsHistory()
+      → isScanningHistory = true (spinner shown)
+      → SmsRepository.scanAllTransactionSources(days = 90)
+          → merge AppConstants.SMS_SENDER_WHITELIST + DB sources
+          → per sender: exact-match query on content://sms/inbox
+          → cutoffTime = min(lastScanTimestamp, now - 90 days)
+          → ReconciliationEngine.processSms() for each row
+      → isScanningHistory = false
+```
 
-## Web Parser Parity
-A TypeScript mirror parser (`src/data/smsParser.ts`) maintains feature parity with the Kotlin `SmsParser`:
-- Same regex patterns for all financial transactions with `(?:ETB\s*)?` prefix support.
-- Same multi-segment parsing with bonus segment handling.
-- Same `addOrReplace` largest-total-wins strategy.
-- Validated by 33+ automated test cases (`src/data/smsParser.test.ts`).
+### USSD Balance Sync (*804#)
+```
+User taps Sync in TelecomScreen
+  → TelecomViewModel.handleSync()
+  → SmsRepository.dialUssd("*804#")
+  → Android dialer opens USSD session
+  → USSD popup appears
+  → UssdAccessibilityService.onAccessibilityEvent()
+      → harvest text (event.text → node tree fallback)
+      → ReconciliationEngine.processSms("804", response, ...)
+      → sendBroadcast(ACTION_USSD_RESPONSE) for live UI update
+```
+
+---
+
+## Build System
+
+| File | Role |
+|---|---|
+| `settings.gradle.kts` | Project name, plugin repositories, dependency resolution |
+| `build.gradle.kts` (root) | AGP and Kotlin plugin declarations |
+| `app/build.gradle.kts` | compileSdk 36, minSdk 24, Compose BOM `2024.12.01`, Room `2.6.1`, JVM target 21 |
+| `gradle.properties` | USSD code overrides via `ethiobalance.ussd.*` keys, injected as `BuildConfig` fields |
+| `.github/workflows/ci.yml` | GitHub Actions — `gradle/actions/setup-gradle@v3`, automated unit tests |
+
+---
+
+## Testing
+
+### Unit Tests (`SmsParserTest.kt`)
+Located at `android/app/src/test/java/com/ethiobalance/app/services/`.
+
+Covers (40+ cases):
+- Telebirr purchase (dual-impact: expense + internet package)
+- All internet/data message formats: Telebirr purchase, keyword-before-unit, remaining-balance, Amharic, Afaan Oromo, MB vs GB normalisation
+- Voice package parsing (multi-segment and single-segment)
+- SMS package parsing
+- Bonus fund (multi-segment and standalone)
+- Airtime balance query (*804# response)
+- Loan taken, gift sent, income, service fee
+- Dedup via `existsByHash`
+
+### Integration Testing (`scripts/test-workflow.sh` + `scripts/mock-data.json`)
+Shell script that injects mock SMS via `adb shell am broadcast` and reads results from Room via `adb shell content query`. Covers all dual-impact scenarios.
+
+---
+
+## Key Design Decisions
+
+| Decision | Rationale |
+|---|---|
+| All values in MB internally | Avoids double-conversion bugs in UI; `PackageCard` displays as GB only if value ≥ 1024 |
+| `addOrReplace` largest-total-wins | Prevents bonus/partial segments from overwriting real package data |
+| Canonical package IDs (`airtime-sim1`) | Upsert-safe; historical rescans don't duplicate |
+| 90-day scan window | Covers typical billing cycles and new-install onboarding |
+| `resolveSource()` at read time, not write time | Old DB rows (e.g., source=`"127"`) are transparently remapped without a DB migration |
+| Accessibility Service, not `telephonyManager.sendUssdRequest` | Works across all Android versions and OEM dialers; no elevated permissions required |
