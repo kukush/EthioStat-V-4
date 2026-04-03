@@ -1,25 +1,31 @@
 package com.ethiobalance.app.ui.viewmodel
 
-import android.app.Application
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionEntity
+import com.ethiobalance.app.domain.usecase.FormatTransactionUseCase
+import com.ethiobalance.app.domain.usecase.GetFinancialSummaryUseCase
 import com.ethiobalance.app.repository.SettingsRepository
 import com.ethiobalance.app.repository.TransactionRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.inject.Inject
 
-class TransactionViewModel(application: Application) : AndroidViewModel(application) {
-
-    val transactionRepo = TransactionRepository(application)
-    private val settingsRepo = SettingsRepository(application)
+@HiltViewModel
+class TransactionViewModel @Inject constructor(
+    private val transactionRepo: TransactionRepository,
+    private val settingsRepo: SettingsRepository,
+    private val formatTransactionUseCase: FormatTransactionUseCase,
+    private val getFinancialSummaryUseCase: GetFinancialSummaryUseCase
+) : ViewModel() {
 
     val allTransactions: StateFlow<List<TransactionEntity>> = transactionRepo.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -44,49 +50,18 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     val filteredTransactions: StateFlow<List<TransactionEntity>> = combine(
         allTransactions, _timeFilter, _sourceFilter, _searchQuery, settingsRepo.getTransactionSources()
     ) { transactions, time, source, query, configuredSources ->
-        // Start by removing AIRTIME and filtering by configured sources (Case-Insensitive)
-        val enabledNormalised = configuredSources.map { it.name.lowercase() }.toSet()
-        var filtered = transactions.filter {
-            val resolved = AppConstants.resolveSource(it.source).lowercase()
-            resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledNormalised.contains(resolved)
-        }
-
-        // Time filter
-        val now = System.currentTimeMillis()
-        filtered = when (time) {
-            "today" -> filtered.filter { now - it.timestamp < 24L * 60 * 60 * 1000 }
-            "thisWeek" -> filtered.filter { now - it.timestamp < 7L * 24 * 60 * 60 * 1000 }
-            "thisMonth" -> filtered.filter { now - it.timestamp < 30L * 24 * 60 * 60 * 1000 }
-            else -> filtered
-        }
-
-        // Source filter
-        if (source != null) {
-            filtered = filtered.filter {
-                AppConstants.resolveSource(it.source).equals(source, ignoreCase = true)
-            }
-        }
-
-        // Search query
-        if (query.isNotBlank()) {
-            val q = query.lowercase()
-            filtered = filtered.filter {
-                it.source.lowercase().contains(q) ||
-                it.category.lowercase().contains(q) ||
-                it.id.lowercase().contains(q)
-            }
-        }
-
-        filtered
+        formatTransactionUseCase(transactions, time, source, query, configuredSources)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val totalIncome: StateFlow<Double> = filteredTransactions.map { list ->
-        list.filter { it.type == "INCOME" }.sumOf { it.amount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    private val financialSummary: StateFlow<GetFinancialSummaryUseCase.FinancialSummary> = filteredTransactions
+        .map { getFinancialSummaryUseCase(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GetFinancialSummaryUseCase.FinancialSummary(0.0, 0.0))
 
-    val totalExpense: StateFlow<Double> = filteredTransactions.map { list ->
-        list.filter { it.type == "EXPENSE" }.sumOf { it.amount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    val totalIncome: StateFlow<Double> = financialSummary.map { it.totalIncome }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalExpense: StateFlow<Double> = financialSummary.map { it.totalExpense }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val uniqueSources: StateFlow<List<String>> = settingsRepo.getTransactionSources()
         .map { sources ->

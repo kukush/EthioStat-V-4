@@ -1,21 +1,24 @@
 package com.ethiobalance.app.ui.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiobalance.app.data.BalancePackageEntity
 import com.ethiobalance.app.data.TransactionEntity
+import com.ethiobalance.app.domain.usecase.GetFinancialSummaryUseCase
 import com.ethiobalance.app.repository.BalanceRepository
 import com.ethiobalance.app.repository.SettingsRepository
 import com.ethiobalance.app.repository.TransactionRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val transactionRepo = TransactionRepository(application)
-    private val balanceRepo = BalanceRepository(application)
-    private val settingsRepo = SettingsRepository(application)
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val transactionRepo: TransactionRepository,
+    private val balanceRepo: BalanceRepository,
+    private val settingsRepo: SettingsRepository,
+    private val getFinancialSummaryUseCase: GetFinancialSummaryUseCase
+) : ViewModel() {
 
     val transactions: StateFlow<List<TransactionEntity>> = transactionRepo.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -35,15 +38,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val theme: StateFlow<String> = settingsRepo.theme
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "light")
 
-    val totalIncome: StateFlow<Double> = transactions.map { list ->
-        list.filter { it.type == "INCOME" && com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME }
-            .sumOf { it.amount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    private val financialSummary: StateFlow<GetFinancialSummaryUseCase.FinancialSummary> = transactions.map { list ->
+        val filtered = list.filter { com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME }
+        getFinancialSummaryUseCase(filtered)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GetFinancialSummaryUseCase.FinancialSummary(0.0, 0.0))
 
-    val totalExpense: StateFlow<Double> = transactions.map { list ->
-        list.filter { it.type == "EXPENSE" && com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME }
-            .sumOf { it.amount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+    val totalIncome: StateFlow<Double> = financialSummary.map { it.totalIncome }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalExpense: StateFlow<Double> = financialSummary.map { it.totalExpense }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val telecomBalance: StateFlow<Double> = packages.map { list ->
         list.filter { it.type == "DATA_AIRTIME" || it.type == "AIRTIME" }

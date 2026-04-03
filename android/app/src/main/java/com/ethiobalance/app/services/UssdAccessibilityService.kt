@@ -7,26 +7,22 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.AppDatabase
+import com.ethiobalance.app.data.UssdDao
 import com.ethiobalance.app.data.UssdEntity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.*
+import javax.inject.Inject
 
-/**
- * Reads USSD popup dialog text after the user triggers *804#.
- *
- * Setup required for user:
- *   Settings → Accessibility → EthioStat → Enable.
- *
- * Scope: limited to "com.android.phone" package (declared in ussd_service_config.xml)
- * so we never read popups from other apps.
- *
- * Compatible with Android 5.0+ (API 21+).
- * The deprecated `recycle()` call is intentionally removed — the framework
- * automatically recycles nodes obtained via `AccessibilityEvent.source` and
- * `AccessibilityNodeInfo.getChild()` on Android 9+ without explicit recycling.
- */
+@AndroidEntryPoint
 class UssdAccessibilityService : AccessibilityService() {
+
+    @Inject
+    lateinit var reconciliationEngine: ReconciliationEngine
+    
+    @Inject
+    lateinit var ussdDao: UssdDao
+
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
@@ -92,27 +88,25 @@ class UssdAccessibilityService : AccessibilityService() {
     }
 
     private fun onUssdCaptured(response: String) {
-        CoroutineScope(Dispatchers.IO).launch {
+        serviceScope.launch {
             try {
-                val db = AppDatabase.getDatabase(this@UssdAccessibilityService)
-
-                // Persist raw USSD response
-                db.ussdDao().insert(
+                // Persist raw USSD response using injected DAO
+                ussdDao.insert(
                     UssdEntity(
-                        AppConstants.USSD_REQUEST_LABEL,
-                        response,
-                        System.currentTimeMillis(),
-                        AppConstants.DEFAULT_SIM_SLOT
+                        request = AppConstants.USSD_REQUEST_LABEL,
+                        response = response,
+                        timestamp = System.currentTimeMillis(),
+                        simSlot = AppConstants.DEFAULT_SIM_SLOT
                     )
                 )
 
-                // Run through the dual-tracking reconciliation pipeline
-                ReconciliationEngine.processSms("804", response, System.currentTimeMillis(), db)
+                // Run through the dual-tracking reconciliation pipeline via injected engine
+                reconciliationEngine.processSms("804", response, System.currentTimeMillis())
 
                 // Broadcast to UI for real-time display
                 val intent = Intent(AppConstants.ACTION_USSD_RESPONSE).apply {
                     putExtra("ussd_text", response)
-                    setPackage(packageName) // explicit package to avoid implicit broadcast warning
+                    setPackage(packageName)
                 }
                 sendBroadcast(intent)
 

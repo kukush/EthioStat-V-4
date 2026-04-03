@@ -1,7 +1,6 @@
 package com.ethiobalance.app.ui.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiobalance.app.data.SimCardEntity
 import com.ethiobalance.app.data.TransactionSourceEntity
@@ -9,15 +8,18 @@ import com.ethiobalance.app.repository.BalanceRepository
 import com.ethiobalance.app.repository.SettingsRepository
 import com.ethiobalance.app.repository.SimRepository
 import com.ethiobalance.app.repository.TransactionRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class SettingsViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val settingsRepo = SettingsRepository(application)
-    private val simRepo = SimRepository(application)
-    private val transactionRepo = TransactionRepository(application)
-    private val balanceRepo = BalanceRepository(application)
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val settingsRepo: SettingsRepository,
+    private val simRepo: SimRepository,
+    private val transactionRepo: TransactionRepository,
+    private val balanceRepo: BalanceRepository
+) : ViewModel() {
 
     val language: StateFlow<String> = settingsRepo.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")

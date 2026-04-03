@@ -11,11 +11,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "ethio_balance_settings")
+import com.ethiobalance.app.data.TransactionSourceDao
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
-class SettingsRepository(private val context: Context) {
-
-    private val db = AppDatabase.getDatabase(context)
+class SettingsRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val dataStore: DataStore<Preferences>,
+    private val transactionSourceDao: TransactionSourceDao
+) {
 
     // DataStore keys
     companion object {
@@ -27,24 +31,24 @@ class SettingsRepository(private val context: Context) {
     }
 
     // Language
-    val language: Flow<String> = context.dataStore.data.map { it[LANGUAGE_KEY] ?: "en" }
+    val language: Flow<String> = dataStore.data.map { it[LANGUAGE_KEY] ?: "en" }
     suspend fun setLanguage(lang: String) {
-        context.dataStore.edit { it[LANGUAGE_KEY] = lang }
+        dataStore.edit { it[LANGUAGE_KEY] = lang }
     }
 
     // Theme
-    val theme: Flow<String> = context.dataStore.data.map { it[THEME_KEY] ?: "light" }
+    val theme: Flow<String> = dataStore.data.map { it[THEME_KEY] ?: "light" }
     suspend fun setTheme(theme: String) {
-        context.dataStore.edit { it[THEME_KEY] = theme }
+        dataStore.edit { it[THEME_KEY] = theme }
     }
 
     // User profile
-    val userName: Flow<String> = context.dataStore.data.map { it[USER_NAME_KEY] ?: "User" }
-    val userPhone: Flow<String> = context.dataStore.data.map { it[USER_PHONE_KEY] ?: "" }
-    val userAvatar: Flow<String> = context.dataStore.data.map { it[USER_AVATAR_KEY] ?: "" }
+    val userName: Flow<String> = dataStore.data.map { it[USER_NAME_KEY] ?: "User" }
+    val userPhone: Flow<String> = dataStore.data.map { it[USER_PHONE_KEY] ?: "" }
+    val userAvatar: Flow<String> = dataStore.data.map { it[USER_AVATAR_KEY] ?: "" }
 
     suspend fun setUserProfile(name: String, phone: String, avatar: String) {
-        context.dataStore.edit {
+        dataStore.edit {
             it[USER_NAME_KEY] = name
             it[USER_PHONE_KEY] = phone
             it[USER_AVATAR_KEY] = avatar
@@ -53,20 +57,20 @@ class SettingsRepository(private val context: Context) {
 
     // Transaction Sources
     fun getTransactionSources(): Flow<List<TransactionSourceEntity>> =
-        db.transactionSourceDao().getAllSources()
+        transactionSourceDao.getAllSources()
 
     suspend fun addTransactionSource(source: TransactionSourceEntity) = withContext(Dispatchers.IO) {
-        db.transactionSourceDao().insertOrUpdate(source)
+        transactionSourceDao.insertOrUpdate(source)
         updateSmsWhitelist()
     }
 
     suspend fun removeTransactionSource(abbreviation: String) = withContext(Dispatchers.IO) {
-        db.transactionSourceDao().deleteByAbbreviation(abbreviation)
+        transactionSourceDao.deleteByAbbreviation(abbreviation)
         updateSmsWhitelist()
     }
 
     private suspend fun updateSmsWhitelist() {
-        val enabledSenders = db.transactionSourceDao().getEnabledSenderIds()
+        val enabledSenders = transactionSourceDao.getEnabledSenderIds()
         val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
         prefs.edit().putStringSet("sms_whitelist", enabledSenders.toSet()).apply()
     }

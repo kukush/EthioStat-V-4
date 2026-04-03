@@ -9,16 +9,18 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.ethiobalance.app.AppConstants
-import com.ethiobalance.app.data.AppDatabase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.*
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class SmsForegroundService : Service() {
     companion object {
         private const val TAG = "SmsForegroundService"
     }
+
+    @Inject
+    lateinit var reconciliationEngine: ReconciliationEngine
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
@@ -56,8 +58,7 @@ class SmsForegroundService : Service() {
             // Process with Dual Tracking Engine, then stop the service when done
             scope.launch {
                 try {
-                    val db = AppDatabase.getDatabase(applicationContext)
-                    ReconciliationEngine.processSms(sender, body, timestamp, db)
+                    reconciliationEngine.processSms(sender, body, timestamp)
                     Log.d(TAG, "SMS from $sender processed successfully")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error processing SMS from $sender: ${e.message}", e)

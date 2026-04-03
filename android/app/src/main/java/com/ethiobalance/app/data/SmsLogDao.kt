@@ -18,4 +18,7 @@ interface SmsLogDao {
 
     @Query("SELECT MAX(timestamp) FROM sms_logs WHERE sender = :sender")
     suspend fun getLastTimestampForSender(sender: String): Long?
+
+    @Query("DELETE FROM sms_logs")
+    suspend fun deleteAll()
 }

@@ -12,9 +12,17 @@ import com.ethiobalance.app.services.ReconciliationEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class SmsRepository(private val context: Context) {
+import com.ethiobalance.app.data.SmsLogDao
+import com.ethiobalance.app.data.TransactionSourceDao
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
-    private val db = AppDatabase.getDatabase(context)
+class SmsRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val smsLogDao: SmsLogDao,
+    private val transactionSourceDao: TransactionSourceDao,
+    private val reconciliationEngine: ReconciliationEngine
+) {
 
     /**
      * Scan the SMS Inbox for a given sender address.
@@ -29,15 +37,21 @@ class SmsRepository(private val context: Context) {
      * so that "+251127", "251127", "0127", and "127" are all matched.
      */
     suspend fun scanHistory(senderId: String, days: Int = 90, forceReparse: Boolean = false): Int = withContext(Dispatchers.IO) {
-        val normalized = ReconciliationEngine.normalizeSender(senderId)
-        val lastTimestamp = db.smsLogDao().getLastTimestampForSender(normalized)
+        val normalized = reconciliationEngine.normalizeSender(senderId)
+        val lastTimestamp = smsLogDao.getLastTimestampForSender(normalized)
 
-        // Use the OLDER of: (now - days) vs last known scan timestamp.
-        // If forceReparse is true, force scanning the ENTIRE 90 days window without being artificially bottlenecked.
-        // Wait, if lastTimestamp is very old, we still want to scan everything from 90 days ago OR older.
-        // Actually, if we forceReparse, we only care about the last 90 days.
+        // Ensure we scan at least the last 90 days on initial run.
+        // On subsequent runs, overlap slightly or start from the last processed timestamp.
         val windowStart = System.currentTimeMillis() - (days * 24L * 60L * 60L * 1000L)
-        val cutoffTime = if (lastTimestamp != null && !forceReparse) minOf(lastTimestamp, windowStart) else windowStart
+        val cutoffTime = if (lastTimestamp == null || forceReparse) {
+            windowStart 
+        } else {
+            // Take the EARLIER of (last known message) or (90 days ago).
+            // This ensures if the window is widened to 90 days, we don't skip old messages.
+            minOf(lastTimestamp, windowStart)
+        }
+
+        Log.d("SmsRepository", "Scanning sender=$senderId (normalized=$normalized) cutoff=${java.util.Date(cutoffTime)}")
 
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
@@ -78,7 +92,7 @@ class SmsRepository(private val context: Context) {
                 val body      = it.getString(bodyIdx)    ?: continue
                 val timestamp = it.getLong(dateIdx)
                 try {
-                    ReconciliationEngine.processSms(sender, body, timestamp, db, forceReparse)
+                    reconciliationEngine.processSms(sender, body, timestamp, forceReparse)
                     matchCount++
                 } catch (e: Exception) {
                     Log.e("SmsRepository", "Failed to process SMS from $sender: ${e.message}")
@@ -100,11 +114,11 @@ class SmsRepository(private val context: Context) {
      */
     suspend fun scanAllTransactionSources(days: Int = 90): Int = withContext(Dispatchers.IO) {
         // Merge user-configured senders with the hardcoded whitelist
-        val configuredSenders = db.transactionSourceDao().getEnabledSenderIds().toSet()
+        val configuredSenders = transactionSourceDao.getEnabledSenderIds().toSet()
         val allSenders = (configuredSenders + AppConstants.SMS_SENDER_WHITELIST).distinct()
 
         var totalScanned = 0
-        allSenders.forEach { senderId ->
+        for (senderId in allSenders) {
             totalScanned += scanHistory(senderId, days = days)
         }
         Log.d("SmsRepository", "scanAllTransactionSources done: $totalScanned total")

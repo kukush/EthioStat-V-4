@@ -7,9 +7,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class BalanceRepository(context: Context) {
+import com.ethiobalance.app.data.BalancePackageDao
+import javax.inject.Inject
 
-    private val dao = AppDatabase.getDatabase(context).balancePackageDao()
+class BalanceRepository @Inject constructor(
+    private val dao: BalancePackageDao
+) {
 
     fun getAllPackages(): Flow<List<BalancePackageEntity>> = dao.getAllPackages()
 

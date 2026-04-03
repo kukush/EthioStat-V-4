@@ -1,22 +1,26 @@
 package com.ethiobalance.app.ui.viewmodel
 
-import android.app.Application
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.BalancePackageEntity
+import com.ethiobalance.app.domain.usecase.SyncAirtimeUseCase
 import com.ethiobalance.app.repository.BalanceRepository
 import com.ethiobalance.app.repository.SettingsRepository
 import com.ethiobalance.app.repository.SmsRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import android.util.Log
 
-class TelecomViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val balanceRepo = BalanceRepository(application)
-    private val smsRepo = SmsRepository(application)
-    private val settingsRepo = SettingsRepository(application)
+@HiltViewModel
+class TelecomViewModel @Inject constructor(
+    private val balanceRepo: BalanceRepository,
+    private val settingsRepo: SettingsRepository,
+    private val smsRepo: SmsRepository,
+    private val syncAirtimeUseCase: SyncAirtimeUseCase
+) : ViewModel() {
 
     val packages: StateFlow<List<BalancePackageEntity>> = balanceRepo.getAllPackages()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -175,12 +179,10 @@ class TelecomViewModel(application: Application) : AndroidViewModel(application)
     }
     
     fun rechargeViaUssd(voucher: String) {
-        val code = "${AppConstants.USSD_RECHARGE_SELF}$voucher#"
-        smsRepo.dialUssd(code)
+        syncAirtimeUseCase.recharge(voucher)
     }
 
     fun transferAirtime(recipient: String, amount: String) {
-        val code = "${AppConstants.USSD_TRANSFER_AIRTIME}$recipient*$amount#"
-        smsRepo.dialUssd(code)
+        syncAirtimeUseCase.transfer(recipient, amount)
     }
 }
