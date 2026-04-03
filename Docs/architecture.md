@@ -3,7 +3,7 @@
 ## Overview
 EthioStat is a telecom-grade, dual-tracking native Android application designed to function as an offline-first billing engine. The active application operates as a **100% Pure Native Kotlin Application**, using a **MVVM / MVI** architecture compiled via a strictly typed **Kotlin DSL (`.kts`)** build system.
 
-The app tracks a user's telecom balances (Assets: Airtime, Internet, Voice, SMS, Bonus) separately from their financial history (Transactions: Income and Expenses). Every piece of state flows from a single offline-first Room database.
+EthioStat tracks a user's telecom balances (Assets: Airtime, Internet, Voice, SMS, Bonus) separately from their financial history (Transactions: Income and Expenses). Every piece of state flows from a single offline-first Room database, mediated by a centralized Domain/UseCase layer, and dependency injection is powered by Dagger Hilt.
 
 ---
 
@@ -35,6 +35,8 @@ All screens are built with 100% native Jetpack Compose. There is no WebView / Ca
 
 ### 2. State Management Layer (ViewModels)
 
+All ViewModels are annotated with `@HiltViewModel` and inject dependencies via constructor. UI components consume state via `collectAsStateWithLifecycle()` for exact alignment with the Android lifecycle.
+
 | ViewModel | Key Flows |
 |---|---|
 | `HomeViewModel` | `userName`, `userPhone`, `totalIncome`, `totalExpense`, `telecomBalance`, `packages`, `transactions` |
@@ -47,9 +49,15 @@ All transaction source values are mapped through `AppConstants.resolveSource()` 
 
 ---
 
-### 3. Data Layer (Room Database)
+### 3. Domain Layer (Use Cases)
 
-All persistence is local-first via Room. No network calls.
+A dedicated layer of single-responsibility classes (e.g. `ParseSmsUseCase`, `GetFilteredTransactionsUseCase`) coordinates business logic. This ensures ViewModels stay concerned with state management and Repositories stay focused on data fetching.
+
+---
+
+### 4. Data Layer (Room Database)
+
+All persistence is local-first via Room using Kotlin coroutines (`Flow` and `suspend` functions). No network calls. All manual instantiation of database instances has been removed in favor of Hilt injection.
 
 #### Entities
 
