@@ -13,11 +13,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Request SMS permissions on startup for EthioStat Monitoring
+        // Request SMS and phone permissions on startup for EthioStat Monitoring
         ActivityCompat.requestPermissions(this, arrayOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.CALL_PHONE,
             Manifest.permission.POST_NOTIFICATIONS
         ), 1)
 

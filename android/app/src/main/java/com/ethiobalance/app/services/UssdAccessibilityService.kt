@@ -129,11 +129,42 @@ class UssdAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "UssdAccessibility"
+        
+        // Instance reference for external calls
+        @Volatile
+        private var instance: UssdAccessibilityService? = null
+        
+        fun getInstance(): UssdAccessibilityService? = instance
 
         /** Call this from SettingsScreen to open the system accessibility settings page. */
         fun buildSettingsIntent(): Intent =
             Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
+    }
+    
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        instance = this
+        Log.d(TAG, "AccessibilityService connected")
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        instance = null
+        Log.d(TAG, "AccessibilityService destroyed")
+    }
+    
+    /**
+     * Close the current dialog/dialer by performing a back gesture
+     */
+    fun closeDialer() {
+        try {
+            // Perform back action
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            Log.d(TAG, "Performed global back action to close dialer")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close dialer: ${e.message}", e)
+        }
     }
 }

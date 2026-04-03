@@ -35,6 +35,7 @@ fun TelecomScreen(
     telecomBalance: Double,
     isSyncing: Boolean,
     syncError: String?,
+    syncWarning: String?,
     onSync: () -> Unit,
     onRecharge: (String) -> Unit,
     onTransfer: (String, String) -> Unit
@@ -107,6 +108,26 @@ fun TelecomScreen(
                     Icon(Icons.Default.Error, null, tint = Rose600, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(error, fontSize = 13.sp, color = Rose600, modifier = Modifier.weight(1f))
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
+        // Sync Warning Display
+        syncWarning?.let { warning ->
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Amber50,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Amber700.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Warning, null, tint = Amber700, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(warning, fontSize = 13.sp, color = Amber700, modifier = Modifier.weight(1f))
                 }
             }
             Spacer(Modifier.height(12.dp))

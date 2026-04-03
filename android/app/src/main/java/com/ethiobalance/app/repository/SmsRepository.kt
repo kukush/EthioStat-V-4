@@ -2,6 +2,9 @@ package com.ethiobalance.app.repository
 
 import android.content.Context
 import android.provider.Telephony
+import android.telephony.TelephonyManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.AppDatabase
@@ -109,10 +112,11 @@ class SmsRepository(private val context: Context) {
     }
 
     /**
-     * Specifically scans for EthioTelecom (804, etc.) balance responses.
+     * Specifically scans for EthioTelecom balance responses.
+     * Includes common senders like 804, ETC, and other telecom numbers.
      */
     suspend fun scanTelecomHistory(days: Int = 1): Int = withContext(Dispatchers.IO) {
-        val telecomSenders = setOf("804")
+        val telecomSenders = setOf("804", "ETC", "EthioTelecom", "8181", "888", "808")
         var total = 0
         telecomSenders.forEach { total += scanHistory(it, days) }
         total
@@ -130,6 +134,54 @@ class SmsRepository(private val context: Context) {
             }
             context.startActivity(intent)
             Result.success("USSD initiated successfully")
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Send USSD automatically using TelephonyManager (Android O+).
+     * No user interaction required - captures response via callback.
+     */
+    suspend fun sendUssdAuto(ussdCode: String): Result<String> = withContext(Dispatchers.Main) {
+        try {
+            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            
+            // Remove * and # from the code as sendUssdRequest doesn't need them
+            val cleanCode = ussdCode.replace("*", "").replace("#", "")
+            
+            var ussdResult: Result<String>? = null
+            val lock = Object()
+            
+            val callback = object : TelephonyManager.UssdResponseCallback() {
+                override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
+                    synchronized(lock) {
+                        ussdResult = Result.success(response.toString())
+                        lock.notify()
+                    }
+                }
+                
+                override fun onReceiveUssdResponseFailed(telephonyManager: TelephonyManager, request: String, failureCode: Int) {
+                    synchronized(lock) {
+                        ussdResult = Result.failure(Exception("USSD failed with code: $failureCode"))
+                        lock.notify()
+                    }
+                }
+            }
+            
+            // Send USSD request
+            telephonyManager.sendUssdRequest(cleanCode, callback, Handler(Looper.getMainLooper()))
+            
+            // Wait for response (max 15 seconds)
+            synchronized(lock) {
+                if (ussdResult == null) {
+                    lock.wait(15000)
+                }
+            }
+            
+            ussdResult ?: Result.failure(Exception("USSD request timed out. Network may be unavailable."))
+        } catch (e: SecurityException) {
+            Result.failure(Exception("CALL_PHONE permission required for auto-USSD"))
         } catch (e: Exception) {
             Result.failure(e)
         }

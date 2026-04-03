@@ -65,6 +65,7 @@ fun EthioBalanceApp() {
                         val telecomBalance by telecomVM.telecomBalance.collectAsState()
                         val isSyncing by telecomVM.isSyncing.collectAsState()
                         val syncError by telecomVM.syncError.collectAsState()
+                        val syncWarning by telecomVM.syncWarning.collectAsState()
 
                         TelecomScreen(
                             language = language,
@@ -72,6 +73,7 @@ fun EthioBalanceApp() {
                             telecomBalance = telecomBalance,
                             isSyncing = isSyncing,
                             syncError = syncError,
+                            syncWarning = syncWarning,
                             onSync = { telecomVM.handleSync() },
                             onRecharge = { telecomVM.rechargeViaUssd(it) },
                             onTransfer = { r, a -> telecomVM.transferAirtime(r, a) }
