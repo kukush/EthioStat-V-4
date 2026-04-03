@@ -11,5 +11,6 @@ data class TransactionEntity(
     val category: String, // PURCHASE, GIFT_SENT, LOAN, REPAYMENT
     val source: String, // TELEBIRR, USSD, SMS
     val timestamp: Long,
-    val reference: String?
+    val reference: String?,
+    val partyName: String?
 )

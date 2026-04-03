@@ -1,0 +1,65 @@
+[
+  {
+    "sender": "CBE",
+    "body": "Dear xxx, You have transfered ETB 1,300.00 to Lenco Getachew on 18/03/2026 at 13:36:38 from your account 1*********5064. Your account has been debited...",
+    "expectedParty": "Lenco Getachew",
+    "expectedAmount": 1300.0,
+    "expectedScenario": "EXPENSE"
+  },
+  {
+    "sender": "BOA",
+    "body": "Dear xx, your account 2*****46 was credited with ETB 5.00 by A/r Tele Birr. Available Balance: ETB 1,114.15. Receipt: https://cs.bankofabyssinia.com/slip/?trx=FT2607828PWC10104",
+    "expectedParty": "A/r Tele Birr",
+    "expectedAmount": 5.0,
+    "expectedScenario": "INCOME"
+  },
+  {
+    "sender": "127",
+    "body": "You have sent 500.00 ETB to 0911XXXXXX (Abebe Kebede). Service fee is 2.00 ETB. Your current balance is 1,250.50 ETB. Transaction ID: 123456789.",
+    "expectedParty": "Abebe Kebede",
+    "expectedAmount": 500.0,
+    "expectedScenario": "EXPENSE"
+  },
+  {
+    "sender": "127",
+    "body": "You have sent 200.00 ETB to 0922XXXXXX. Service fee is 1.00 ETB. Your current balance... Transaction ID: 123.",
+    "expectedParty": "0922XXXXXX",
+    "expectedAmount": 200.0,
+    "expectedScenario": "EXPENSE"
+  },
+  {
+    "sender": "127",
+    "body": "You have successfully recharged 100.00 ETB airtime for 09XXXXXXXX. Your current telebirr balance is 450.00 ETB. Transaction ID: 987654321.",
+    "expectedParty": "09XXXXXXXX",
+    "expectedAmount": 100.0,
+    "expectedScenario": "SELF_PURCHASE"
+  },
+  {
+    "sender": "127",
+    "body": "You have paid 350.00 ETB to Ethiopian Electric Utility for Reference No 1000XXXXXX. Your current balance is 800.00 ETB. Transaction ID: 556677889.",
+    "expectedParty": "Ethiopian Electric Utility",
+    "expectedAmount": 350.0,
+    "expectedScenario": "SELF_PURCHASE"
+  },
+  {
+    "sender": "127",
+    "body": "Your account has been credited with 2,000.00 ETB by Agent [Agent Name/ID]. Your current balance is 2,800.00 ETB. Transaction ID: 112233445.",
+    "expectedParty": "[Agent Name/ID]",
+    "expectedAmount": 2000.0,
+    "expectedScenario": "RECHARGE_OR_GIFT_RECEIVED"
+  },
+  {
+    "sender": "127",
+    "body": "You have withdrawn 1,000.00 ETB from Agent [Agent ID]. Cash out fee is 5.00 ETB. Your current balance is 500.00 ETB. Transaction ID: 998877665.",
+    "expectedParty": "[Agent ID]",
+    "expectedAmount": 1000.0,
+    "expectedScenario": "EXPENSE"
+  },
+  {
+    "sender": "127",
+    "body": "You have paid 150.00 ETB to Best Burger Shop. Your current balance is 300.00 ETB. Transaction ID: 443322",
+    "expectedParty": "Best Burger Shop",
+    "expectedAmount": 150.0,
+    "expectedScenario": "SELF_PURCHASE"
+  }
+]

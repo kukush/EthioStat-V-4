@@ -85,7 +85,8 @@ class ReconciliationEngine @Inject constructor(
                     category = "PURCHASE",
                     source = resolvedSrc,
                     timestamp = timestamp,
-                    reference = parsedResult.reference
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName
                 ))
                 parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
@@ -98,7 +99,8 @@ class ReconciliationEngine @Inject constructor(
                     category = parsedResult.transactionCategory ?: "EXPENSE",
                     source = resolvedSrc,
                     timestamp = timestamp,
-                    reference = parsedResult.reference
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName
                 ))
                 parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
@@ -111,7 +113,8 @@ class ReconciliationEngine @Inject constructor(
                     category = parsedResult.transactionCategory ?: "GIFT",
                     source = resolvedSrc,
                     timestamp = timestamp,
-                    reference = parsedResult.reference
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName
                 ))
             }
 
@@ -125,7 +128,8 @@ class ReconciliationEngine @Inject constructor(
                         category = "RECHARGE",
                         source = src,
                         timestamp = timestamp,
-                        reference = parsedResult.reference
+                        reference = parsedResult.reference,
+                        partyName = parsedResult.partyName
                     ))
                 }
                 parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
@@ -139,7 +143,8 @@ class ReconciliationEngine @Inject constructor(
                     category = "CREDIT",
                     source = AppConstants.resolveSource(normalizedSender),
                     timestamp = timestamp,
-                    reference = parsedResult.reference
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName
                 ))
             }
 

@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.activity.result.contract.ActivityResultContracts
 import com.ethiobalance.app.repository.SmsRepository
 import com.ethiobalance.app.ui.EthioBalanceAppUI
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,6 +25,15 @@ class MainActivity : ComponentActivity() {
 
     private var isScanStarted = false
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val smsGranted = permissions[Manifest.permission.READ_SMS] ?: false
+        if (smsGranted) {
+            triggerBackgroundScan()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -36,26 +46,16 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.POST_NOTIFICATIONS
         )
 
-        // Check if permissions are already granted to start scan immediately
+        // Check if permissions are already granted
         if (permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) {
             triggerBackgroundScan()
         } else {
-            // Request SMS and phone permissions on startup
-            ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
+            // Request permissions using the modern launcher
+            requestPermissionLauncher.launch(permissions)
         }
 
         setContent {
             EthioBalanceAppUI()
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val smsGranted = grantResults.getOrNull(permissions.indexOf(Manifest.permission.READ_SMS)) == PackageManager.PERMISSION_GRANTED
-            if (smsGranted) {
-                triggerBackgroundScan()
-            }
         }
     }
 
@@ -67,9 +67,5 @@ class MainActivity : ComponentActivity() {
             val count = smsRepo.scanAllTransactionSources(90)
             Log.d("MainActivity", "Initial scan complete. Total messages processed: $count")
         }
-    }
-
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 1
     }
 }

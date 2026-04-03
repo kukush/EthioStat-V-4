@@ -11,5 +11,6 @@ data class ParsedSmsResult(
     val isRecharge: Boolean = false,
     val airtimeBalance: Double? = null,
     val transactionCategory: String? = null,
-    val reference: String? = null
+    val reference: String? = null,
+    val partyName: String? = null
 )
