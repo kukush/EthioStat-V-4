@@ -1,6 +1,7 @@
 package com.ethiobalance.app.repository
 
 import android.content.Context
+import android.os.Build
 import android.provider.Telephony
 import android.telephony.TelephonyManager
 import android.os.Handler
@@ -167,24 +168,28 @@ class SmsRepository @Inject constructor(
             var ussdResult: Result<String>? = null
             val lock = Object()
             
-            val callback = object : TelephonyManager.UssdResponseCallback() {
-                override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
-                    synchronized(lock) {
-                        ussdResult = Result.success(response.toString())
-                        lock.notify()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val callback = object : TelephonyManager.UssdResponseCallback() {
+                    override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
+                        synchronized(lock) {
+                            ussdResult = Result.success(response.toString())
+                            lock.notify()
+                        }
+                    }
+                    
+                    override fun onReceiveUssdResponseFailed(telephonyManager: TelephonyManager, request: String, failureCode: Int) {
+                        synchronized(lock) {
+                            ussdResult = Result.failure(Exception("USSD failed with code: $failureCode"))
+                            lock.notify()
+                        }
                     }
                 }
                 
-                override fun onReceiveUssdResponseFailed(telephonyManager: TelephonyManager, request: String, failureCode: Int) {
-                    synchronized(lock) {
-                        ussdResult = Result.failure(Exception("USSD failed with code: $failureCode"))
-                        lock.notify()
-                    }
-                }
+                // Send USSD request
+                telephonyManager.sendUssdRequest(cleanCode, callback, Handler(Looper.getMainLooper()))
+            } else {
+                return@withContext Result.failure(Exception("USSD requests require Android 8.0 (API 26) or higher"))
             }
-            
-            // Send USSD request
-            telephonyManager.sendUssdRequest(cleanCode, callback, Handler(Looper.getMainLooper()))
             
             // Wait for response (max 15 seconds)
             synchronized(lock) {

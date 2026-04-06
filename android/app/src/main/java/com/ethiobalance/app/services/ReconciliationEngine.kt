@@ -35,7 +35,32 @@ class ReconciliationEngine @Inject constructor(
         
         // 1. Dedup check
         val bodyHash = body.hashCode()
+        
         if (!forceReparse && smsLogDao.existsByHash(normalizedSender, timestamp, bodyHash)) {
+            return
+        }
+        
+        // Check if we've already processed this exact transaction ID before
+        // This is a safety net for when forceReparse=true
+        val parsedResult = parseSmsUseCase(normalizedSender, body, timestamp)
+        if (parsedResult.confidence < 0.7f) {
+            return
+        }
+        
+        // Generate potential transaction ID to check for duplicates early
+        val potentialTransactionId = if (!parsedResult.reference.isNullOrBlank()) {
+            UUID.nameUUIDFromBytes("${normalizedSender}-${parsedResult.reference}".toByteArray()).toString()
+        } else if (parsedResult.addedAmount != null && parsedResult.addedAmount > 0) {
+            UUID.nameUUIDFromBytes("${normalizedSender}-INCOME-${parsedResult.addedAmount}-${timestamp}".toByteArray()).toString()
+        } else if (parsedResult.deductedAmount != null && parsedResult.deductedAmount > 0) {
+            UUID.nameUUIDFromBytes("${normalizedSender}-EXPENSE-${parsedResult.deductedAmount}-${timestamp}".toByteArray()).toString()
+        } else {
+            val uniqueStr = "$normalizedSender-$timestamp-${body.hashCode()}"
+            UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
+        }
+        
+        // Early duplicate check even for forceReparse
+        if (transactionDao.existsById(potentialTransactionId)) {
             return
         }
         
@@ -61,19 +86,9 @@ class ReconciliationEngine @Inject constructor(
             smsLogDao.insert(logEntity)
         }
 
-        // 3. Parse SMS via Use Case
-        val parsedResult = parseSmsUseCase(normalizedSender, body, timestamp)
-        if (parsedResult.confidence < 0.7f) {
-            return
-        }
-
-        // 4. Apply Dual Tracking Rules
-        val transactionId = if (!parsedResult.reference.isNullOrBlank()) {
-            UUID.nameUUIDFromBytes("${normalizedSender}-${parsedResult.reference}".toByteArray()).toString()
-        } else {
-            val uniqueStr = "$normalizedSender-$timestamp-${body.hashCode()}"
-            UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
-        }
+        // 3. Parse SMS via Use Case (already done above)
+        // 4. Apply Dual Tracking Rules (already done above)
+        val transactionId = potentialTransactionId
         val resolvedSrc = AppConstants.resolveSource(normalizedSender)
 
         when (parsedResult.scenario) {
@@ -86,7 +101,8 @@ class ReconciliationEngine @Inject constructor(
                     source = resolvedSrc,
                     timestamp = timestamp,
                     reference = parsedResult.reference,
-                    partyName = parsedResult.partyName
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
                 ))
                 parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
@@ -100,7 +116,8 @@ class ReconciliationEngine @Inject constructor(
                     source = resolvedSrc,
                     timestamp = timestamp,
                     reference = parsedResult.reference,
-                    partyName = parsedResult.partyName
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
                 ))
                 parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
@@ -114,7 +131,8 @@ class ReconciliationEngine @Inject constructor(
                     source = resolvedSrc,
                     timestamp = timestamp,
                     reference = parsedResult.reference,
-                    partyName = parsedResult.partyName
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
                 ))
             }
 
@@ -129,7 +147,8 @@ class ReconciliationEngine @Inject constructor(
                         source = src,
                         timestamp = timestamp,
                         reference = parsedResult.reference,
-                        partyName = parsedResult.partyName
+                        partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
                     ))
                 }
                 parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
@@ -144,7 +163,8 @@ class ReconciliationEngine @Inject constructor(
                     source = AppConstants.resolveSource(normalizedSender),
                     timestamp = timestamp,
                     reference = parsedResult.reference,
-                    partyName = parsedResult.partyName
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
                 ))
             }
 

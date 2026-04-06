@@ -3,6 +3,7 @@ package com.ethiobalance.app.services
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Telephony
 import android.util.Log
 import com.ethiobalance.app.AppConstants
@@ -38,7 +39,11 @@ class SmsReceiver : BroadcastReceiver() {
                         putExtra("body", body)
                         putExtra("timestamp", timestamp)
                     }
-                    context.startForegroundService(serviceIntent)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(serviceIntent)
+                    } else {
+                        context.startService(serviceIntent)
+                    }
                 } else {
                     Log.d(TAG, "Sender $sender is NOT whitelisted. Ignoring message.")
                 }

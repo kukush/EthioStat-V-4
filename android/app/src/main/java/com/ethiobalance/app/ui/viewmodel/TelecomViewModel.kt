@@ -60,21 +60,25 @@ class TelecomViewModel @Inject constructor(
                 val dialCheckInterval = 2000L // Check every 2 seconds
                 var totalDialWaited = 0L
                 var userDialed = false
+                var smsProcessed = false
                 
                 _syncWarning.value = "Please dial the USSD number..."
                 
                 // First wait for user to dial (no closing attempts yet)
-                while (totalDialWaited < maxDialWait && !userDialed) {
+                while (totalDialWaited < maxDialWait && !userDialed && !smsProcessed) {
                     kotlinx.coroutines.delay(dialCheckInterval)
                     totalDialWaited += dialCheckInterval
                     
                     // Check if any SMS has arrived (user dialed and got response)
-                    val scanned = smsRepo.scanTelecomHistory(days = 1)
-                    if (scanned > 0) {
-                        _syncWarning.value = null
-                        userDialed = true
-                        Log.d("TelecomViewModel", "User dialed and received SMS response")
-                        break
+                    // Only scan once to avoid duplicate processing
+                    if (totalDialWaited == dialCheckInterval) { // Only scan on first check
+                        val scanned = smsRepo.scanTelecomHistory(days = 1)
+                        if (scanned > 0) {
+                            _syncWarning.value = null
+                            userDialed = true
+                            smsProcessed = true
+                            break
+                        }
                     }
                     
                     _syncWarning.value = "Please dial the USSD number... (${(maxDialWait - totalDialWaited)/2000}s)"
@@ -87,46 +91,50 @@ class TelecomViewModel @Inject constructor(
                     return@launch
                 }
                 
-                // User has dialed and pressed OK, wait for USSD response in background
+                // User has dialed, wait for USSD response in background
                 _syncWarning.value = "Processing USSD response in background..."
                 kotlinx.coroutines.delay(3000) // Wait for USSD to complete
                 
-                // Try to close USSD popup if it appears
-                val maxPopupWait = 10000L // 10 seconds max wait for popup
-                val popupCheckInterval = 1000L // Check every 1 second
-                var totalPopupWaited = 0L
-                var popupClosed = false
-                
-                _syncWarning.value = "Waiting for USSD response..."
-                
-                while (totalPopupWaited < maxPopupWait && !popupClosed) {
-                    kotlinx.coroutines.delay(popupCheckInterval)
-                    totalPopupWaited += popupCheckInterval
+                // Try to close USSD popup if it appears (only scan if not already processed)
+                if (!smsProcessed) {
+                    val maxPopupWait = 10000L // 10 seconds max wait for popup
+                    val popupCheckInterval = 1000L // Check every 1 second
+                    var totalPopupWaited = 0L
+                    var popupClosed = false
                     
-                    // Try to close the USSD popup
-                    val ussdService = com.ethiobalance.app.services.UssdAccessibilityService.getInstance()
-                    if (ussdService != null) {
-                        ussdService.closeDialer()
-                        Log.d("TelecomViewModel", "Attempted to close USSD popup after ${totalPopupWaited/1000}s")
+                    _syncWarning.value = "Waiting for USSD response..."
+                    
+                    while (totalPopupWaited < maxPopupWait && !popupClosed) {
+                        kotlinx.coroutines.delay(popupCheckInterval)
+                        totalPopupWaited += popupCheckInterval
                         
-                        // Wait a moment to see if popup was closed
-                        kotlinx.coroutines.delay(500)
-                        
-                        // Check if SMS was received (popup was successfully closed and processed)
-                        val popupScanned = smsRepo.scanTelecomHistory(days = 1)
-                        if (popupScanned > 0) {
-                            _syncWarning.value = null
-                            popupClosed = true
-                            Log.d("TelecomViewModel", "USSD popup closed and processed successfully")
-                            break
+                        // Try to close the USSD popup
+                        val ussdService = com.ethiobalance.app.services.UssdAccessibilityService.getInstance()
+                        if (ussdService != null) {
+                            ussdService.closeDialer()
+                            
+                            // Wait a moment to see if popup was closed
+                            kotlinx.coroutines.delay(500)
+                            
+                            // Check if SMS was received (popup was successfully closed and processed)
+                            // Only scan once
+                            if (totalPopupWaited == popupCheckInterval) {
+                                val popupScanned = smsRepo.scanTelecomHistory(days = 1)
+                                if (popupScanned > 0) {
+                                    _syncWarning.value = null
+                                    popupClosed = true
+                                    smsProcessed = true
+                                    break
+                                }
+                            }
+                            
+                            _syncWarning.value = "Waiting for USSD response... (${(maxPopupWait - totalPopupWaited)/1000}s)"
                         }
-                        
-                        _syncWarning.value = "Waiting for USSD response... (${(maxPopupWait - totalPopupWaited)/1000}s)"
                     }
                 }
                 
-                // After popup handling, continue waiting for SMS
-                if (!popupClosed) {
+                // Final check for SMS (only if not already processed)
+                if (!smsProcessed) {
                     _syncWarning.value = "Waiting for balance SMS..."
                     val maxSmsWait = 15000L // 15 seconds max wait for SMS
                     val smsCheckInterval = 2000L // Check every 2 seconds
@@ -137,38 +145,30 @@ class TelecomViewModel @Inject constructor(
                         kotlinx.coroutines.delay(smsCheckInterval)
                         totalSmsWaited += smsCheckInterval
                         
-                        // Check if SMS has arrived
-                        val scanned = smsRepo.scanTelecomHistory(days = 1)
-                        if (scanned > 0) {
-                            _syncWarning.value = null
-                            smsReceived = true
-                            Log.d("TelecomViewModel", "Balance SMS received and processed")
-                            break
+                        // Check if SMS has arrived (only scan once)
+                        if (totalSmsWaited == smsCheckInterval) {
+                            val scanned = smsRepo.scanTelecomHistory(days = 1)
+                            if (scanned > 0) {
+                                _syncWarning.value = null
+                                smsReceived = true
+                                smsProcessed = true
+                                break
+                            }
                         }
                         
                         _syncWarning.value = "Waiting for balance SMS... (${(maxSmsWait - totalSmsWaited)/2000}s)"
                     }
                     
                     if (!smsReceived) {
-                        _syncWarning.value = "No USSD response detected. Please return to app to check balance."
+                        // Try fallback scan (only once)
+                        val fallbackScan = smsRepo.scanAllTransactionSources(days = 1)
+                        if (fallbackScan > 0) {
+                            _syncWarning.value = null
+                            smsProcessed = true
+                        } else {
+                            _syncWarning.value = "No USSD response detected. Please return to app to check balance."
+                        }
                     }
-                }
-                
-                // Wait for SMS response
-                kotlinx.coroutines.delay(7000)
-                val scanned = smsRepo.scanTelecomHistory(days = 1)
-                
-                if (scanned == 0) {
-                    // Fallback: scan all recent SMS for balance keywords
-                    val balanceScanned = smsRepo.scanAllTransactionSources(days = 1)
-                    if (balanceScanned > 0) {
-                        _syncWarning.value = null // Clear warning if balance SMS found
-                    } else {
-                        // Only show warning if no SMS received after delay
-                        _syncWarning.value = "No balance SMS received. Please ensure the USSD call was completed."
-                    }
-                } else {
-                    _syncWarning.value = null // Clear any warning when SMS is received
                 }
             } catch (e: Exception) {
                 _syncError.value = e.message ?: "Sync failed"

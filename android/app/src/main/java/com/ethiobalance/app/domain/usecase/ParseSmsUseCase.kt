@@ -9,6 +9,17 @@ import javax.inject.Inject
 
 class ParseSmsUseCase @Inject constructor() {
 
+    private fun detectLanguage(text: String): String {
+        val amharicRegex = Regex("[\\u1200-\\u137F]")
+        if (amharicRegex.containsMatchIn(text)) return "am"
+        
+        val oromoKeywords = listOf("haala", "galii", "herrega", "kennamee", "fudhattaniirtu")
+        val lowerText = text.lowercase()
+        if (oromoKeywords.any { lowerText.contains(it) }) return "om"
+        
+        return "en"
+    }
+
     operator fun invoke(sender: String, body: String, timestamp: Long): ParsedSmsResult {
         val now = System.currentTimeMillis()
         val result = ParsedSmsResult(scenario = SmsScenario.UNKNOWN, confidence = 0f)
@@ -18,8 +29,10 @@ class ParseSmsUseCase @Inject constructor() {
         var addedAmount: Double? = null
         var isRecharge = false
         var transactionCategory: String? = null
+        var transactionSubType: String? = null
         var reference: String? = null
         var airtimeBalance: Double? = null
+        var partyName: String? = null
         
         // Generate a deterministic base ID
         val uniqueStr = "$sender-$timestamp-${body.hashCode()}"
@@ -121,27 +134,27 @@ class ParseSmsUseCase @Inject constructor() {
         val isTrustedSender = sender.contains("TELEBIRR", ignoreCase = true) || AppConstants.SMS_SENDER_WHITELIST.contains(sender)
         
         if (isTrustedSender) {
-            // Check for airtime balance or packages in any trusted SMS (e.g. purchase confirmation)
-            val balanceMatch = Regex(
-                """(?:your\s+(?:telebirr\s+)?(?:account\s+)?(?:new\s+)?balance\s+(?:after\s+\S+\s+)?(?:is|:)|(?:new\s+)?balance[:\s]+|ቀሪ\s*(?:ሒሳ\S*|ብዛ)?|current\s+balance)[\s:]*(?:ETB\s*)?([\d,]+\.?\d*)\s*(?:ETB|ብር)?""",
-                RegexOption.IGNORE_CASE
-            ).find(body)
-            
-            balanceMatch?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull()?.let { airtimeBal ->
-                airtimeBalance = airtimeBal
-                addOrReplace(BalancePackageEntity(
-                    id = "airtime-sim1", simId = "sim1", type = "airtime",
-                    totalAmount = airtimeBal, remainingAmount = airtimeBal, unit = "ETB",
-                    expiryDate = now + (30 * 24 * 60 * 60 * 1000L), isActive = true, source = "SMS", lastUpdated = now
-                ))
-                if (scenario == SmsScenario.UNKNOWN) {
-                    scenario = SmsScenario.BALANCE_QUERY
-                    confidenceScore = 0.85f
+            // Party Name Extraction (before financial matching)
+            val partyNamePatterns = listOf(
+                // CBE/BOA Transfer: "to Lenco Getachew"
+                Regex("(?:transfered|transferred)\\s+ETB\\s+[\\d,.]+\\s+to\\s+([A-Za-z0-9\\s./]+?)(?:\\s+on|from your account)", RegexOption.IGNORE_CASE),
+                // Telebirr Merchant/Utility: "to Ethiopian Electric Utility"
+                Regex("paid\\s+[\\d,.]+\\s+ETB\\s+to\\s+([^.]+?)(?:\\s+for|\\. Your current balance)", RegexOption.IGNORE_CASE),
+                // Cash In/Out: "by Agent [Agent Name/ID]"
+                Regex("by\\s+(Agent\\s*\\[[^\\]]+\\])", RegexOption.IGNORE_CASE),
+                // CBE/BOA Credit: "by A/r Tele Birr"
+                Regex("by\\s+([A-Za-z0-9\\s./]+?)\\. Available Balance", RegexOption.IGNORE_CASE),
+                // Telebirr Transfer: "to 0911XXXXXX (Abebe Kebede)" or "to 0922123456" (most generic, last)
+                Regex("to\\s+([^\\.]+)", RegexOption.IGNORE_CASE)
+            )
+
+            for (pattern in partyNamePatterns) {
+                val match = pattern.find(body)
+                if (match != null) {
+                    partyName = match.groupValues[1].trim()
+                    break
                 }
             }
-
-            // Also search for data/voice/sms packages in this message
-            parsePackageDetails(body, now, result)
 
             // Financial matching logic
             // Loan taken
@@ -166,9 +179,11 @@ class ParseSmsUseCase @Inject constructor() {
                 """(?:credited|credit of|has been credited|received\s+a\s+gift\s+of|received\s+ETB|transferred\s+to\s+you)\s*(?:with\s+)?(?:ETB\s*)?([\d,]+\.?\d*)""",
                 RegexOption.IGNORE_CASE
             ).find(body)
+            
             if (creditMatch != null && loanMatch == null) {
                 scenario = SmsScenario.INCOME
                 addedAmount = creditMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                transactionSubType = "Received"
                 confidenceScore = 0.9f
             }
 
@@ -186,16 +201,22 @@ class ParseSmsUseCase @Inject constructor() {
             if (paymentMatch != null && loanMatch == null && creditMatch == null && repayMatch == null && debitMatch == null) {
                 scenario = SmsScenario.SELF_PURCHASE
                 deductedAmount = paymentMatch.groupValues[1].replace(",", "").toDoubleOrNull()
-                transactionCategory = "PURCHASE"
+                transactionSubType = "Payment"
+                transactionCategory = when {
+                    body.contains("utility", ignoreCase = true) -> "UTILITY"
+                    body.contains("airtime", ignoreCase = true) -> "AIRTIME"
+                    else -> "PURCHASE"
+                }
                 confidenceScore = 0.9f
             }
 
             // Transfer / Gift Sent
-            val transferMatch = Regex("(?:transferred|gifted)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
+            val transferMatch = Regex("(?:transferred|transfered|sent)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
             if (transferMatch != null) {
                 scenario = SmsScenario.EXPENSE
                 deductedAmount = transferMatch.groupValues[1].replace(",", "").toDoubleOrNull()
-                transactionCategory = "GIFT"
+                transactionCategory = if (body.contains("gift", ignoreCase = true)) "GIFT" else "TRANSFER"
+                transactionSubType = "Transfer"
                 confidenceScore = 0.9f
             }
 
@@ -222,6 +243,28 @@ class ParseSmsUseCase @Inject constructor() {
             if (refMatch != null && refMatch.groupValues[1].length > 4) {
                 reference = refMatch.groupValues[1]
             }
+
+            // Package parsing
+            parsePackageDetails(body, now, result)
+
+            // Check for airtime balance (only if no financial scenario detected)
+            val balanceMatch = Regex(
+                """(?:your\s+(?:telebirr\s+)?(?:account\s+)?(?:new\s+)?balance\s+(?:after\s+\S+\s+)?(?:is|:)|(?:new\s+)?balance[:\s]+|ቀሪ\s*(?:ሒሳ\S*|ብዛ)?|current\s+balance)[\s:]*(?:ETB\s*)?([\d,]+\.?\d*)\s*(?:ETB|ብር)?""",
+                RegexOption.IGNORE_CASE
+            ).find(body)
+            
+            balanceMatch?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull()?.let { airtimeBal ->
+                airtimeBalance = airtimeBal
+                addOrReplace(BalancePackageEntity(
+                    id = "airtime-sim1", simId = "sim1", type = "airtime",
+                    totalAmount = airtimeBal, remainingAmount = airtimeBal, unit = "ETB",
+                    expiryDate = now + (30 * 24 * 60 * 60 * 1000L), isActive = true, source = "SMS", lastUpdated = now
+                ))
+                if (scenario == SmsScenario.UNKNOWN) {
+                    scenario = SmsScenario.BALANCE_QUERY
+                    confidenceScore = 0.85f
+                }
+            }
         }
 
         // 3. Asset inference if still UNKNOWN but packages found
@@ -238,7 +281,9 @@ class ParseSmsUseCase @Inject constructor() {
             isRecharge = isRecharge,
             airtimeBalance = airtimeBalance,
             transactionCategory = transactionCategory,
-            reference = reference
+            transactionSubType = transactionSubType,
+            reference = reference,
+            partyName = partyName
         )
     }
 

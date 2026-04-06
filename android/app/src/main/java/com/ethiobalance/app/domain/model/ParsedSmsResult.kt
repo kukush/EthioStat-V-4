@@ -12,5 +12,6 @@ data class ParsedSmsResult(
     val airtimeBalance: Double? = null,
     val transactionCategory: String? = null,
     val reference: String? = null,
-    val partyName: String? = null
+    val partyName: String? = null,
+    val transactionSubType: String? = null
 )

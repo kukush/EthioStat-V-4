@@ -116,7 +116,7 @@ fun TransactionItem(
 
                     Column {
                         Text(
-                            text = transaction.category.replaceFirstChar { it.uppercase() }.takeIf { it.isNotBlank() } ?: "Transaction", // Fallback for description if category is all we have
+                            text = transaction.transactionSubType?.let { "${transaction.source.take(2).uppercase()} : $it" } ?: transaction.category.replaceFirstChar { it.uppercase() },
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Slate900,
@@ -124,7 +124,7 @@ fun TransactionItem(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "${transaction.source} • $formattedDate",
+                            text = transaction.partyName?.let { "To: $it" } ?: formattedDate,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Slate400,
@@ -140,7 +140,7 @@ fun TransactionItem(
                 Row(verticalAlignment = Alignment.Top) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "$sign ETB $formatted",
+                            text = "$sign $formatted",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Black,
                             color = amountColor

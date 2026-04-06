@@ -53,6 +53,7 @@ object AppConstants {
         "847",
         "CBEBirr",
         "CBEBIRR",
+        "CBE",
 
         // ── Awash Bank — *901# ────────────────────────────────────────────────
         "901",
@@ -61,6 +62,7 @@ object AppConstants {
         // ── Bank of Abyssinia (BoA) — *815# ──────────────────────────────────
         "815",
         "AbyssiniaBank",
+        "BOA",
 
         // ── Dashen Bank — *721# ───────────────────────────────────────────────
         "721",

@@ -1,0 +1,42 @@
+[
+  {
+    "category": "CBE - Transfer",
+    "sender": "CBEBirr",
+    "body": "Dear xxx, You have transfered ETB 1,300.00 to Lenco Getachew on 18/03/2026 at 13:36:38 from your account 1*********5064. Your account has been debited with a S.charge of ETB 1.00 and VAT(15%) of ETB0.15 and Disaster Fund (5%) of ETB0.05, with a total of ETB 1301.20. Your Current Balance is ETB 941.01. Thank you for Banking with CBE! https://apps.cbe.com.et:100/?id=FT26077QCPNW09785064 For feedback click the link https://forms.gle/R1s9nkJ6qZVCxRVu9"
+  },
+  {
+    "category": "BOA - Credit",
+    "sender": "BOA",
+    "body": "Dear xx, your account 2*****46 was credited with ETB 5.00 by A/r Tele Birr. Available Balance: ETB 1,114.15. Receipt: https://cs.bankofabyssinia.com/slip/?trx=FT2607828PWC10104 Feedback: https://cs.bankofabyssinia.com/cs/?trx=CFT2607828PWC For help, call 8397 (24/7 Toll-Free). Bank of Abyssinia."
+  },
+  {
+    "category": "Telebirr - Money Transfer",
+    "sender": "127",
+    "body": "You have sent 500.00 ETB to 0911XXXXXX (Name). Service fee is 2.00 ETB. Your current balance is 1,250.50 ETB. Transaction ID: 123456789."
+  },
+  {
+    "category": "Telebirr - Airtime Top-up",
+    "sender": "127",
+    "body": "You have successfully recharged 100.00 ETB airtime for 09XXXXXXXX. Your current telebirr balance is 450.00 ETB. Transaction ID: 987654321."
+  },
+  {
+    "category": "Telebirr - Utility Bill Payment",
+    "sender": "127",
+    "body": "You have paid 350.00 ETB to Ethiopian Electric Utility for Reference No 1000XXXXXX. Your current balance is 800.00 ETB. Transaction ID: 556677889."
+  },
+  {
+    "category": "Telebirr - Cash In",
+    "sender": "127",
+    "body": "Your account has been credited with 2,000.00 ETB by Agent [Agent Name/ID]. Your current balance is 2,800.00 ETB. Transaction ID: 112233445."
+  },
+  {
+    "category": "Telebirr - Cash Out",
+    "sender": "127",
+    "body": "You have withdrawn 1,000.00 ETB from Agent [Agent ID]. Cash out fee is [Fee Amount] ETB. Your current balance is 500.00 ETB. Transaction ID: 998877665."
+  },
+  {
+    "category": "Telebirr - Merchant Payment",
+    "sender": "127",
+    "body": "You have paid 150.00 ETB to [Merchant Name]. Your current balance is 300.00 ETB. Transaction ID: 443322"
+  }
+]

@@ -18,6 +18,7 @@ class ParseSmsUseCaseTest {
         assertEquals(SmsScenario.EXPENSE, result.scenario)
         assertEquals(1300.0, result.deductedAmount!!, 0.01)
         assertEquals("Lenco Getachew", result.partyName)
+        assertEquals("Transfer", result.transactionSubType)
     }
 
     @Test
@@ -28,6 +29,7 @@ class ParseSmsUseCaseTest {
         assertEquals(SmsScenario.INCOME, result.scenario)
         assertEquals(5.0, result.addedAmount!!, 0.01)
         assertEquals("A/r Tele Birr", result.partyName)
+        assertEquals("Received", result.transactionSubType)
     }
 
     @Test
@@ -37,7 +39,8 @@ class ParseSmsUseCaseTest {
         
         assertEquals(SmsScenario.EXPENSE, result.scenario)
         assertEquals(500.0, result.deductedAmount!!, 0.01)
-        assertEquals("Abebe Kebede", result.partyName)
+        assertEquals("0911XXXXXX (Abebe Kebede)", result.partyName)
+        assertEquals("Transfer", result.transactionSubType)
     }
 
     @Test
@@ -64,8 +67,9 @@ class ParseSmsUseCaseTest {
         val body = "Your account has been credited with 2,000.00 ETB by Agent [Agent Name/ID]. Your current balance is 2,800.00 ETB. Transaction ID: 112233445."
         val result = parseSmsUseCase("127", body, System.currentTimeMillis())
         
-        assertEquals(SmsScenario.RECHARGE_OR_GIFT_RECEIVED, result.scenario)
+        assertEquals(SmsScenario.INCOME, result.scenario)
         assertEquals(2000.0, result.addedAmount!!, 0.01)
-        assertEquals("[Agent Name/ID]", result.partyName)
+        assertEquals("Agent [Agent Name/ID]", result.partyName)
+        assertEquals("Received", result.transactionSubType)
     }
 }

@@ -10,6 +10,9 @@ interface TransactionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(transaction: TransactionEntity)
+    
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE id = :id)")
+    suspend fun existsById(id: String): Boolean
 
     @Query("SELECT SUM(amount) FROM transactions WHERE type = :type")
     suspend fun getTotalByType(type: String): Double?

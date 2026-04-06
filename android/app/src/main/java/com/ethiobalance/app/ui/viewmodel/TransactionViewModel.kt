@@ -51,10 +51,13 @@ class TransactionViewModel @Inject constructor(
         allTransactions, _timeFilter, _sourceFilter, _searchQuery, settingsRepo.getTransactionSources()
     ) { transactions, time, source, query, configuredSources ->
         formatTransactionUseCase(transactions, time, source, query, configuredSources)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.distinctUntilChanged()
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Calculate totals using GetFinancialSummaryUseCase
     private val financialSummary: StateFlow<GetFinancialSummaryUseCase.FinancialSummary> = filteredTransactions
         .map { getFinancialSummaryUseCase(it) }
+        .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GetFinancialSummaryUseCase.FinancialSummary(0.0, 0.0))
 
     val totalIncome: StateFlow<Double> = financialSummary.map { it.totalIncome }

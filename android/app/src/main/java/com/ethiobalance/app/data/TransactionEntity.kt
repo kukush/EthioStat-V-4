@@ -12,5 +12,6 @@ data class TransactionEntity(
     val source: String, // TELEBIRR, USSD, SMS
     val timestamp: Long,
     val reference: String?,
-    val partyName: String?
+    val partyName: String?,
+    val transactionSubType: String?
 )
