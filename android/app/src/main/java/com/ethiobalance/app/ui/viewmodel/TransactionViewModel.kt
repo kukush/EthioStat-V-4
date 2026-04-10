@@ -66,12 +66,12 @@ class TransactionViewModel @Inject constructor(
     val totalExpense: StateFlow<Double> = financialSummary.map { it.totalExpense }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val uniqueSources: StateFlow<List<String>> = settingsRepo.getTransactionSources()
+    val uniqueSources: StateFlow<List<Pair<String, String>>> = settingsRepo.getTransactionSources()
         .map { sources ->
-            sources.map { it.name }
-                .filter { it != AppConstants.SOURCE_AIRTIME }
-                .distinct()
-                .sorted()
+            sources.map { it.abbreviation to AppConstants.resolveSource(it.senderId) }
+                .filter { it.second != AppConstants.SOURCE_AIRTIME }
+                .distinctBy { it.second }
+                .sortedBy { it.second }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setTimeFilter(filter: String) { _timeFilter.value = filter }

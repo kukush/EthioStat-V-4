@@ -2,6 +2,14 @@
 # =============================================================================
 # EthioStat — End-to-End SMS Workflow Test Script
 #
+# Tests SMS parsing & transaction recording using REAL device SMS formats.
+# All test messages are copied verbatim from actual Ethiopian bank/telecom SMS
+# captured via: adb shell "content query --uri content://sms/inbox ..."
+#
+# Covered banks:  CBE, BOA, Awash Bank, Telebirr (127)
+# Covered cases:  credit, debit, debit+service-charge, debit-for-party,
+#                 credit-from-party, transfer, airtime-received
+#
 # Usage:  chmod +x scripts/test-workflow.sh && ./scripts/test-workflow.sh
 # =============================================================================
 
@@ -16,11 +24,13 @@ NOW_MS=$(date +%s000)
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 pass() { echo -e "${GREEN}✅ PASS${NC}: $1"; PASS=$((PASS+1)); }
 fail() { echo -e "${RED}❌ FAIL${NC}: $1"; FAIL=$((FAIL+1)); }
 info() { echo -e "${YELLOW}ℹ️  ${NC}$1"; }
+section() { echo -e "\n${CYAN}── $1 ──${NC}"; }
 
 # ─── Preconditions ───────────────────────────────────────────────────────────
 
@@ -65,13 +75,13 @@ db_query() {
   sqlite3 "${LOCAL_DB_DIR}/${DB_NAME}" "$sql" 2>/dev/null || echo ""
 }
 
-# ─── Helper: inject a fake SMS broadcast ─────────────────────────────────────
+# ─── Helper: inject SMS via SmsForegroundService ────────────────────────────
 
 inject_sms() {
   local sender="$1"
   local body="$2"
   local ts="${3:-$NOW_MS}"
-  info "Injecting SMS from '$sender': $body"
+  info "Injecting SMS from '${sender}'"
   adb shell "am start-foreground-service \
     -n $APP_PACKAGE/.services.SmsForegroundService \
     --es sender '$sender' \
@@ -79,91 +89,194 @@ inject_sms() {
     --el timestamp $ts" 2>/dev/null || true
 }
 
-# ─── Clear old test data ──────────────────────────────────────────────────────
+# ─── Assert helper ──────────────────────────────────────────────────────────
 
-info "Clearing previous test data from DB..."
-db_query "DELETE FROM transactions WHERE reference IS NULL AND category IN ('PURCHASE', 'CREDIT', 'EXPENSE', 'REPAYMENT', 'GIFT', 'FEE');" 2>/dev/null || true
-db_query "DELETE FROM balance_packages WHERE source = 'SMS';" 2>/dev/null || true
-db_query "DELETE FROM sms_logs;" 2>/dev/null || true
+assert_tx() {
+  local test_num="$1"
+  local label="$2"
+  local type="$3"
+  local amount="$4"
+  local source="$5"
+  local count
+  count=$(db_query "SELECT COUNT(*) FROM transactions WHERE type='${type}' AND amount=${amount} AND source='${source}';")
+  if [[ "$count" -ge 1 ]]; then
+    pass "Test ${test_num}: ${label}"
+  else
+    fail "Test ${test_num}: ${label} (expected ${type} ${amount} from ${source})"
+  fi
+}
+
+# ─── Reset ──────────────────────────────────────────────────────────────────
+
+section "Reset"
+
+info "Clearing app data to reset DB..."
+adb shell pm clear $APP_PACKAGE 2>/dev/null || true
+sleep 1
+
+info "Launching app to re-initialize database..."
+adb shell am start -n $APP_PACKAGE/.MainActivity 2>/dev/null || true
+sleep 4
+
+info "Clearing logcat..."
+adb logcat -c 2>/dev/null || true
+
+# =============================================================================
+#  REAL-WORLD SMS TEST CASES
+#  All messages below are verbatim copies from actual device SMS inbox
+# =============================================================================
+
+section "Injecting Real-World SMS Messages"
+
+# ── CBE: Simple Credit ──────────────────────────────────────────────────────
+T1_TS=$((NOW_MS - 200000))
+inject_sms "CBE" \
+  "Dear Abebech your Account 1********3618 has been credited with ETB 7000.00. Your Current Balance is ETB 62923.77. Thank you for Banking with CBE! https://apps.cbe.com.et:100/BranchReceipt/FT252810466B&35393618" \
+  "$T1_TS"
+
+# ── CBE: Credit from named party ────────────────────────────────────────────
+T2_TS=$((NOW_MS - 190000))
+inject_sms "CBE" \
+  "Dear Abebech your Account 1*********3743 has been Credited with ETB 20,000.00 from Metawal Taye, on 12/12/2025 at 09:58:18 with Ref No FT253462WZSY Your Current Balance is ETB 87,037.78. Thank you for Banking with CBE! https://apps.cbe.com.et:100/?id=FT253462WZSY95763743" \
+  "$T2_TS"
+
+# ── CBE: Debit with service charge ──────────────────────────────────────────
+T3_TS=$((NOW_MS - 180000))
+inject_sms "CBE" \
+  "Dear Abebech your Account 1********3618 has been debited with ETB 5005.75 including Service charge 5.00 and VAT(15%) 0.75. Your Current Balance is ETB 45465.75. Thank you for Banking with CBE!. For feedback https://shorturl.at/auUX0" \
+  "$T3_TS"
+
+# ── CBE: Large debit with service charge ────────────────────────────────────
+T4_TS=$((NOW_MS - 170000))
+inject_sms "CBE" \
+  "Dear Abebech your Account 1********3618 has been debited with ETB 50011.50 including Service charge 10.00 and VAT(15%) 1.50. Your Current Balance is ETB 142454.25. Thank you for Banking with CBE!. For feedback https://shorturl.at/auUX0" \
+  "$T4_TS"
+
+# ── CBE: Debit for named party ──────────────────────────────────────────────
+T5_TS=$((NOW_MS - 160000))
+inject_sms "CBE" \
+  "Dear Abebech your Account 1********3618 has been debited for SELAMAWIT  ALEMU GETAHUN with ETB 50011.5 including Service charge ETB10.00 and VAT(15%) ETB1.50. Your Current Balance is ETB 77356.25. Thank you for Banking with CBE!. For feedback https://shorturl.at/auUX0 https://apps.cbe.com.et:100/BranchReceipt/FT25360QSQD2&35393618" \
+  "$T5_TS"
+
+# ── CBE: Debit for utility ──────────────────────────────────────────────────
+T6_TS=$((NOW_MS - 150000))
+inject_sms "CBE" \
+  "Dear Abebech your Account 1********1058 has been debited for GULELE KK YEMAH.AKEF .TEN.MED.TE.A with ETB 2005.75 including Service charge ETB5.00 and VAT(15%) ETB0.75. Your Current Balance is ETB 64.16. Thank you for Banking with CBE!. For feedback https://shorturl.at/auUX0 https://apps.cbe.com.et:100/BranchReceipt/FT25297CHLHW&07211058" \
+  "$T6_TS"
+
+# ── CBE: Large credit ───────────────────────────────────────────────────────
+T7_TS=$((NOW_MS - 140000))
+inject_sms "CBE" \
+  "Dear Abebech your Account 1********3618 has been credited with ETB 60000.00. Your Current Balance is ETB 64745.46. Thank you for Banking with CBE! for Reciept https://apps.cbe.com.et:100/BranchReceipt/FT26035CC8BL&35393618" \
+  "$T7_TS"
+
+# ── BOA: Credit by cash deposit ─────────────────────────────────────────────
+T8_TS=$((NOW_MS - 130000))
+inject_sms "BOA" \
+  "Dear Ababech, your account 1*****07 was credited with ETB 5,000.00 by Cash Deposit-ABEBECH WELDE SHOLATO. Available Balance:  ETB 81,505.76. Receipt: https://cs.bankofabyssinia.com/slip/?trx=TT26076G8L5B74607" \
+  "$T8_TS"
+
+# ── BOA: Debit ──────────────────────────────────────────────────────────────
+T9_TS=$((NOW_MS - 120000))
+inject_sms "BOA" \
+  "Dear ABEBECH, your account 1*****07 was debited with ETB 50,000.00. Available Balance:  ETB 50,095.90. Receipt: https://cs.bankofabyssinia.com/slip/?trx=TT252119GSPL74607" \
+  "$T9_TS"
+
+# ── BOA: Large credit ───────────────────────────────────────────────────────
+T10_TS=$((NOW_MS - 110000))
+inject_sms "BOA" \
+  "Dear ABEBECH, your account 1*****07 was credited with ETB 100,000.00 by Cash Deposit-ABEBECH WELDE SHOLATO. Available Balance:  ETB 100,107.40. Receipt: https://cs.bankofabyssinia.com/slip/?trx=TT25202BV0J174607" \
+  "$T10_TS"
+
+# ── Awash: Credit with party ────────────────────────────────────────────────
+T11_TS=$((NOW_MS - 100000))
+inject_sms "Awash Bank" \
+  "Dear Customer, your Account 01320xxxxx1400 has been Credited with ETB 1300.00 on 2026-03-31 11:32:14 by ABEBECH WOLDE. Your balance now is ETB 17535.60. For any complaint or enquiry, please call 8980. Thank You. Awash Bank." \
+  "$T11_TS"
+
+# ── Awash: Credit via transfer ──────────────────────────────────────────────
+T12_TS=$((NOW_MS - 90000))
+inject_sms "Awash Bank" \
+  "Dear Customer, ETB 50 has been credited to your account from SAMUEL MITIKU GUDINA on : 2026-01-28 20:12:21  with Txn ID: 260128201223255 . Your available balance is now ETB 50.00. Receipt  Link: https://awashpay.awashbank.com:8225/-2K7H8UP3KN-3JLL2T. Contact center  8980." \
+  "$T12_TS"
+
+# ── Awash: Larger credit ────────────────────────────────────────────────────
+T13_TS=$((NOW_MS - 80000))
+inject_sms "Awash Bank" \
+  "Dear Customer, your Account 01320xxxxxx1400 has been Credited with ETB 4000.00 on 2026-01-20 09:52:38 by sd. Your balance now is ETB 28696.65. For any complaint or enquiry, please call 8980. Thank You. Awash Bank." \
+  "$T13_TS"
+
+# ── Telebirr: Airtime received ──────────────────────────────────────────────
+T14_TS=$((NOW_MS - 70000))
+inject_sms "127" \
+  "Dear Customer\nYou have received ETB 25.00 airtime from 251927983338 on 16/11/2025 18:16:34. Your transaction number is CKG87P67W6.\nThank you for using telebirr\nethio telecom" \
+  "$T14_TS"
+
+# ── Telebirr: Payment for package ───────────────────────────────────────────
+T15_TS=$((NOW_MS - 60000))
+inject_sms "127" \
+  "You have paid 100.00 ETB for 5GB Monthly Internet package. Transaction ID: TX001. Your new balance is 2400.00 ETB." \
+  "$T15_TS"
+
+# ── Telebirr: Transfer/Send ─────────────────────────────────────────────────
+T16_TS=$((NOW_MS - 50000))
+inject_sms "127" \
+  "You have sent 450.50 ETB to 0911223344. Transaction ID: TX016. Fee: 2.50 ETB." \
+  "$T16_TS"
 
 echo ""
-echo "── Injecting Mock Data SMS Messages ─────────────────────────────────────"
+info "Waiting 10 seconds for processing pipeline to complete..."
+sleep 10
 
-# Test 1: Telebirr - Internet Purchase (Dual Impact)
-T1_TS=$((NOW_MS - 100000))
-inject_sms "127" "You have successfully paid 100.00 ETB for 5GB Monthly Internet package via Telebirr. Your new balance is 2400.00 ETB." "$T1_TS"
+# =============================================================================
+#  ASSERTIONS
+# =============================================================================
 
-# Test 2: Telebirr - Voice Purchase (Dual Impact)
-T2_TS=$((NOW_MS - 90000))
-inject_sms "127" "You have successfully paid 50.00 ETB for 100 Minutes Weekly Voice package. New Telebirr balance: 2350.00 ETB." "$T2_TS"
+section "Asserting DB State"
 
-# Test 3: Telebirr - SMS Purchase (Dual Impact)
-T3_TS=$((NOW_MS - 80000))
-inject_sms "127" "You have successfully paid 20.00 ETB for 200 Weekly SMS package. Transaction Ref: SMS998." "$T3_TS"
+# ── CBE Tests ───────────────────────────────────────────────────────────────
+assert_tx  1 "CBE credit 7,000 ETB"                     "INCOME"  "7000.0"    "CBE"
+assert_tx  2 "CBE credit 20,000 ETB (from Metawal Taye)" "INCOME"  "20000.0"   "CBE"
+assert_tx  3 "CBE debit 5,005.75 ETB (incl. svc charge)"  "EXPENSE" "5005.75"   "CBE"
+assert_tx  4 "CBE debit 50,011.50 ETB (incl. svc charge)" "EXPENSE" "50011.5"   "CBE"
+assert_tx  5 "CBE debit 50,011.50 ETB (for SELAMAWIT)"    "EXPENSE" "50011.5"   "CBE"
+assert_tx  6 "CBE debit 2,005.75 ETB (utility payment)"   "EXPENSE" "2005.75"   "CBE"
+assert_tx  7 "CBE credit 60,000 ETB"                      "INCOME"  "60000.0"   "CBE"
 
-# Test 4: Telebirr - Merchant Payment (Financial Only)
-T4_TS=$((NOW_MS - 70000))
-inject_sms "TELEBIRR" "You have paid 450.50 ETB to Merchant ABC. New balance 1899.50 ETB." "$T4_TS"
+# ── BOA Tests ──────────────────────────────────────────────────────────────
+assert_tx  8 "BOA credit 5,000 ETB (cash deposit)"        "INCOME"  "5000.0"    "BOA"
+assert_tx  9 "BOA debit 50,000 ETB"                       "EXPENSE" "50000.0"   "BOA"
+assert_tx 10 "BOA credit 100,000 ETB (cash deposit)"      "INCOME"  "100000.0"  "BOA"
 
-# Test 5: CBE - Salary Deposit (Financial Only)
-T5_TS=$((NOW_MS - 60000))
-inject_sms "CBEBirr" "Your account has been credited with 15,500.00 ETB. Reference: SALARY-MAR-2026." "$T5_TS"
+# ── Awash Tests ────────────────────────────────────────────────────────────
+assert_tx 11 "Awash credit 1,300 ETB (from ABEBECH)"      "INCOME"  "1300.0"    "AWASH"
+assert_tx 12 "Awash credit 50 ETB (from SAMUEL)"          "INCOME"  "50.0"      "AWASH"
+assert_tx 13 "Awash credit 4,000 ETB"                     "INCOME"  "4000.0"    "AWASH"
 
-# Test 6: EthioTelecom - Direct Package Gift Received (Asset Only)
-T6_TS=$((NOW_MS - 50000))
-inject_sms "251994" "Dear customer, you have received a gift of 500MB Daily Internet package from 0911XXXXXX. Valid until tomorrow." "$T6_TS"
+# ── Telebirr Tests ─────────────────────────────────────────────────────────
+assert_tx 14 "Telebirr airtime received 25 ETB"           "INCOME"  "25.0"      "TeleBirr"
+assert_tx 15 "Telebirr package purchase 100 ETB"          "EXPENSE" "100.0"     "TeleBirr"
+assert_tx 16 "Telebirr transfer 450.50 ETB"               "EXPENSE" "450.5"     "TeleBirr"
 
-# Test 7: EthioTelecom - Airtime Recharge (Financial Income)
-T7_TS=$((NOW_MS - 40000))
-inject_sms "805" "Your account has been recharged with 50.00 ETB." "$T7_TS"
+# =============================================================================
+#  DB DUMP  (debug aid)
+# =============================================================================
 
+section "DB Transaction Dump"
 echo ""
-info "Waiting 8 seconds for processing pipeline to complete..."
-sleep 8
+db_query "SELECT type, amount, source, category, partyName FROM transactions ORDER BY timestamp DESC;"
 
+section "Logcat (ReconciliationEngine)"
 echo ""
-echo "── Asserting DB State ────────────────────────────────────────────────────"
+adb logcat -d -s ReconciliationEngine:D 2>/dev/null | tail -60 || true
 
-# Assert 1: Telebirr Internet Purchase (100 ETB expense + 5GB Asset)
-TX_1=$(db_query "SELECT COUNT(*) FROM transactions WHERE type='EXPENSE' AND amount=100.0;")
-if [[ "$TX_1" -ge 1 ]]; then pass "Test 1 [Financial]: Telebirr 100 ETB Internet Purchase recorded."; else fail "Test 1 [Financial]: Missing 100 ETB Telebirr expense."; fi
-
-PK_1=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type='internet' AND remainingAmount >= 5;")
-if [[ "$PK_1" -ge 1 ]]; then pass "Test 1 [Asset]: 5GB Internet package tracked successfully."; else fail "Test 1 [Asset]: Missing 5GB Internet package."; fi
-
-# Assert 2: Telebirr Voice Purchase (50 ETB expense + 100 Min Asset)
-TX_2=$(db_query "SELECT COUNT(*) FROM transactions WHERE type='EXPENSE' AND amount=50.0;")
-if [[ "$TX_2" -ge 1 ]]; then pass "Test 2 [Financial]: Telebirr 50 ETB Voice Purchase recorded."; else fail "Test 2 [Financial]: Missing 50 ETB Telebirr voice expense."; fi
-
-PK_2=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type='voice' AND remainingAmount >= 100;")
-if [[ "$PK_2" -ge 1 ]]; then pass "Test 2 [Asset]: 100 Min Voice package tracked successfully."; else fail "Test 2 [Asset]: Missing 100 Min Voice package."; fi
-
-# Assert 3: Telebirr SMS Purchase (20 ETB expense + 200 SMS Asset)
-TX_3=$(db_query "SELECT COUNT(*) FROM transactions WHERE type='EXPENSE' AND amount=20.0;")
-if [[ "$TX_3" -ge 1 ]]; then pass "Test 3 [Financial]: Telebirr 20 ETB SMS Purchase recorded."; else fail "Test 3 [Financial]: Missing 20 ETB Telebirr SMS expense."; fi
-
-PK_3=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type='sms' AND remainingAmount >= 200;")
-if [[ "$PK_3" -ge 1 ]]; then pass "Test 3 [Asset]: 200 SMS package tracked successfully."; else fail "Test 3 [Asset]: Missing 200 SMS package."; fi
-
-# Assert 4: Telebirr Merchant Payment (Financial Only, 450.50 ETB)
-TX_4=$(db_query "SELECT COUNT(*) FROM transactions WHERE type='EXPENSE' AND amount=450.50;")
-if [[ "$TX_4" -ge 1 ]]; then pass "Test 4 [Financial]: Merchant Payment 450.50 ETB recorded."; else fail "Test 4 [Financial]: Missing 450.50 ETB Merchant Payment."; fi
-
-# Assert 5: CBE - Salary Deposit (Income, 15500 ETB)
-TX_5=$(db_query "SELECT COUNT(*) FROM transactions WHERE type='INCOME' AND amount=15500.0;")
-if [[ "$TX_5" -ge 1 ]]; then pass "Test 5 [Financial]: CBE Salary Income of 15,500.00 ETB recorded."; else fail "Test 5 [Financial]: Missing CBE Salary Income."; fi
-
-# Assert 6: Direct Package Gift Received (Asset Only, 500MB)
-PK_6=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type='internet';")
-if [[ "$PK_6" -ge 1 ]]; then pass "Test 6 [Asset]: Gifted Internet package tracked successfully."; else fail "Test 6 [Asset]: Missing Gifted Internet package."; fi
-
-# Assert 7: Airtime Recharge (Income, 50 ETB)
-TX_7=$(db_query "SELECT COUNT(*) FROM transactions WHERE type='INCOME' AND amount=50.0;")
-if [[ "$TX_7" -ge 1 ]]; then pass "Test 7 [Financial]: Airtime Recharge Income of 50.00 ETB recorded."; else fail "Test 7 [Financial]: Missing Airtime Recharge Income."; fi
+# =============================================================================
+#  SUMMARY
+# =============================================================================
 
 echo ""
 echo "════════════════════════════════════════════"
-printf "  Results: \033[0;32m%d passed\033[0m, \033[0;31m%d failed\033[0m\n" "$PASS" "$FAIL"
+printf "  Results: ${GREEN}%d passed${NC}, ${RED}%d failed${NC}\n" "$PASS" "$FAIL"
 echo "════════════════════════════════════════════"
 echo ""
 

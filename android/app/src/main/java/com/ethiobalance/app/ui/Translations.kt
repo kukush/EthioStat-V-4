@@ -81,7 +81,11 @@ object Translations {
         "syncToSeePackages" to "Sync your balance to see your packages",
         "netCashFlow" to "Net Cash Flow",
         "hideAmount" to "Hide Amount", "showAmount" to "Show Amount",
-        "validity" to "Validity", "left" to "Left"
+        "validity" to "Validity", "left" to "Left",
+        "utility" to "Utility", "bills" to "Bills", "grocery" to "Grocery",
+        "shopping" to "Shopping", "market" to "Market", "dining" to "Dining",
+        "food" to "Food", "restaurant" to "Restaurant", "telecom" to "Telecom",
+        "recharge" to "Recharge", "phone" to "Phone"
     )
 
     private val am = mapOf(
@@ -167,7 +171,11 @@ object Translations {
         "syncToSeePackages" to "ፓኬጆችዎን ለማየት ሂሳብዎን ያመሳስሉ",
         "netCashFlow" to "የተጣራ የገንዘብ ፍሰት",
         "hideAmount" to "መጠን ደብቅ", "showAmount" to "መጠን አሳይ",
-        "validity" to "ተቀባይነት", "left" to "ቀሪ"
+        "validity" to "ተቀባይነት", "left" to "ቀሪ",
+        "utility" to "የመረጃ ዘዴ", "bills" to "ክፍያዎች", "grocery" to "የምግብ ግዢ",
+        "shopping" to "ግዢ", "market" to "ገበያ", "dining" to "ምግብ ቤት",
+        "food" to "ምግብ", "restaurant" to "ምግብ ቤት", "telecom" to "ቴሌኮም",
+        "recharge" to "መሙያ", "phone" to "ስልክ"
     )
 
     private val om = mapOf(
@@ -258,7 +266,11 @@ object Translations {
         "syncToSeePackages" to "Paakeejiiwwan keessan ilaaluuf haftee keessan sync godhaa",
         "netCashFlow" to "Net Cash Flow",
         "hideAmount" to "Hamma Dhoksi", "showAmount" to "Hamma Agarsiisi",
-        "validity" to "Validity", "left" to "Hafte"
+        "validity" to "Validity", "left" to "Hafte",
+        "utility" to "Utilitii", "bills" to "Billiiwwan", "grocery" to "Nyaata",
+        "shopping" to "Bituu", "market" to "Gabaa", "dining" to "Manca'uu",
+        "food" to "Nyaata", "restaurant" to "Mana nyaataa", "telecom" to "Telekoomii",
+        "recharge" to "Guuti", "phone" to "Bilbila"
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)

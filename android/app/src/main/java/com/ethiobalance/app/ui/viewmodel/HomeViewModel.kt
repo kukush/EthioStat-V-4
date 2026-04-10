@@ -2,6 +2,7 @@ package com.ethiobalance.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.BalancePackageEntity
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.domain.usecase.GetFinancialSummaryUseCase
@@ -20,8 +21,20 @@ class HomeViewModel @Inject constructor(
     private val getFinancialSummaryUseCase: GetFinancialSummaryUseCase
 ) : ViewModel() {
 
-    val transactions: StateFlow<List<TransactionEntity>> = transactionRepo.getAllTransactions()
+    private val allTransactions: StateFlow<List<TransactionEntity>> = transactionRepo.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val transactions: StateFlow<List<TransactionEntity>> = combine(
+        allTransactions, settingsRepo.getTransactionSources()
+    ) { txList, configuredSources ->
+        val enabledResolved = configuredSources.map {
+            AppConstants.resolveSource(it.senderId).lowercase()
+        }.toSet()
+        txList.filter {
+            val resolved = AppConstants.resolveSource(it.source).lowercase()
+            resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledResolved.contains(resolved)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val packages: StateFlow<List<BalancePackageEntity>> = balanceRepo.getAllPackages()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -39,8 +52,7 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "light")
 
     private val financialSummary: StateFlow<GetFinancialSummaryUseCase.FinancialSummary> = transactions.map { list ->
-        val filtered = list.filter { com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME }
-        getFinancialSummaryUseCase(filtered)
+        getFinancialSummaryUseCase(list)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GetFinancialSummaryUseCase.FinancialSummary(0.0, 0.0))
 
     val totalIncome: StateFlow<Double> = financialSummary.map { it.totalIncome }

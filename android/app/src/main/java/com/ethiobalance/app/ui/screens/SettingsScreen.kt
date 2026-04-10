@@ -27,7 +27,6 @@ import android.content.Context
 import android.provider.Settings
 import android.text.TextUtils
 import androidx.compose.ui.platform.LocalContext
-import com.ethiobalance.app.data.SimCardEntity
 import com.ethiobalance.app.data.TransactionSourceEntity
 import com.ethiobalance.app.services.UssdAccessibilityService
 import com.ethiobalance.app.ui.Translations
@@ -46,14 +45,10 @@ fun SettingsScreen(
     userName: String,
     userPhone: String,
     userAvatar: String,
-    simCards: List<SimCardEntity>,
     transactionSources: List<TransactionSourceEntity>,
     onLanguageChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
     onProfileUpdate: (String, String, String) -> Unit,
-    onDetectSims: () -> Unit,
-    onDeleteSim: (String) -> Unit,
-    onSetPrimarySim: (String) -> Unit,
     onAddSource: (TransactionSourceEntity) -> Unit,
     onRemoveSource: (String) -> Unit,
     onClearData: () -> Unit
@@ -107,36 +102,8 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text(userName.ifEmpty { "User" }, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Slate900)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(userPhone.ifEmpty { simCards.find { it.isPrimary }?.phoneNumber ?: "No Primary Number" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate400)
+            Text(userPhone.ifEmpty { "No Phone Number" }, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate400)
         }
-
-        // SIM Cards Section
-        SectionHeader("SIM Cards & Numbers", Icons.Default.Smartphone, "Detect SIMs", onDetectSims)
-        Spacer(Modifier.height(16.dp))
-        Surface(
-            shape = RoundedCornerShape(40.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
-            shadowElevation = 1.dp
-        ) {
-            Column {
-                if (simCards.isEmpty()) {
-                    Text("No SIM cards detected", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate400,
-                        modifier = Modifier.padding(32.dp).fillMaxWidth(), textAlign = TextAlign.Center)
-                } else {
-                    simCards.forEachIndexed { idx, sim ->
-                        if (idx > 0) HorizontalDivider(color = Slate50)
-                        SimCardRow(
-                            sim = sim,
-                            onSetPrimary = { onSetPrimarySim(sim.id) },
-                            onDelete = { onDeleteSim(sim.id) }
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(32.dp))
 
         // Appearance
         SectionHeader("Appearance", Icons.Default.Palette)
@@ -153,7 +120,7 @@ fun SettingsScreen(
             )
             themes.chunked(2).forEach { chunk ->
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    chunk.forEach { (meta, bgColor) ->
+                    chunk.forEach { (meta, _bgColor) ->
                         val (id, label, icon) = meta
                         val isActive = theme == id
                         Surface(
@@ -344,7 +311,7 @@ fun SettingsScreen(
     // Add Source Modal
     if (showAddSource) {
         AddSourceSheet(
-            language = language,
+            _language = language,
             onDismiss = { showAddSource = false },
             onAdd = { source ->
                 onAddSource(source)
@@ -372,46 +339,6 @@ private fun SectionHeader(text: String, icon: ImageVector, actionTitle: String? 
                 Spacer(Modifier.width(4.dp))
                 Text(actionTitle.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Blue600, letterSpacing = 2.sp)
             }
-        }
-    }
-}
-
-@Composable
-private fun SimCardRow(sim: SimCardEntity, onSetPrimary: () -> Unit, onDelete: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val (bg, txt) = if (sim.carrierName.contains("Ethio", ignoreCase = true)) Blue600 to "E"
-        else if (sim.carrierName.contains("Safa", ignoreCase = true)) Rose600 to "S"
-        else Slate400 to sim.carrierName.take(1).uppercase()
-
-        Box(
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(16.dp)).background(bg),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(txt, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black)
-        }
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(sim.phoneNumber, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
-                if (sim.isPrimary) {
-                    Spacer(Modifier.width(8.dp))
-                    Surface(shape = RoundedCornerShape(50), color = Blue50) {
-                        Text("PRIMARY", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Blue600, letterSpacing = 1.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-                    }
-                }
-            }
-            Text(sim.carrierName.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
-        }
-        if (!sim.isPrimary) {
-            IconButton(onClick = onSetPrimary) {
-                Icon(Icons.Default.Check, null, tint = Slate300, modifier = Modifier.size(18.dp))
-            }
-        }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Default.DeleteOutline, null, tint = Slate300, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -474,12 +401,15 @@ private fun EditProfileSheet(
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(color = Slate900),
                 shape = RoundedCornerShape(24.dp), singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedContainerColor = Slate50,
                     focusedContainerColor = Slate50,
                     unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = Blue500
+                    focusedBorderColor = Blue500,
+                    unfocusedTextColor = Slate900,
+                    focusedTextColor = Slate900
                 )
             )
 
@@ -487,14 +417,33 @@ private fun EditProfileSheet(
             Text("PHONE NUMBER", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
-                value = phone, onValueChange = { phone = it },
+                value = phone, 
+                onValueChange = { 
+                    if (it.length <= 13) phone = it 
+                },
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(color = Slate900),
+                leadingIcon = {
+                    Row(
+                        modifier = Modifier.padding(start = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🇪🇹", fontSize = 20.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("+251", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate600)
+                        Spacer(Modifier.width(8.dp))
+                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(Slate200))
+                    }
+                },
+                placeholder = { Text("911223344", color = Slate400) },
                 shape = RoundedCornerShape(24.dp), singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedContainerColor = Slate50,
                     focusedContainerColor = Slate50,
                     unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = Blue500
+                    focusedBorderColor = Blue500,
+                    unfocusedTextColor = Slate900,
+                    focusedTextColor = Slate900
                 )
             )
 
@@ -531,8 +480,14 @@ private fun EditProfileSheet(
 
             Spacer(Modifier.height(32.dp))
             Button(
-                onClick = { onSave(name, phone, avatar) },
+                onClick = { 
+                    val validatedPhone = if (phone.startsWith("0")) phone.substring(1) else phone
+                    if (name.isNotBlank() && validatedPhone.length >= 9) {
+                        onSave(name, "+251$validatedPhone", avatar) 
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(60.dp),
+                enabled = name.isNotBlank() && (phone.startsWith("0") && phone.length == 10 || !phone.startsWith("0") && phone.length == 9),
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Slate900)
             ) {
@@ -575,7 +530,7 @@ private val bankList = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddSourceSheet(
-    language: String,
+    _language: String,
     onDismiss: () -> Unit,
     onAdd: (TransactionSourceEntity) -> Unit
 ) {

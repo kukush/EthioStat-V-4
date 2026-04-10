@@ -58,6 +58,7 @@ object AppConstants {
         // ── Awash Bank — *901# ────────────────────────────────────────────────
         "901",
         "AwashBank",
+        "Awash Bank",
 
         // ── Bank of Abyssinia (BoA) — *815# ──────────────────────────────────
         "815",
@@ -181,6 +182,30 @@ object AppConstants {
         
         // Coopbank
         if (upper.contains("COOP") || sender == "896") return "COOPBANK"
+        
+        // Bank of Abyssinia (BoA)
+        if (upper.contains("BOA") || upper.contains("ABYSSINIA") || sender == "815") return "BOA"
+        
+        // Hibret Bank
+        if (upper.contains("HIBRET") || sender == "844") return "HIBRET"
+        
+        // Wegagen Bank
+        if (upper.contains("WEGAGEN") || sender == "889") return "WEGAGEN"
+        
+        // Abay Bank
+        if (upper.contains("ABAY") || sender == "812") return "ABAY"
+        
+        // NIB International Bank
+        if (upper.contains("NIB") || sender == "865") return "NIB"
+        
+        // Bunna Bank
+        if (upper.contains("BUNNA") || sender == "252") return "BUNNA"
+        
+        // Zemen Bank
+        if (upper.contains("ZEMEN") || sender == "710") return "ZEMEN"
+        
+        // Berhan Bank
+        if (upper.contains("BERHAN") || sender == "811") return "BERHAN"
         
         // EthioTelecom (Airtime / Telecom Assets)
         val ethioTelecomSenders = setOf("804", "805", "806", "810", "830", "994", "251994", "8994")

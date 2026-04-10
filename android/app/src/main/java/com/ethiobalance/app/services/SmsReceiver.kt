@@ -21,19 +21,25 @@ class SmsReceiver : BroadcastReceiver() {
                 val body = message.displayMessageBody
                 val timestamp = message.timestampMillis
 
-                Log.d(TAG, "SMS Received from: $sender")
+
 
                 // Filter: Check both system whitelist and user-defined transaction sources
                 val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
                 val userWhitelist = prefs.getStringSet("sms_whitelist", emptySet()) ?: emptySet()
                 
-                val isWhitelisted = sender.contains("TELEBIRR", ignoreCase = true) ||
-                                  AppConstants.SMS_SENDER_WHITELIST.contains(sender) ||
-                                  userWhitelist.contains(sender)
+                val isWhitelisted = sender.isNotEmpty() && (
+                                  sender.contains("TELEBIRR", ignoreCase = true) ||
+                                  sender.contains("CBE", ignoreCase = true) ||
+                                  sender.contains("AWASH", ignoreCase = true) ||
+                                  sender.contains("DASHEN", ignoreCase = true) ||
+                                  AppConstants.SMS_SENDER_WHITELIST.any { it.equals(sender, ignoreCase = true) } ||
+                                  userWhitelist.any { it.equals(sender, ignoreCase = true) }
+                )
+
+                Log.d(TAG, "Checking sender: $sender, isWhitelisted: $isWhitelisted")
 
                 if (isWhitelisted) {
-                    Log.d(TAG, "Sender $sender is whitelisted. Starting processing...")
-                    // Start Foreground Service to ensure processing continues if app is in background
+                    Log.d(TAG, "Triggering foreground service for $sender")
                     val serviceIntent = Intent(context, SmsForegroundService::class.java).apply {
                         putExtra("sender", sender)
                         putExtra("body", body)

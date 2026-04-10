@@ -98,12 +98,12 @@ fun EthioBalanceAppUI() {
                             timeFilter = timeFilter,
                             sourceFilter = sourceFilter,
                             searchQuery = searchQuery,
-                            isScanningHistory = isScanning,
+                            _isScanningHistory = isScanning,
                             onTimeFilterChange = { transactionVM.setTimeFilter(it) },
                             onSourceFilterChange = { transactionVM.setSourceFilter(it) },
                             onSearchChange = { transactionVM.setSearchQuery(it) },
                             onExportCsv = { transactionVM.exportToCsv(context) },
-                            onScanAll = { transactionVM.scanSmsHistory() }
+                            _onScanAll = { transactionVM.scanSmsHistory() }
                         )
                     }
 
@@ -111,7 +111,6 @@ fun EthioBalanceAppUI() {
                         val userName by settingsVM.userName.collectAsStateWithLifecycle()
                         val userPhone by settingsVM.userPhone.collectAsStateWithLifecycle()
                         val userAvatar by settingsVM.userAvatar.collectAsStateWithLifecycle()
-                        val simCards by settingsVM.simCards.collectAsStateWithLifecycle()
                         val transactionSources by settingsVM.transactionSources.collectAsStateWithLifecycle()
 
                         SettingsScreen(
@@ -120,14 +119,10 @@ fun EthioBalanceAppUI() {
                             userName = userName,
                             userPhone = userPhone,
                             userAvatar = userAvatar,
-                            simCards = simCards,
                             transactionSources = transactionSources,
                             onLanguageChange = { settingsVM.setLanguage(it) },
                             onThemeChange = { settingsVM.setTheme(it) },
                             onProfileUpdate = { n, p, a -> settingsVM.setUserProfile(n, p, a) },
-                            onDetectSims = { settingsVM.detectSimCards() },
-                            onDeleteSim = { settingsVM.deleteSimCard(it) },
-                            onSetPrimarySim = { settingsVM.setPrimarySim(it) },
                             onAddSource = { settingsVM.addTransactionSource(it) },
                             onRemoveSource = { settingsVM.removeTransactionSource(it) },
                             onClearData = { settingsVM.clearAllData() }

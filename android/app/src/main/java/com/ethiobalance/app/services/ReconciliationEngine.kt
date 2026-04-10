@@ -1,5 +1,6 @@
 package com.ethiobalance.app.services
 
+import android.util.Log
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.*
 import com.ethiobalance.app.domain.model.SmsScenario
@@ -29,26 +30,33 @@ class ReconciliationEngine @Inject constructor(
     }
     
     suspend fun processSms(sender: String?, body: String, timestamp: Long, forceReparse: Boolean = false) {
-        if (sender == null) return
+        if (sender == null) {
+            Log.w("ReconciliationEngine", "Aborting: Sender is null")
+            return
+        }
 
         val normalizedSender = normalizeSender(sender)
+        Log.d("ReconciliationEngine", "Processing SMS from $sender (normalized: $normalizedSender), force: $forceReparse")
         
         // 1. Dedup check
         val bodyHash = body.hashCode()
         
         if (!forceReparse && smsLogDao.existsByHash(normalizedSender, timestamp, bodyHash)) {
+            Log.d("ReconciliationEngine", "Ignoring duplicate SMS from $normalizedSender")
             return
         }
         
         // Check if we've already processed this exact transaction ID before
-        // This is a safety net for when forceReparse=true
         val parsedResult = parseSmsUseCase(normalizedSender, body, timestamp)
+        Log.d("ReconciliationEngine", "Parsed result confidence: ${parsedResult.confidence}, scenario: ${parsedResult.scenario}")
+
         if (parsedResult.confidence < 0.7f) {
+            Log.w("ReconciliationEngine", "Confidence too low (${parsedResult.confidence}) for $normalizedSender. Body snippet: ${body.take(20)}...")
             return
         }
         
-        // Generate potential transaction ID to check for duplicates early
-        val potentialTransactionId = if (!parsedResult.reference.isNullOrBlank()) {
+        // Generate transaction ID
+        val transactionId = if (!parsedResult.reference.isNullOrBlank()) {
             UUID.nameUUIDFromBytes("${normalizedSender}-${parsedResult.reference}".toByteArray()).toString()
         } else if (parsedResult.addedAmount != null && parsedResult.addedAmount > 0) {
             UUID.nameUUIDFromBytes("${normalizedSender}-INCOME-${parsedResult.addedAmount}-${timestamp}".toByteArray()).toString()
@@ -59,18 +67,21 @@ class ReconciliationEngine @Inject constructor(
             UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
         }
         
-        // Early duplicate check even for forceReparse
-        if (transactionDao.existsById(potentialTransactionId)) {
+        // Early duplicate check
+        if (transactionDao.existsById(transactionId)) {
+            Log.d("ReconciliationEngine", "Transaction $transactionId already exists")
             return
         }
+        
+        Log.d("ReconciliationEngine", "Saving new transaction $transactionId from $normalizedSender")
         
         // 2. Log Raw SMS
         val logEntity = SmsLogEntity(
             sender = normalizedSender, 
             message = body, 
             parsedType = AppConstants.SMS_LOG_TYPE_PROCESSING, 
-            confidence = 0f, 
-            processed = false, 
+            confidence = parsedResult.confidence, 
+            processed = true, 
             timestamp = timestamp, 
             bodyHash = bodyHash
         )
@@ -86,14 +97,13 @@ class ReconciliationEngine @Inject constructor(
             smsLogDao.insert(logEntity)
         }
 
-        // 3. Parse SMS via Use Case (already done above)
-        // 4. Apply Dual Tracking Rules (already done above)
-        val transactionId = potentialTransactionId
+        // 3. Save Transaction
         val resolvedSrc = AppConstants.resolveSource(normalizedSender)
+        Log.d("ReconciliationEngine", "Resolved source: $resolvedSrc for $normalizedSender")
 
         when (parsedResult.scenario) {
             SmsScenario.SELF_PURCHASE -> {
-                transactionDao.insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "EXPENSE",
                     amount = parsedResult.deductedAmount ?: 0.0,
@@ -103,12 +113,17 @@ class ReconciliationEngine @Inject constructor(
                     reference = parsedResult.reference,
                     partyName = parsedResult.partyName,
                     transactionSubType = parsedResult.transactionSubType
-                ))
-                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
+                )
+                transactionDao.insert(entity)
+                Log.d("ReconciliationEngine", "✅ SAVED: SELF_PURCHASE transaction ${entity.id} - ${entity.amount} ETB")
+                parsedResult.packages.forEach { 
+                    balancePackageDao.insertOrUpdate(it) 
+                    Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type} - ${it.remainingAmount} ${it.unit}")
+                }
             }
 
             SmsScenario.EXPENSE -> {
-                transactionDao.insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "EXPENSE",
                     amount = parsedResult.deductedAmount ?: 0.0,
@@ -118,12 +133,17 @@ class ReconciliationEngine @Inject constructor(
                     reference = parsedResult.reference,
                     partyName = parsedResult.partyName,
                     transactionSubType = parsedResult.transactionSubType
-                ))
-                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
+                )
+                transactionDao.insert(entity)
+                Log.d("ReconciliationEngine", "✅ SAVED: EXPENSE transaction ${entity.id} - ${entity.amount} ETB (${entity.category})")
+                parsedResult.packages.forEach { 
+                    balancePackageDao.insertOrUpdate(it) 
+                    Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type} - ${it.remainingAmount} ${it.unit}")
+                }
             }
 
             SmsScenario.GIFT_SENT -> {
-                transactionDao.insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "EXPENSE",
                     amount = parsedResult.deductedAmount ?: 0.0,
@@ -133,13 +153,15 @@ class ReconciliationEngine @Inject constructor(
                     reference = parsedResult.reference,
                     partyName = parsedResult.partyName,
                     transactionSubType = parsedResult.transactionSubType
-                ))
+                )
+                transactionDao.insert(entity)
+                Log.d("ReconciliationEngine", "✅ SAVED: GIFT_SENT transaction ${entity.id} - ${entity.amount} ETB")
             }
 
             SmsScenario.RECHARGE_OR_GIFT_RECEIVED -> {
                 val src = AppConstants.resolveSource(normalizedSender)
                 if (src != AppConstants.SOURCE_AIRTIME) {
-                    transactionDao.insert(TransactionEntity(
+                    val entity = TransactionEntity(
                         id = transactionId,
                         type = "INCOME",
                         amount = parsedResult.addedAmount ?: 0.0,
@@ -148,14 +170,19 @@ class ReconciliationEngine @Inject constructor(
                         timestamp = timestamp,
                         reference = parsedResult.reference,
                         partyName = parsedResult.partyName,
-                    transactionSubType = parsedResult.transactionSubType
-                    ))
+                        transactionSubType = parsedResult.transactionSubType
+                    )
+                    transactionDao.insert(entity)
+                    Log.d("ReconciliationEngine", "✅ SAVED: RECHARGE transaction ${entity.id} - ${entity.amount} ETB")
                 }
-                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
+                parsedResult.packages.forEach { 
+                    balancePackageDao.insertOrUpdate(it) 
+                    Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type} - ${it.remainingAmount} ${it.unit}")
+                }
             }
 
             SmsScenario.INCOME -> {
-                transactionDao.insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "INCOME",
                     amount = parsedResult.addedAmount ?: 0.0,
@@ -165,14 +192,21 @@ class ReconciliationEngine @Inject constructor(
                     reference = parsedResult.reference,
                     partyName = parsedResult.partyName,
                     transactionSubType = parsedResult.transactionSubType
-                ))
+                )
+                transactionDao.insert(entity)
+                Log.d("ReconciliationEngine", "✅ SAVED: INCOME transaction ${entity.id} - ${entity.amount} ETB")
             }
 
             SmsScenario.BALANCE_UPDATE, SmsScenario.BALANCE_QUERY -> {
-                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
+                parsedResult.packages.forEach { 
+                    balancePackageDao.insertOrUpdate(it) 
+                    Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type} - ${it.remainingAmount} ${it.unit}")
+                }
             }
 
-            else -> {}
+            else -> {
+                Log.w("ReconciliationEngine", "❌ NO SAVE: Unknown scenario for $normalizedSender - no matching transaction type")
+            }
         }
     }
 }

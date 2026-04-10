@@ -2,11 +2,9 @@ package com.ethiobalance.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ethiobalance.app.data.SimCardEntity
 import com.ethiobalance.app.data.TransactionSourceEntity
 import com.ethiobalance.app.repository.BalanceRepository
 import com.ethiobalance.app.repository.SettingsRepository
-import com.ethiobalance.app.repository.SimRepository
 import com.ethiobalance.app.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -16,7 +14,6 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
-    private val simRepo: SimRepository,
     private val transactionRepo: TransactionRepository,
     private val balanceRepo: BalanceRepository
 ) : ViewModel() {
@@ -36,9 +33,6 @@ class SettingsViewModel @Inject constructor(
     val userAvatar: StateFlow<String> = settingsRepo.userAvatar
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    val simCards: StateFlow<List<SimCardEntity>> = simRepo.getAllSimCards()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val transactionSources: StateFlow<List<TransactionSourceEntity>> = settingsRepo.getTransactionSources()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -53,33 +47,7 @@ class SettingsViewModel @Inject constructor(
     fun setUserProfile(name: String, phone: String, avatar: String) {
         viewModelScope.launch {
             settingsRepo.setUserProfile(name, phone, avatar)
-            
-            // Automatically find and set primary SIM if number matches
-            val currentSims = simRepo.getAllSimCards().first()
-            val match = currentSims.find { it.phoneNumber.contains(phone) || phone.contains(it.phoneNumber) }
-            if (match != null) {
-                simRepo.setPrimary(match.id)
-            } else if (currentSims.isNotEmpty()) {
-                // If no phone match but SIMs exist, default the first one to primary as a fallback
-                simRepo.setPrimary(currentSims.first().id)
-            }
         }
-    }
-
-    fun detectSimCards() {
-        viewModelScope.launch { simRepo.detectSimCards() }
-    }
-
-    fun addSimCard(sim: SimCardEntity) {
-        viewModelScope.launch { simRepo.insertOrUpdate(sim) }
-    }
-
-    fun deleteSimCard(simId: String) {
-        viewModelScope.launch { simRepo.delete(simId) }
-    }
-
-    fun setPrimarySim(simId: String) {
-        viewModelScope.launch { simRepo.setPrimary(simId) }
     }
 
     fun addTransactionSource(source: TransactionSourceEntity) {

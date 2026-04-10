@@ -123,7 +123,6 @@ class TelecomViewModel @Inject constructor(
                                 if (popupScanned > 0) {
                                     _syncWarning.value = null
                                     popupClosed = true
-                                    smsProcessed = true
                                     break
                                 }
                             }
@@ -151,7 +150,6 @@ class TelecomViewModel @Inject constructor(
                             if (scanned > 0) {
                                 _syncWarning.value = null
                                 smsReceived = true
-                                smsProcessed = true
                                 break
                             }
                         }
@@ -164,7 +162,6 @@ class TelecomViewModel @Inject constructor(
                         val fallbackScan = smsRepo.scanAllTransactionSources(days = 1)
                         if (fallbackScan > 0) {
                             _syncWarning.value = null
-                            smsProcessed = true
                         } else {
                             _syncWarning.value = "No USSD response detected. Please return to app to check balance."
                         }

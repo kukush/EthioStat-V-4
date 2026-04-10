@@ -47,16 +47,16 @@ fun TransactionScreen(
     transactions: List<TransactionEntity>,
     totalIncome: Double,
     totalExpense: Double,
-    uniqueSources: List<String>,
+    uniqueSources: List<Pair<String, String>>,
     timeFilter: String,
     sourceFilter: String?,
     searchQuery: String,
-    isScanningHistory: Boolean = false,
+    _isScanningHistory: Boolean = false,
     onTimeFilterChange: (String) -> Unit,
     onSourceFilterChange: (String?) -> Unit,
     onSearchChange: (String) -> Unit,
     onExportCsv: () -> Unit,
-    onScanAll: () -> Unit
+    _onScanAll: () -> Unit
 ) {
     var showAmounts by remember { mutableStateOf(true) }
     val netBalance = totalIncome - totalExpense
@@ -186,11 +186,12 @@ fun TransactionScreen(
                             onClick = { onSourceFilterChange(null) }
                         )
                         // Per-source chips
-                        uniqueSources.forEach { source ->
+                        uniqueSources.forEach { (abbreviation, name) ->
                             SourceChip(
-                                label = source.take(8),
-                                isSelected = sourceFilter == source,
-                                onClick = { onSourceFilterChange(source) }
+                                label = name.take(8),
+                                abbreviation = abbreviation,
+                                isSelected = sourceFilter == name,
+                                onClick = { onSourceFilterChange(name) }
                             )
                         }
                     }
@@ -340,7 +341,7 @@ fun TransactionScreen(
 
 // ── Reusable source chip component ───────────────────────────────────────────
 @Composable
-private fun SourceChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun SourceChip(label: String, abbreviation: String = label, isSelected: Boolean, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable { onClick() }.width(64.dp)
@@ -358,8 +359,12 @@ private fun SourceChip(label: String, isSelected: Boolean, onClick: () -> Unit) 
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = label.take(2).uppercase(),
-                fontSize = if (label == "ALL") 13.sp else 15.sp,
+                text = abbreviation.uppercase(),
+                fontSize = when {
+                    abbreviation.length <= 2 -> 15.sp
+                    abbreviation.length <= 3 -> 13.sp
+                    else -> 10.sp
+                },
                 fontWeight = FontWeight.Black,
                 color = if (isSelected) Color.White else Slate400
             )

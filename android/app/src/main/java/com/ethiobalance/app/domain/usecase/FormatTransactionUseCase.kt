@@ -14,11 +14,13 @@ class FormatTransactionUseCase @Inject constructor() {
         searchQuery: String,
         configuredSources: List<TransactionSourceEntity>
     ): List<TransactionEntity> {
-        val enabledNormalised = configuredSources.map { it.name.lowercase() }.toSet()
+        val enabledResolved = configuredSources.map {
+            AppConstants.resolveSource(it.senderId).lowercase()
+        }.toSet()
         
         var filtered = transactions.filter {
             val resolved = AppConstants.resolveSource(it.source).lowercase()
-            resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledNormalised.contains(resolved)
+            resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledResolved.contains(resolved)
         }
 
         val now = System.currentTimeMillis()

@@ -30,6 +30,7 @@ class SimRepository @Inject constructor(
         val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
         val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList ?: return@withContext emptyList()
 
+        @Suppress("DEPRECATION")
         val sims = activeSubscriptions.map { info ->
             SimCardEntity(
                 id = info.subscriptionId.toString(),

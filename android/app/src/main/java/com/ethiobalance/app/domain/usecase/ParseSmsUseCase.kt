@@ -36,7 +36,7 @@ class ParseSmsUseCase @Inject constructor() {
         
         // Generate a deterministic base ID
         val uniqueStr = "$sender-$timestamp-${body.hashCode()}"
-        val baseId = UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
+        val _baseId = UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString() // Unused - for future deterministic ID generation
 
         // 1. Multi-segment Package Detection (Status SMS)
         val isMultiSegment = Regex(";\\s+from ", RegexOption.IGNORE_CASE).containsMatchIn(body) &&
@@ -131,7 +131,7 @@ class ParseSmsUseCase @Inject constructor() {
         }
 
         // 2. Airtime & Financial (Same logic as SmsParser)
-        val isTrustedSender = sender.contains("TELEBIRR", ignoreCase = true) || AppConstants.SMS_SENDER_WHITELIST.contains(sender)
+        val isTrustedSender = sender.contains("TELEBIRR", ignoreCase = true) || AppConstants.SMS_SENDER_WHITELIST.any { it.equals(sender, ignoreCase = true) }
         
         if (isTrustedSender) {
             // Party Name Extraction (before financial matching)
@@ -180,48 +180,92 @@ class ParseSmsUseCase @Inject constructor() {
                 RegexOption.IGNORE_CASE
             ).find(body)
             
-            if (creditMatch != null && loanMatch == null) {
+            // Alternative: "ETB X has been credited" (amount before "credited")
+            val creditMatchAlt = Regex(
+                """(?:ETB\s*)?([\d,]+\.?\d*)\s*(?:has\s+been\s+credited|credited)""",
+                RegexOption.IGNORE_CASE
+            ).find(body)
+            
+            val effectiveCreditMatch = creditMatch ?: creditMatchAlt
+            if (effectiveCreditMatch != null && loanMatch == null) {
                 scenario = SmsScenario.INCOME
-                addedAmount = creditMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                addedAmount = effectiveCreditMatch.groupValues[1].replace(",", "").toDoubleOrNull()
                 transactionSubType = "Received"
                 confidenceScore = 0.9f
             }
 
             // Debit / Deduction
             val debitMatch = Regex("(?:debited|debit of|deducted)\\s*(?:with\\s+)?(?:ETB\\s*)?(\\d[\\d,]*\\.?\\d*)", RegexOption.IGNORE_CASE).find(body)
-            if (debitMatch != null && loanMatch == null && repayMatch == null) {
+            
+            // Alternative: "debited for [party] with ETB X" (amount after "with ETB")
+            val debitMatchAlt = Regex("debited\\s+for\\s+.+?\\swith\\s+ETB\\s*(\\d[\\d,]*\\.?\\d*)", RegexOption.IGNORE_CASE).find(body)
+            
+            val effectiveDebitMatch = debitMatch ?: debitMatchAlt
+            if (effectiveDebitMatch != null && loanMatch == null && repayMatch == null) {
                 scenario = SmsScenario.EXPENSE
-                deductedAmount = debitMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                deductedAmount = effectiveDebitMatch.groupValues[1].replace(",", "").toDoubleOrNull()
                 transactionCategory = "EXPENSE"
                 confidenceScore = 0.9f
             }
 
-            // Payment / Purchase
-            val paymentMatch = Regex("(?<!re)(?:paid|pay|payment|purchase)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
-            if (paymentMatch != null && loanMatch == null && creditMatch == null && repayMatch == null && debitMatch == null) {
+            // Payment / Purchase (Telebirr style: "You have paid X ETB to...")
+            val telebirrPaymentMatch = Regex("(?:you\\s+have\\s+)?(?:successfully\\s+)?(?:paid|payment|purchase).*?([\\d,.]+)\\s*(?:ETB|ብር)", RegexOption.IGNORE_CASE).find(body)
+            if (telebirrPaymentMatch != null && loanMatch == null && creditMatch == null && repayMatch == null && debitMatch == null) {
                 scenario = SmsScenario.SELF_PURCHASE
-                deductedAmount = paymentMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                deductedAmount = telebirrPaymentMatch.groupValues[1].replace(",", "").toDoubleOrNull()
                 transactionSubType = "Payment"
                 transactionCategory = when {
                     body.contains("utility", ignoreCase = true) -> "UTILITY"
                     body.contains("airtime", ignoreCase = true) -> "AIRTIME"
+                    body.contains("internet", ignoreCase = true) -> "INTERNET"
+                    body.contains("voice", ignoreCase = true) || body.contains("minute", ignoreCase = true) -> "VOICE"
+                    body.contains("sms", ignoreCase = true) -> "SMS"
                     else -> "PURCHASE"
                 }
-                confidenceScore = 0.9f
+                confidenceScore = 0.95f
             }
 
-            // Transfer / Gift Sent
-            val transferMatch = Regex("(?:transferred|transfered|sent)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
-            if (transferMatch != null) {
+            // Transfer / Gift Sent (Telebirr: "You have sent X ETB to...")
+            val telebirrTransferMatch = Regex("(?:you\\s+have\\s+)?(?:sent|transfer).*?([\\d,.]+)\\s*(?:ETB|ብር)", RegexOption.IGNORE_CASE).find(body)
+            if (telebirrTransferMatch != null) {
                 scenario = SmsScenario.EXPENSE
-                deductedAmount = transferMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                deductedAmount = telebirrTransferMatch.groupValues[1].replace(",", "").toDoubleOrNull()
                 transactionCategory = if (body.contains("gift", ignoreCase = true)) "GIFT" else "TRANSFER"
                 transactionSubType = "Transfer"
-                confidenceScore = 0.9f
+                confidenceScore = 0.95f
             }
 
-            // Service fee
-            val feeMatch = if (loanMatch == null && repayMatch == null) Regex("(?:service fee of|fee\\s+of)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body) else null
+            // Received / Cash In (Telebirr: "You have received X ETB from...")
+            val telebirrReceivedMatch = Regex("(?:you\\s+have\\s+)?(?:received).*?([\\d,.]+)\\s*(?:ETB|ብር)", RegexOption.IGNORE_CASE).find(body)
+            if (telebirrReceivedMatch != null && scenario == SmsScenario.UNKNOWN) {
+                scenario = SmsScenario.INCOME
+                addedAmount = telebirrReceivedMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                transactionSubType = "Received"
+                transactionCategory = "CASH_IN"
+                confidenceScore = 0.95f
+            }
+
+            // Generic patterns (CBE/Bank style)
+            val bankPaymentMatch = Regex("(?<!re)(?:paid|pay|payment|purchase)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
+            if (bankPaymentMatch != null && loanMatch == null && creditMatch == null && repayMatch == null && debitMatch == null && scenario == SmsScenario.UNKNOWN) {
+                scenario = SmsScenario.SELF_PURCHASE
+                deductedAmount = bankPaymentMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                transactionSubType = "Payment"
+                transactionCategory = "PURCHASE"
+                confidenceScore = 0.85f
+            }
+
+            val bankTransferMatch = Regex("(?:transferred|transfered|sent)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
+            if (bankTransferMatch != null && scenario == SmsScenario.UNKNOWN) {
+                scenario = SmsScenario.EXPENSE
+                deductedAmount = bankTransferMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                transactionCategory = if (body.contains("gift", ignoreCase = true)) "GIFT" else "TRANSFER"
+                transactionSubType = "Transfer"
+                confidenceScore = 0.85f
+            }
+
+            // Service fee (only if no other scenario already detected)
+            val feeMatch = if (loanMatch == null && repayMatch == null && scenario == SmsScenario.UNKNOWN) Regex("(?:service fee of|fee\\s+of|service fee)[:\\s]*(?:ETB\\s*)?([\\d,.]+)", RegexOption.IGNORE_CASE).find(body) else null
             if (feeMatch != null) {
                 scenario = SmsScenario.EXPENSE
                 deductedAmount = feeMatch.groupValues[1].replace(",", "").toDoubleOrNull()
@@ -229,13 +273,30 @@ class ParseSmsUseCase @Inject constructor() {
                 confidenceScore = 0.9f
             }
             
+            // Cash In / Cash Out (Specific to Telebirr/Mobile Money)
+            val cashInMatch = Regex("(?:cash\\s*in|received|deposit|deposited)[:\\s]*(?:ETB\\s*)?([\\d,.]+)", RegexOption.IGNORE_CASE).find(body)
+            if (cashInMatch != null && scenario == SmsScenario.UNKNOWN) {
+                scenario = SmsScenario.INCOME
+                addedAmount = cashInMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                transactionCategory = "CASH_IN"
+                confidenceScore = 0.95f
+            }
+
+            val cashOutMatch = Regex("(?:cash\\s*out|withdrawn|withdraw)[:\\s]*(?:ETB\\s*)?([\\d,.]+)", RegexOption.IGNORE_CASE).find(body)
+            if (cashOutMatch != null && scenario == SmsScenario.UNKNOWN) {
+                scenario = SmsScenario.EXPENSE
+                deductedAmount = cashOutMatch.groupValues[1].replace(",", "").toDoubleOrNull()
+                transactionCategory = "CASH_OUT"
+                confidenceScore = 0.95f
+            }
+            
             // Recharges
-            val rechargeMatch = Regex("(?:recharged|topup|top-up|ሞልተዋል)\\s*(?:ETB\\s*)?([\\d,.]+)\\s*(?:ETB|ብር)?", RegexOption.IGNORE_CASE).find(body)
+            val rechargeMatch = Regex("(?:recharged|topup|top-up|ሞልተዋል|recharge)[:\\s]*(?:ETB\\s*)?([\\d,.]+)", RegexOption.IGNORE_CASE).find(body)
             if (rechargeMatch != null) {
                 scenario = SmsScenario.RECHARGE_OR_GIFT_RECEIVED
                 isRecharge = true
                 addedAmount = rechargeMatch.groupValues[1].replace(",", "").toDoubleOrNull()
-                confidenceScore = 0.9f
+                confidenceScore = 0.95f
             }
 
             // Reference ID extraction
