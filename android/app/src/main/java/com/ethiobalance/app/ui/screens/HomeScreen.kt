@@ -41,6 +41,7 @@ fun HomeScreen(
     telecomBalance: Double,
     packages: List<com.ethiobalance.app.data.BalancePackageEntity>,
     transactions: List<TransactionEntity>,
+    bankBalances: Map<String, Double> = emptyMap(),
     onViewAllTransactions: () -> Unit
 ) {
     val netBalance = totalIncome - totalExpense
@@ -59,7 +60,10 @@ fun HomeScreen(
         com.ethiobalance.app.AppConstants.resolveSource(it.source) 
     }
     
-    val uniqueSources = groupedTransactions.keys.filter { it != "Unknown" }.sorted()
+    // Include sources that have transactions OR bank balances
+    val txSources = groupedTransactions.keys.filter { it != "Unknown" }
+    val balanceSources = bankBalances.keys
+    val uniqueSources = (txSources + balanceSources).distinct().sorted()
 
     // Telecom Package computations
     val internetPkgs = packages.filter { it.type.contains("internet", ignoreCase = true) || it.type.contains("data", ignoreCase = true) }
@@ -169,11 +173,21 @@ fun HomeScreen(
                         Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(src, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
-                            Text("${srcTxs.size} Transactions", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                            Text(
+                                if (srcTxs.isNotEmpty()) "${srcTxs.size} Transactions" else "Balance only",
+                                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp)
+                            )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(fmt.format(srcNet), fontSize = 14.sp, fontWeight = FontWeight.Black, color = if(srcNet >= 0) Emerald600 else Rose600)
-                            Text("NET FLOW", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                            if (srcTxs.isNotEmpty()) {
+                                Text(fmt.format(srcNet), fontSize = 14.sp, fontWeight = FontWeight.Black, color = if(srcNet >= 0) Emerald600 else Rose600)
+                                Text("NET FLOW", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                            }
+                            val bal = bankBalances[src]
+                            if (bal != null) {
+                                Text(fmt.format(bal), fontSize = 14.sp, fontWeight = FontWeight.Black, color = Blue600)
+                                Text("BALANCE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                            }
                         }
                     }
                 }

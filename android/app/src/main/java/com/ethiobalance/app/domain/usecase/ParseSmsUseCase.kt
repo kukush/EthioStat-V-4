@@ -308,17 +308,31 @@ class ParseSmsUseCase @Inject constructor() {
             // Package parsing
             parsePackageDetails(body, now, result)
 
-            // Check for airtime balance (only if no financial scenario detected)
+            // Check for balance (wallet, bank, or airtime depending on sender)
             val balanceMatch = Regex(
                 """(?:your\s+(?:telebirr\s+)?(?:account\s+)?(?:new\s+)?balance\s+(?:after\s+\S+\s+)?(?:is|:)|(?:new\s+)?balance[:\s]+|ቀሪ\s*(?:ሒሳ\S*|ብዛ)?|current\s+balance)[\s:]*(?:ETB\s*)?([\d,]+\.?\d*)\s*(?:ETB|ብር)?""",
                 RegexOption.IGNORE_CASE
             ).find(body)
             
-            balanceMatch?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull()?.let { airtimeBal ->
-                airtimeBalance = airtimeBal
+            // Alternative: "Account Balance is : ETB X" (with "is" before colon)
+            val balanceMatchAlt = Regex(
+                """balance\s+is\s*[:\s]*(?:ETB\s*)?([\d,]+\.?\d*)\s*(?:ETB|ብር)?""",
+                RegexOption.IGNORE_CASE
+            ).find(body)
+            
+            val effectiveBalanceMatch = balanceMatch ?: balanceMatchAlt
+            effectiveBalanceMatch?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull()?.let { bal ->
+                // Balance type: only EthioTelecom senders (994, 804, 806, 830) are airtime (telecom asset).
+                // Everything else (Telebirr, banks) is bank_balance (per-source).
+                val resolvedSource = AppConstants.resolveSource(sender)
+                val isEthioTelecom = resolvedSource == AppConstants.SOURCE_AIRTIME
+                val balanceType = if (isEthioTelecom) "airtime" else "bank_balance"
+                val balanceId = if (isEthioTelecom) "airtime-sim1" else "bank_balance-$resolvedSource"
+                
+                airtimeBalance = bal
                 addOrReplace(BalancePackageEntity(
-                    id = "airtime-sim1", simId = "sim1", type = "airtime",
-                    totalAmount = airtimeBal, remainingAmount = airtimeBal, unit = "ETB",
+                    id = balanceId, simId = resolvedSource, type = balanceType,
+                    totalAmount = bal, remainingAmount = bal, unit = "ETB",
                     expiryDate = now + (30 * 24 * 60 * 60 * 1000L), isActive = true, source = "SMS", lastUpdated = now
                 ))
                 if (scenario == SmsScenario.UNKNOWN) {

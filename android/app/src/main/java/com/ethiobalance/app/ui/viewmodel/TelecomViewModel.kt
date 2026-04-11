@@ -22,14 +22,21 @@ class TelecomViewModel @Inject constructor(
     private val syncAirtimeUseCase: SyncAirtimeUseCase
 ) : ViewModel() {
 
+    private val telecomTypes = setOf("airtime", "voice", "internet", "data", "sms", "bonus")
+
     val packages: StateFlow<List<BalancePackageEntity>> = balanceRepo.getAllPackages()
+        .map { list ->
+            list.filter { it.type.lowercase() in telecomTypes }
+                // Normalize "data" → "internet" so they merge
+                .map { if (it.type.equals("data", ignoreCase = true)) it.copy(type = "internet") else it }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val language: StateFlow<String> = settingsRepo.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
 
     val telecomBalance: StateFlow<Double> = packages.map { list ->
-        list.filter { it.type == "DATA_AIRTIME" || it.type == "AIRTIME" }
+        list.filter { it.type.equals("airtime", ignoreCase = true) }
             .sumOf { it.remainingAmount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 

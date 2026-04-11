@@ -144,15 +144,15 @@ fun TelecomScreen(
         val now = System.currentTimeMillis()
         val activePackages = packages
             .filter { it.expiryDate > now }
+            .filter { !it.type.equals("airtime", ignoreCase = true) } // Airtime shown in TelecomAssetCard only
             .sortedBy { pkg ->
-                // Priority order: airtime → internet → voice → sms → bonus → other
+                // Priority order: internet → voice → sms → bonus → other
                 when (pkg.type.lowercase()) {
-                    "airtime"           -> 0
-                    "internet", "data"  -> 1
-                    "voice"            -> 2
-                    "sms"              -> 3
-                    "bonus"            -> 4
-                    else               -> 5
+                    "internet", "data"  -> 0
+                    "voice"            -> 1
+                    "sms"              -> 2
+                    "bonus"            -> 3
+                    else               -> 4
                 }
             }
 

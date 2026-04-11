@@ -44,6 +44,7 @@ fun EthioBalanceAppUI() {
                         val telecomBalance by homeVM.telecomBalance.collectAsStateWithLifecycle()
                         val packages by homeVM.packages.collectAsStateWithLifecycle()
                         val transactions by homeVM.transactions.collectAsStateWithLifecycle()
+                        val bankBalances by homeVM.bankBalances.collectAsStateWithLifecycle()
 
                         HomeScreen(
                             userName = userName,
@@ -54,6 +55,7 @@ fun EthioBalanceAppUI() {
                             telecomBalance = telecomBalance,
                             packages = packages,
                             transactions = transactions,
+                            bankBalances = bankBalances,
                             onViewAllTransactions = { currentRoute = "transactions" }
                         )
                     }

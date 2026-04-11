@@ -36,7 +36,14 @@ class HomeViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val telecomTypes = setOf("airtime", "voice", "internet", "data", "sms", "bonus")
+
     val packages: StateFlow<List<BalancePackageEntity>> = balanceRepo.getAllPackages()
+        .map { list ->
+            list.filter { it.type.lowercase() in telecomTypes }
+                // Normalize "data" → "internet" so they merge
+                .map { if (it.type.equals("data", ignoreCase = true)) it.copy(type = "internet") else it }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val userName: StateFlow<String> = settingsRepo.userName
@@ -62,7 +69,21 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val telecomBalance: StateFlow<Double> = packages.map { list ->
-        list.filter { it.type == "DATA_AIRTIME" || it.type == "AIRTIME" }
+        list.filter { it.type.equals("airtime", ignoreCase = true) }
             .sumOf { it.remainingAmount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // Bank/wallet balances keyed by resolved source name (e.g. "TeleBirr" → 7.96)
+    // Only shows balances for sources configured in Settings
+    val bankBalances: StateFlow<Map<String, Double>> = combine(
+        balanceRepo.getAllPackages(),
+        settingsRepo.getTransactionSources()
+    ) { packages, configuredSources ->
+        val enabledResolved = configuredSources.map {
+            AppConstants.resolveSource(it.senderId).lowercase()
+        }.toSet()
+        packages.filter { it.type.equals("bank_balance", ignoreCase = true) }
+            .filter { enabledResolved.contains(it.simId.lowercase()) }
+            .associate { it.simId to it.remainingAmount }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 }
