@@ -45,6 +45,20 @@ fun PackageCard(
     val percentage = if (total > 0) Math.min(100.0, (value / total) * 100) else 0.0
     val expiryPercentage = if (totalDays > 0) Math.min(100.0, (daysLeft.toDouble() / totalDays) * 100) else 0.0
 
+    // Urgency colors for circular bar (usage remaining)
+    val circularColor = when {
+        percentage < 5  -> Rose500    // 🔴 Critical: <5% remaining
+        percentage < 20 -> Amber500   // 🟠 Warning: <20% remaining (>80% used)
+        else -> theme.progressFg      // 🟢 Healthy
+    }
+
+    // Urgency colors for linear bar (expiry)
+    val expiryBarColor = when {
+        daysLeft < 3 -> Rose500       // 🔴 Critical: <3 days left
+        daysLeft < 7 -> Amber500      // 🟠 Warning: 3-6 days left
+        else -> theme.barFg           // 🟢 Healthy
+    }
+
     val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.US)
     val expiryDateStr = if (expiryMs > 0) dateFormat.format(Date(expiryMs)) else "N/A"
     
@@ -117,7 +131,7 @@ fun PackageCard(
                             .fillMaxWidth((expiryPercentage / 100f).toFloat())
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(4.dp))
-                            .background(theme.barFg)
+                            .background(expiryBarColor)
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -149,7 +163,7 @@ fun PackageCard(
                                 style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
                             )
                             drawArc(
-                                color = theme.progressFg,
+                                color = circularColor,
                                 startAngle = -90f,
                                 sweepAngle = (percentage * 3.6).toFloat(),
                                 useCenter = false,

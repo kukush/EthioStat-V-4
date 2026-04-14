@@ -115,8 +115,11 @@ class SmsRepository @Inject constructor(
      */
     suspend fun scanAllTransactionSources(days: Int = 90): Int = withContext(Dispatchers.IO) {
         // Merge user-configured senders with the hardcoded whitelist
+        // Exclude 994/251994 — telecom packages are handled by refreshTelecomFromLatestSms()
+        val telecomExclude = setOf("994", "251994", "+251994", "0994")
         val configuredSenders = transactionSourceDao.getEnabledSenderIds().toSet()
         val allSenders = (configuredSenders + AppConstants.SMS_SENDER_WHITELIST).distinct()
+            .filter { it !in telecomExclude }
 
         var totalScanned = 0
         for (senderId in allSenders) {
@@ -131,10 +134,42 @@ class SmsRepository @Inject constructor(
      * Includes common senders like 804, ETC, and other telecom numbers.
      */
     suspend fun scanTelecomHistory(days: Int = 1): Int = withContext(Dispatchers.IO) {
-        val telecomSenders = setOf("804", "ETC", "EthioTelecom", "8181", "888", "808")
+        val telecomSenders = setOf("994", "251994")
         var total = 0
         telecomSenders.forEach { total += scanHistory(it, days) }
         total
+    }
+
+    /**
+     * Read the latest SMS from 251994 and process it to update telecom assets.
+     * Called on app start and screen load to ensure correct package data.
+     */
+    suspend fun refreshTelecomFromLatestSms(): Int = withContext(Dispatchers.IO) {
+        val uri = Telephony.Sms.Inbox.CONTENT_URI
+        val projection = arrayOf("address", "body", "date")
+        val selection = "(address = ? OR address = ? OR address = ? OR address = ?)"
+        val selectionArgs = arrayOf("994", "251994", "+251994", "0994")
+
+        val cursor = context.contentResolver.query(
+            uri, projection, selection, selectionArgs, "date DESC"
+        )
+
+        var count = 0
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val sender = it.getString(it.getColumnIndex("address")) ?: return@use
+                val body = it.getString(it.getColumnIndex("body")) ?: return@use
+                val timestamp = it.getLong(it.getColumnIndex("date"))
+                try {
+                    reconciliationEngine.processSms(sender, body, timestamp, forceReparse = true)
+                    count = 1
+                    Log.d("SmsRepository", "Refreshed telecom from latest 251994 SMS (ts=$timestamp)")
+                } catch (e: Exception) {
+                    Log.e("SmsRepository", "Failed to refresh telecom: ${e.message}")
+                }
+            }
+        }
+        count
     }
 
     /**

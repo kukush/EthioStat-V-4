@@ -14,6 +14,9 @@ interface BalancePackageDao {
     @Query("SELECT * FROM balance_packages WHERE id = :id LIMIT 1")
     suspend fun getPackageById(id: String): BalancePackageEntity?
 
+    @Query("DELETE FROM balance_packages WHERE type IN ('voice', 'internet', 'sms', 'bonus')")
+    suspend fun deleteTelecomPackages()
+
     @Query("DELETE FROM balance_packages")
     suspend fun deleteAll()
 }

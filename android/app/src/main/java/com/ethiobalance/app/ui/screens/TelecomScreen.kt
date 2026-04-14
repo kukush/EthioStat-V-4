@@ -183,7 +183,7 @@ fun TelecomScreen(
                     value = pkg.remainingAmount,
                     total = pkg.totalAmount,
                     unit = pkg.unit,
-                    label = pkg.type.replaceFirstChar { it.uppercase() },
+                    label = pkg.simId.ifEmpty { pkg.type.replaceFirstChar { it.uppercase() } },
                     expiryMs = pkg.expiryDate,
                     daysLeft = daysLeft,
                     totalDays = totalDays,

@@ -67,10 +67,21 @@ class ReconciliationEngine @Inject constructor(
             UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
         }
         
-        // Early duplicate check
-        if (transactionDao.existsById(transactionId)) {
+        // Early duplicate check (skip for forceReparse — allows package refresh)
+        if (!forceReparse && transactionDao.existsById(transactionId)) {
             Log.d("ReconciliationEngine", "Transaction $transactionId already exists")
             return
+        }
+
+        // Time-window dedup: reject if same (source, type, amount) exists within 60s
+        if (!forceReparse) {
+            val resolvedSrcForDedup = AppConstants.resolveSource(normalizedSender)
+            val txType = if ((parsedResult.addedAmount ?: 0.0) > 0) "INCOME" else "EXPENSE"
+            val txAmount = parsedResult.addedAmount ?: parsedResult.deductedAmount ?: 0.0
+            if (txAmount > 0 && transactionDao.existsNearDuplicate(resolvedSrcForDedup, txType, txAmount, timestamp, 60_000L)) {
+                Log.d("ReconciliationEngine", "Near-duplicate detected: $resolvedSrcForDedup $txType $txAmount within 60s window. Skipping.")
+                return
+            }
         }
         
         Log.d("ReconciliationEngine", "Saving new transaction $transactionId from $normalizedSender")
@@ -198,6 +209,12 @@ class ReconciliationEngine @Inject constructor(
             }
 
             SmsScenario.BALANCE_UPDATE, SmsScenario.BALANCE_QUERY -> {
+                // Clear stale telecom packages before inserting fresh data
+                val hasTelecom = parsedResult.packages.any { it.type in setOf("voice", "internet", "sms", "bonus") }
+                if (hasTelecom) {
+                    balancePackageDao.deleteTelecomPackages()
+                    Log.d("ReconciliationEngine", "Cleared old telecom packages before update")
+                }
                 parsedResult.packages.forEach { 
                     balancePackageDao.insertOrUpdate(it) 
                     Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type} - ${it.remainingAmount} ${it.unit}")

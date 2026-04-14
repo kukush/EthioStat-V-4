@@ -28,7 +28,7 @@ class TransactionViewModel @Inject constructor(
 ) : ViewModel() {
 
     val allTransactions: StateFlow<List<TransactionEntity>> = transactionRepo.getAllTransactions()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val language: StateFlow<String> = settingsRepo.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")

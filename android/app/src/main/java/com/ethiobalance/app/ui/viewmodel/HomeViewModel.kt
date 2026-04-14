@@ -22,7 +22,7 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val allTransactions: StateFlow<List<TransactionEntity>> = transactionRepo.getAllTransactions()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val transactions: StateFlow<List<TransactionEntity>> = combine(
         allTransactions, settingsRepo.getTransactionSources()

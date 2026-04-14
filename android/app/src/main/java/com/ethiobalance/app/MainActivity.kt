@@ -66,6 +66,8 @@ class MainActivity : ComponentActivity() {
             Log.d("MainActivity", "Starting initial historical scan (90 days)...")
             val count = smsRepo.scanAllTransactionSources(90)
             Log.d("MainActivity", "Initial scan complete. Total messages processed: $count")
+            // Always refresh telecom from the latest 251994 SMS (force-reparse)
+            smsRepo.refreshTelecomFromLatestSms()
         }
     }
 }

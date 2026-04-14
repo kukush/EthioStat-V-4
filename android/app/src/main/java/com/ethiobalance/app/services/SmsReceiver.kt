@@ -16,17 +16,29 @@ class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
             val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
+
+            // Concatenate multi-part SMS segments from the same sender to avoid
+            // processing each segment as a separate transaction.
+            val grouped = mutableMapOf<String, Pair<StringBuilder, Long>>()
             for (message in messages) {
                 val sender = message.displayOriginatingAddress ?: ""
-                val body = message.displayMessageBody
+                val body = message.displayMessageBody ?: ""
                 val timestamp = message.timestampMillis
+                val existing = grouped[sender]
+                if (existing != null) {
+                    existing.first.append(body)
+                } else {
+                    grouped[sender] = Pair(StringBuilder(body), timestamp)
+                }
+            }
 
+            val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
+            val userWhitelist = prefs.getStringSet("sms_whitelist", emptySet()) ?: emptySet()
 
+            for ((sender, pair) in grouped) {
+                val body = pair.first.toString()
+                val timestamp = pair.second
 
-                // Filter: Check both system whitelist and user-defined transaction sources
-                val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
-                val userWhitelist = prefs.getStringSet("sms_whitelist", emptySet()) ?: emptySet()
-                
                 val isWhitelisted = sender.isNotEmpty() && (
                                   sender.contains("TELEBIRR", ignoreCase = true) ||
                                   sender.contains("CBE", ignoreCase = true) ||
@@ -36,7 +48,7 @@ class SmsReceiver : BroadcastReceiver() {
                                   userWhitelist.any { it.equals(sender, ignoreCase = true) }
                 )
 
-                Log.d(TAG, "Checking sender: $sender, isWhitelisted: $isWhitelisted")
+                Log.d(TAG, "Checking sender: $sender, isWhitelisted: $isWhitelisted, segments: ${messages.count { (it.displayOriginatingAddress ?: "") == sender }}")
 
                 if (isWhitelisted) {
                     Log.d(TAG, "Triggering foreground service for $sender")

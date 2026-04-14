@@ -4,6 +4,7 @@ import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.BalancePackageEntity
 import com.ethiobalance.app.domain.model.ParsedSmsResult
 import com.ethiobalance.app.domain.model.SmsScenario
+import com.ethiobalance.app.domain.model.TelecomPackageType
 import java.util.*
 import javax.inject.Inject
 
@@ -42,32 +43,64 @@ class ParseSmsUseCase @Inject constructor() {
         val isMultiSegment = Regex(";\\s+from ", RegexOption.IGNORE_CASE).containsMatchIn(body) &&
                 body.contains("expiry date on", ignoreCase = true)
 
-        fun addOrReplace(pkg: BalancePackageEntity) {
-            val existingIdx = result.packages.indexOfFirst { it.type == pkg.type }
-            when {
-                existingIdx < 0 -> result.packages.add(pkg)
-                pkg.totalAmount > result.packages[existingIdx].totalAmount -> result.packages[existingIdx] = pkg
-            }
-        }
-
         if (isMultiSegment) {
+            // Clear stale telecom packages before re-parsing; each segment creates its own entity
+            result.packages.removeAll { it.type in setOf("voice", "internet", "sms", "bonus") }
+            var voiceIdx = 0
+            var internetIdx = 0
+
             val segments = body.split(Regex(";\\s*"))
             segments.forEachIndexed { _, seg ->
                 val segLower = seg.lowercase()
                 val expiryMs = parseExpiryMs(seg, now)
+                val segLabel = extractSegmentLabel(seg)
 
                 when {
                     segLower.contains("min") || segLower.contains("voice") || segLower.contains("ደቂቃ") -> {
                         val isIdx = seg.indexOf("is ", ignoreCase = true)
                         val beforeIs = if (isIdx > 0) seg.substring(0, isIdx) else seg
-                        val totalMatch = Regex("""(\d[\d,.]*)\s*Min(?!ute)""", RegexOption.IGNORE_CASE).find(beforeIs)
-                        val totalVal = totalMatch?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: 0.0
+                        // Extract all "NNN Min" values before "is" for total quota detection
+                        val allTotals = Regex("""(\d[\d,.]*)\s*Min(?!ute)""", RegexOption.IGNORE_CASE).findAll(beforeIs).toList()
                         val remainMatch = Regex("""is\s+(\d[\d,.]*)\s*(?:Min(?:ute)?|ደቂቃ)""", RegexOption.IGNORE_CASE).find(seg)
-                        val remainVal = remainMatch?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: totalVal
+                        val remainVal = remainMatch?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: 0.0
                         if (remainVal > 0) {
-                            addOrReplace(BalancePackageEntity(
-                                id = "voice-sim1", simId = "sim1", type = "voice",
-                                totalAmount = if (totalVal > 0) totalVal else remainVal,
+                            // Classify: for combined plans like "125 Min and 63Min night",
+                            // determine if this segment is the night or recurring portion
+                            val hasNight = segLower.contains("night") || segLower.contains("ምሽት")
+                            val hasFree = segLower.contains("free") || segLower.contains("promo")
+                            val pkgType: TelecomPackageType
+                            val totalVal: Double
+                            when {
+                                hasFree -> {
+                                    pkgType = TelecomPackageType.BONUS_VOICE
+                                    totalVal = allTotals.firstOrNull()?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: remainVal
+                                }
+                                hasNight && allTotals.size >= 2 -> {
+                                    // Combined plan: "125 Min and 63Min night"
+                                    val mainQuota = allTotals[0].groupValues[1].replace(",","").toDoubleOrNull() ?: 0.0
+                                    val nightQuota = allTotals[1].groupValues[1].replace(",","").toDoubleOrNull() ?: 0.0
+                                    if (remainVal <= nightQuota) {
+                                        pkgType = TelecomPackageType.NIGHT_VOICE
+                                        totalVal = nightQuota
+                                    } else {
+                                        pkgType = TelecomPackageType.RECURRING_VOICE
+                                        totalVal = mainQuota
+                                    }
+                                }
+                                hasNight -> {
+                                    pkgType = TelecomPackageType.NIGHT_VOICE
+                                    totalVal = allTotals.firstOrNull()?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: remainVal
+                                }
+                                else -> {
+                                    pkgType = TelecomPackageType.RECURRING_VOICE
+                                    totalVal = allTotals.firstOrNull()?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: remainVal
+                                }
+                            }
+                            val pkgId = "voice-$voiceIdx"
+                            voiceIdx++
+                            result.packages.add(BalancePackageEntity(
+                                id = pkgId, simId = pkgType.label, type = "voice",
+                                totalAmount = totalVal,
                                 remainingAmount = remainVal, unit = "MIN",
                                 expiryDate = expiryMs, isActive = true, source = "SMS", lastUpdated = now
                             ))
@@ -77,8 +110,8 @@ class ParseSmsUseCase @Inject constructor() {
                     segLower.contains("mb") || segLower.contains("gb") || segLower.contains("internet") -> {
                         val isIdx = seg.indexOf("is ", ignoreCase = true)
                         val beforeIs = if (isIdx > 0) seg.substring(0, isIdx) else seg
-                        val totalGb = Regex("""(\d[\d,.]*)\s*GB""", RegexOption.IGNORE_CASE).find(beforeIs)
-                        val totalMb = Regex("""(\d[\d,.]*)\s*MB""", RegexOption.IGNORE_CASE).find(beforeIs)
+                        val totalGb = Regex("""(\d[\d,.]*)(\s*GB)""", RegexOption.IGNORE_CASE).find(beforeIs)
+                        val totalMb = Regex("""(\d[\d,.]*)(\s*MB)""", RegexOption.IGNORE_CASE).find(beforeIs)
                         val totalValMB: Double = when {
                             totalGb != null -> (totalGb.groupValues[1].replace(",","").toDoubleOrNull() ?: 0.0) * 1024.0
                             totalMb != null -> totalMb.groupValues[1].replace(",","").toDoubleOrNull() ?: 0.0
@@ -92,8 +125,10 @@ class ParseSmsUseCase @Inject constructor() {
                             else -> totalValMB
                         }
                         if (remainVal > 0) {
-                            addOrReplace(BalancePackageEntity(
-                                id = "internet-sim1", simId = "sim1", type = "internet",
+                            val pkgId = "internet-$internetIdx"
+                            internetIdx++
+                            result.packages.add(BalancePackageEntity(
+                                id = pkgId, simId = segLabel, type = "internet",
                                 totalAmount = if (totalValMB > 0) totalValMB else remainVal,
                                 remainingAmount = remainVal, unit = "MB",
                                 expiryDate = expiryMs, isActive = true, source = "SMS", lastUpdated = now
@@ -102,12 +137,12 @@ class ParseSmsUseCase @Inject constructor() {
                         }
                     }
                     segLower.contains("sms") || segLower.contains("ኤስኤምኤስ") -> {
-                        val remainSms = Regex("""is\s+(\d[\d,.]*)(\s*(?:SMS|ኤስኤምኤስ))""", RegexOption.IGNORE_CASE).find(seg)
-                            ?: Regex("""(\d[\d,.]*)(\s*(?:SMS|ኤስኤምኤስ))""", RegexOption.IGNORE_CASE).find(seg)
+                        val remainSms = Regex("""is\s+(\d[\d,.]*)\s*(?:SMS|ኤስኤምኤስ)""", RegexOption.IGNORE_CASE).find(seg)
+                            ?: Regex("""(\d[\d,.]*)\s*(?:SMS|ኤስኤምኤስ)""", RegexOption.IGNORE_CASE).find(seg)
                         val remainVal = remainSms?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: 0.0
                         if (remainVal > 0) {
-                            addOrReplace(BalancePackageEntity(
-                                id = "sms-sim1", simId = "sim1", type = "sms",
+                            result.packages.add(BalancePackageEntity(
+                                id = "sms", simId = TelecomPackageType.SMS.label, type = "sms",
                                 totalAmount = remainVal, remainingAmount = remainVal, unit = "SMS",
                                 expiryDate = expiryMs, isActive = true, source = "SMS", lastUpdated = now
                             ))
@@ -118,8 +153,8 @@ class ParseSmsUseCase @Inject constructor() {
                         val bonusMatch = Regex("""is\s+(\d[\d,.]*)\s*(?:Birr|ETB|ብር)""", RegexOption.IGNORE_CASE).find(seg)
                         val bonusVal = bonusMatch?.groupValues?.get(1)?.replace(",","")?.toDoubleOrNull() ?: 0.0
                         if (bonusVal > 0) {
-                            addOrReplace(BalancePackageEntity(
-                                id = "bonus-sim1", simId = "sim1", type = "bonus",
+                            result.packages.add(BalancePackageEntity(
+                                id = "bonus", simId = TelecomPackageType.BONUS_FUND.label, type = "bonus",
                                 totalAmount = bonusVal, remainingAmount = bonusVal, unit = "ETB",
                                 expiryDate = expiryMs, isActive = true, source = "SMS", lastUpdated = now
                             ))
@@ -130,9 +165,30 @@ class ParseSmsUseCase @Inject constructor() {
             }
         }
 
+        // Helper: upsert by package ID (used for balance/airtime packages below)
+        fun addOrReplace(pkg: BalancePackageEntity) {
+            val existingIdx = result.packages.indexOfFirst { it.id == pkg.id }
+            when {
+                existingIdx < 0 -> result.packages.add(pkg)
+                else -> result.packages[existingIdx] = pkg
+            }
+        }
+
         // 2. Airtime & Financial (Same logic as SmsParser)
         val isTrustedSender = sender.contains("TELEBIRR", ignoreCase = true) || AppConstants.SMS_SENDER_WHITELIST.any { it.equals(sender, ignoreCase = true) }
         
+        // Early exit: reject promotional/loyalty SMS (e.g. Telebirr "received 1 point and 1 lottery ticket")
+        val lowerBody = body.lowercase()
+        val isPromoMessage = lowerBody.contains("lottery") ||
+                Regex("received\\s+\\d+\\s+point", RegexOption.IGNORE_CASE).containsMatchIn(body) ||
+                lowerBody.contains("teleplay") ||
+                body.contains("ቴሌፕለይ") ||
+                body.contains("ቴሌኮይን") ||
+                body.contains("በቴሌብር ስላደረጉት")
+        if (isPromoMessage) {
+            return result.copy(confidence = 0f, scenario = SmsScenario.UNKNOWN)
+        }
+
         if (isTrustedSender) {
             // Party Name Extraction (before financial matching)
             val partyNamePatterns = listOf(
@@ -305,8 +361,10 @@ class ParseSmsUseCase @Inject constructor() {
                 reference = refMatch.groupValues[1]
             }
 
-            // Package parsing
-            parsePackageDetails(body, now, result)
+            // Package parsing (skip if multi-segment already parsed)
+            if (!isMultiSegment) {
+                parsePackageDetails(body, now, result)
+            }
 
             // Check for balance (wallet, bank, or airtime depending on sender)
             val balanceMatch = Regex(
@@ -327,7 +385,7 @@ class ParseSmsUseCase @Inject constructor() {
                 val resolvedSource = AppConstants.resolveSource(sender)
                 val isEthioTelecom = resolvedSource == AppConstants.SOURCE_AIRTIME
                 val balanceType = if (isEthioTelecom) "airtime" else "bank_balance"
-                val balanceId = if (isEthioTelecom) "airtime-sim1" else "bank_balance-$resolvedSource"
+                val balanceId = if (isEthioTelecom) "airtime" else "bank_balance-$resolvedSource"
                 
                 airtimeBalance = bal
                 addOrReplace(BalancePackageEntity(
@@ -364,10 +422,10 @@ class ParseSmsUseCase @Inject constructor() {
 
     private fun parsePackageDetails(body: String, now: Long, result: ParsedSmsResult) {
         fun addOrReplace(pkg: BalancePackageEntity) {
-            val existingIdx = result.packages.indexOfFirst { it.type == pkg.type }
+            val existingIdx = result.packages.indexOfFirst { it.id == pkg.id }
             when {
                 existingIdx < 0 -> result.packages.add(pkg)
-                pkg.totalAmount > result.packages[existingIdx].totalAmount -> result.packages[existingIdx] = pkg
+                else -> result.packages[existingIdx] = pkg
             }
         }
 
@@ -377,7 +435,7 @@ class ParseSmsUseCase @Inject constructor() {
             val amount = voiceMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
             if (amount > 0) {
                 addOrReplace(BalancePackageEntity(
-                    id = "voice-sim1", simId = "sim1", type = "voice",
+                    id = "voice-0", simId = "Voice", type = "voice",
                     totalAmount = amount, remainingAmount = amount, unit = "MIN",
                     expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
                     isActive = true, source = "SMS", lastUpdated = now
@@ -403,7 +461,7 @@ class ParseSmsUseCase @Inject constructor() {
             if (amount <= 0) continue
             val amountMB = if (rawUnit == "GB") amount * 1024.0 else amount
             addOrReplace(BalancePackageEntity(
-                id = "internet-sim1", simId = "sim1", type = "internet",
+                id = "internet-0", simId = "Internet", type = "internet",
                 totalAmount = amountMB, remainingAmount = amountMB, unit = "MB",
                 expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
                 isActive = true, source = "SMS", lastUpdated = now
@@ -417,13 +475,28 @@ class ParseSmsUseCase @Inject constructor() {
             val amount = smsMatch.groupValues[1].replace(",", "").toDoubleOrNull() ?: 0.0
             if (amount > 0) {
                 addOrReplace(BalancePackageEntity(
-                    id = "sms-sim1", simId = "sim1", type = "sms",
+                    id = "sms", simId = "SMS", type = "sms",
                     totalAmount = amount, remainingAmount = amount, unit = "SMS",
                     expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
                     isActive = true, source = "SMS", lastUpdated = now
                 ))
             }
         }
+    }
+
+    private fun extractSegmentLabel(seg: String): String {
+        // Strip leading "from " or "Dear Customer, your remaining amount from "
+        var cleaned = seg.replace(Regex("^\\s*(?:Dear Customer,?\\s*)?(?:your remaining amount from\\s+)?(?:from\\s+)?", RegexOption.IGNORE_CASE), "").trim()
+        // Take everything before "is <number>" (the package name)
+        val isMatch = Regex("""^(.+?)\s+is\s+\d""", RegexOption.IGNORE_CASE).find(cleaned)
+        var label = isMatch?.groupValues?.get(1)?.trim() ?: cleaned.split(Regex("\\s+")).take(5).joinToString(" ")
+        // Remove noise: "from telebirr to be expired after N days"
+        label = label.replace(Regex("\\s+from\\s+telebirr.*", RegexOption.IGNORE_CASE), "")
+        // Remove noise: "to be expired after N days"
+        label = label.replace(Regex("\\s+to be expired.*", RegexOption.IGNORE_CASE), "")
+        // Truncate
+        if (label.length > 45) label = label.take(45) + "…"
+        return label.ifEmpty { "Package" }
     }
 
     private fun parseExpiryMs(seg: String, now: Long): Long {
