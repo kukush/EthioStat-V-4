@@ -68,7 +68,7 @@ fun TelecomScreen(
 
         // Telecom Assets Card (reusable component)
         val dataVol = packages.filter { it.type.uppercase().contains("DATA") || it.type.uppercase().contains("INTERNET") }
-            .sumOf { it.remainingAmount }
+            .sumOf { if (it.unit.equals("GB", ignoreCase = true)) it.remainingAmount else it.remainingAmount / 1024.0 }
         val voiceVol = packages.filter { it.type.uppercase() == "VOICE" }
             .sumOf { it.remainingAmount }
         val smsVol = packages.filter { it.type.uppercase() == "SMS" }

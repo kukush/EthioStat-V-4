@@ -2,8 +2,17 @@
 <!--
     Accessibility Service configuration for EthioStat USSD popup reader.
 
-    Scope: ONLY "com.android.phone" package. This prevents the service from
-    intercepting events from any other app, protecting user privacy and battery.
+    Scope: Phone/dialer packages that host the USSD popup dialog or the dialpad.
+      - com.android.phone           : AOSP telephony — hosts the USSD result dialog
+      - com.samsung.telephony.phone : Samsung telephony (One UI) — same role
+      - com.samsung.android.phone   : Older Samsung variant
+      - com.samsung.android.dialer  : Samsung dialer — detected to know popup was dismissed
+      - com.google.android.dialer   : Pixel/stock dialer — same role
+      - com.huawei.phone            : Huawei telephony
+      - android                     : System-level window fallback
+
+    NOTE: CALL_PHONE permission is NOT used. The dialer is opened via ACTION_DIAL
+    (user manually presses Call). No auto-dial occurs.
 
     Flags:
       - flagDefault: standard accessibility event delivery
@@ -18,6 +27,6 @@
     android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_service_description"
-    android:packageNames="com.android.phone,com.google.android.dialer,com.samsung.android.dialer,com.huawei.phone"
+    android:packageNames="com.android.phone,com.google.android.dialer,com.samsung.android.dialer,com.samsung.telephony.phone,com.samsung.android.phone,com.huawei.phone,android"
     android:notificationTimeout="100"
     android:settingsActivity="com.ethiobalance.app.MainActivity" />

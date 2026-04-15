@@ -20,6 +20,8 @@ DB_NAME="ethio_balance_db"
 PASS=0
 FAIL=0
 NOW_MS=$(date +%s000)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ANDROID_DIR="$SCRIPT_DIR/../android"
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -57,6 +59,71 @@ if ! adb shell pm list packages | grep -q "$APP_PACKAGE"; then
   exit 1
 fi
 info "App is installed."
+
+# =============================================================================
+#  JVM UNIT TESTS  (no device needed)
+#
+#  1. TelecomDataVolConversionTest — covers the dataVol MB→GB conversion used
+#     by TelecomScreen and HomeScreen.
+#     Bug: TelecomScreen summed raw remainingAmount (MB) and displayed it as GB,
+#     e.g. 967.1 MB shown as 967.1 GB instead of 0.9 GB.
+#     Fix: divide by 1024 when unit != GB (same as HomeScreen).
+#
+#  2. UssdAccessibilityServiceTest — covers USSD text capture + dismissal logic.
+#     NOTE: CALL_PHONE permission is NOT declared. Dialing uses ACTION_DIAL only.
+# =============================================================================
+
+section "TelecomScreen Data Volume Conversion Tests (JVM)"
+
+if [[ -f "$ANDROID_DIR/gradlew" ]]; then
+  info "Running TelecomDataVolConversionTest..."
+  if "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" \
+      :app:testDebugUnitTest \
+      --tests "com.ethiobalance.app.ui.screens.TelecomDataVolConversionTest" \
+      --quiet 2>&1 | tail -5; then
+    pass "TelecomDataVolConversionTest — all unit tests passed"
+  else
+    fail "TelecomDataVolConversionTest — one or more unit tests failed"
+  fi
+else
+  info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
+fi
+
+section "USSD Unit Tests (JVM)"
+
+if [[ -f "$ANDROID_DIR/gradlew" ]]; then
+  info "Running UssdAccessibilityServiceTest..."
+  if "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" \
+      :app:testDebugUnitTest \
+      --tests "com.ethiobalance.app.services.UssdAccessibilityServiceTest" \
+      --quiet 2>&1 | tail -5; then
+    pass "UssdAccessibilityServiceTest — all unit tests passed"
+  else
+    fail "UssdAccessibilityServiceTest — one or more unit tests failed"
+  fi
+else
+  info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
+fi
+
+# ─── Accessibility Service Bound Check ───────────────────────────────────────
+
+section "Accessibility Service Check"
+
+BOUND=$(adb shell dumpsys accessibility 2>/dev/null \
+  | grep -c "UssdAccessibilityService" || true)
+if [[ "$BOUND" -ge 1 ]]; then
+  pass "UssdAccessibilityService is registered in accessibility dump"
+else
+  fail "UssdAccessibilityService NOT found — go to Settings → Accessibility and enable it"
+fi
+
+CRASHED=$(adb shell dumpsys accessibility 2>/dev/null \
+  | grep "Crashed services" | grep -c "UssdAccessibilityService" || true)
+if [[ "$CRASHED" -eq 0 ]]; then
+  pass "UssdAccessibilityService has not crashed"
+else
+  fail "UssdAccessibilityService appears in Crashed services"
+fi
 
 # ─── Helper: query Room DB via adb ───────────────────────────────────────────
 
@@ -224,9 +291,22 @@ inject_sms "127" \
   "You have sent 450.50 ETB to 0911223344. Transaction ID: TX016. Fee: 2.50 ETB." \
   "$T16_TS"
 
+# ── USSD: Airtime balance (simulates AccessibilityService broadcast) ─────────
+# Sends the ACTION_USSD_RESPONSE broadcast directly, bypassing the dialer flow.
+# This verifies that TelecomViewModel receives the broadcast and persists the
+# airtime value via ReconciliationEngine.processSms("804", ...).
+# (No CALL_PHONE permission needed — broadcast is sent via adb am broadcast)
+T17_TS=$((NOW_MS - 40000))
+info "Simulating USSD balance broadcast (ACTION_USSD_RESPONSE)..."
+adb shell "am broadcast \
+  -a com.ethiobalance.app.ACTION_USSD_RESPONSE \
+  -p $APP_PACKAGE \
+  --es ussd_text 'Dear customer, Your account balance is 12.50 Birr . With this balance your account will expire on 15/04/2027. ethio telecom'" \
+  2>/dev/null || true
+
 echo ""
-info "Waiting 10 seconds for processing pipeline to complete..."
-sleep 10
+info "Waiting 12 seconds for processing pipeline to complete..."
+sleep 12
 
 # =============================================================================
 #  ASSERTIONS
@@ -258,6 +338,23 @@ assert_tx 14 "Telebirr airtime received 25 ETB"           "INCOME"  "25.0"      
 assert_tx 15 "Telebirr package purchase 100 ETB"          "EXPENSE" "100.0"     "TeleBirr"
 assert_tx 16 "Telebirr transfer 450.50 ETB"               "EXPENSE" "450.5"     "TeleBirr"
 
+# ── USSD Airtime Balance Tests ──────────────────────────────────────────────
+section "Asserting USSD Airtime Balance"
+
+USSD_BALANCE=$(db_query "SELECT amount FROM balance_packages WHERE type='airtime' ORDER BY timestamp DESC LIMIT 1;")
+if [[ "$USSD_BALANCE" == "12.5" || "$USSD_BALANCE" == "12.50" ]]; then
+  pass "Test 17: USSD airtime balance 12.50 Birr persisted to balance_packages"
+else
+  fail "Test 17: USSD airtime balance not found (got: '${USSD_BALANCE}', expected 12.5)"
+fi
+
+USSD_COUNT=$(db_query "SELECT COUNT(*) FROM ussd_events;")
+if [[ "$USSD_COUNT" -ge 1 ]]; then
+  pass "Test 18: USSD event persisted to ussd_events table"
+else
+  fail "Test 18: No USSD events in ussd_events table"
+fi
+
 # =============================================================================
 #  DB DUMP  (debug aid)
 # =============================================================================
@@ -266,9 +363,13 @@ section "DB Transaction Dump"
 echo ""
 db_query "SELECT type, amount, source, category, partyName FROM transactions ORDER BY timestamp DESC;"
 
-section "Logcat (ReconciliationEngine)"
+section "DB Balance Packages Dump"
 echo ""
-adb logcat -d -s ReconciliationEngine:D 2>/dev/null | tail -60 || true
+db_query "SELECT type, amount, simId, expiryDate FROM balance_packages ORDER BY timestamp DESC LIMIT 10;"
+
+section "Logcat (ReconciliationEngine + UssdAccessibility)"
+echo ""
+adb logcat -d -s "ReconciliationEngine:D" -s "UssdAccessibility:D" 2>/dev/null | tail -60 || true
 
 # =============================================================================
 #  SUMMARY
@@ -276,6 +377,14 @@ adb logcat -d -s ReconciliationEngine:D 2>/dev/null | tail -60 || true
 
 echo ""
 echo "════════════════════════════════════════════"
+printf "  Results: ${GREEN}%d passed${NC}, ${RED}%d failed${NC}\n" "$PASS" "$FAIL"
+echo "════════════════════════════════════════════"
+echo ""
+
+if [[ "$FAIL" -gt 0 ]]; then
+  exit 1
+fi
+exit 0
 printf "  Results: ${GREEN}%d passed${NC}, ${RED}%d failed${NC}\n" "$PASS" "$FAIL"
 echo "════════════════════════════════════════════"
 echo ""

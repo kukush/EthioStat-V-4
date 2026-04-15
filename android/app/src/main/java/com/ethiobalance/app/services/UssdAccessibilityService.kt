@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.ethiobalance.app.AppConstants
+import com.ethiobalance.app.MainActivity
 import com.ethiobalance.app.data.AppDatabase
 import com.ethiobalance.app.data.UssdDao
 import com.ethiobalance.app.data.UssdEntity
@@ -24,18 +25,42 @@ class UssdAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // Set to true after USSD text is captured; returnToApp() fires when popup is dismissed
+    @Volatile private var pendingReturnToApp = false
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        val pkg = event.packageName?.toString() ?: return
-        // Only act on the phone dialer package (scoped in XML config too, belt-and-suspenders)
-        if (!pkg.contains(AppConstants.PHONE_APP_PACKAGE, ignoreCase = true)) return
+        val pkg = event.packageName?.toString() ?: ""
+        Log.d(TAG, "Window state changed: pkg=$pkg pendingReturn=$pendingReturnToApp")
 
-        // Try harvesting from event text first (fastest path, works on most devices)
+        // USSD popup is hosted by com.android.phone (or telephony variants) — NOT the dialer app
+        val isPhonePopupPkg = pkg == "com.android.phone"
+            || pkg == "com.samsung.telephony.phone"
+            || pkg == "com.samsung.android.phone"
+            || pkg == "com.huawei.phone"
+
+        // Dialer app showing dialpad — signals popup was dismissed and user is back in dialer
+        val isDialerPkg = pkg == "com.samsung.android.dialer"
+            || pkg == "com.google.android.dialer"
+
+        // If we are waiting for dismissal and dialer comes to foreground → popup was closed
+        if (pendingReturnToApp && isDialerPkg) {
+            pendingReturnToApp = false
+            Log.d(TAG, "Popup dismissed (dialer resumed) — returning to app")
+            returnToApp()
+            return
+        }
+
+        // Only harvest USSD text from the phone popup package
+        if (!isPhonePopupPkg) return
+
+        // Try event.text first (fastest path)
         val eventTexts = (0 until event.text.size).mapNotNull { event.text.getOrNull(it)?.toString() }
         val eventText = eventTexts.filter { it.length > 5 }.joinToString(" ").trim()
-        if (eventText.isNotEmpty()) {
+        if (looksLikeUssdResponse(eventText)) {
             Log.d(TAG, "Captured USSD via event.text: $eventText")
             onUssdCaptured(eventText)
+            pendingReturnToApp = true
             return
         }
 
@@ -45,12 +70,23 @@ class UssdAccessibilityService : AccessibilityService() {
             val collected = mutableListOf<String>()
             harvestText(root, collected)
             val harvested = collected.filter { it.length > 5 }.joinToString(" ").trim()
-            if (harvested.isNotEmpty()) {
+            if (looksLikeUssdResponse(harvested)) {
                 Log.d(TAG, "Captured USSD via node tree: $harvested")
                 onUssdCaptured(harvested)
-                attemptDismiss(root)
+                pendingReturnToApp = true
+                return
             }
         }
+    }
+
+    /** Returns true if the text looks like a real USSD response (not a dialpad / progress screen). */
+    private fun looksLikeUssdResponse(text: String): Boolean {
+        if (text.isBlank()) return false
+        val lower = text.lowercase()
+        // Must contain balance/telecom keywords; reject pure "running..." progress screens
+        return (lower.contains("birr") || lower.contains("balance") || lower.contains("dear")
+            || lower.contains("customer") || lower.contains("ዋጋ") || lower.contains("ብር"))
+            && !lower.contains("keypad") && !lower.contains("voicemail")
     }
 
     /**
@@ -101,7 +137,8 @@ class UssdAccessibilityService : AccessibilityService() {
                 )
 
                 // Run through the dual-tracking reconciliation pipeline via injected engine
-                reconciliationEngine.processSms("804", response, System.currentTimeMillis())
+                // forceReparse = true ensures balance always updates even if same text captured before
+                reconciliationEngine.processSms("804", response, System.currentTimeMillis(), forceReparse = true)
 
                 // Broadcast to UI for real-time display
                 val intent = Intent(AppConstants.ACTION_USSD_RESPONSE).apply {
@@ -114,6 +151,19 @@ class UssdAccessibilityService : AccessibilityService() {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to process USSD response: ${e.message}", e)
             }
+        }
+    }
+    
+    private fun returnToApp() {
+        try {
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            startActivity(intent)
+            Log.d(TAG, "Returned to MainActivity")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to return to app: ${e.message}", e)
         }
     }
 
