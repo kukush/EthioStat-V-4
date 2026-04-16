@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -116,12 +117,12 @@ fun TransactionScreen(
                             Text("Search transactions…", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.Search, null, tint = Slate400, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                         },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { onSearchChange("") }) {
-                                    Icon(Icons.Default.Close, null, tint = Slate400, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                 }
                             }
                         },
@@ -129,12 +130,14 @@ fun TransactionScreen(
                         shape = RoundedCornerShape(16.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = Color.White,
-                            focusedContainerColor = Color.White,
-                            unfocusedBorderColor = Slate100,
-                            focusedBorderColor = Blue500,
-                            focusedTextColor = Slate900,
-                            unfocusedTextColor = Slate900
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
 
@@ -245,23 +248,23 @@ fun TransactionScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 16.dp)
                             .clip(RoundedCornerShape(40.dp))
-                            .background(Color.White)
-                            .border(1.dp, Slate100, RoundedCornerShape(40.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(40.dp))
                             .padding(48.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
-                                modifier = Modifier.size(64.dp).clip(CircleShape).background(Slate50),
+                                modifier = Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Payments, null, tint = Slate300, modifier = Modifier.size(32.dp))
+                                Icon(Icons.Default.Payments, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
                             }
                             Spacer(Modifier.height(16.dp))
-                            Text("No transactions found", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate900)
+                            Text("No transactions found", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Text(
                                 "Try adjusting your filters or search query",
-                                fontSize = 12.sp, color = Slate400,
+                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         }
@@ -287,7 +290,7 @@ fun TransactionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(8.dp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 4.dp
             ) {
                 Row(

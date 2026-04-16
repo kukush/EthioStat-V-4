@@ -62,11 +62,9 @@ class MainActivity : ComponentActivity() {
         if (isScanStarted) return
         isScanStarted = true
         lifecycleScope.launch {
-            Log.d("MainActivity", "Starting initial historical scan (1 days)...")
-            val count = smsRepo.scanTelecomHistory(days = 1)
-            Log.d("MainActivity", "Initial scan complete. Total messages processed: $count")
-            // Always refresh telecom from the latest 251994 SMS (force-reparse)
-            smsRepo.refreshTelecomFromLatestSms()
+            Log.d("MainActivity", "Refreshing telecom from last 2 SMS messages...")
+            val count = smsRepo.refreshTelecomFromLatestSms(limit = 2)
+            Log.d("MainActivity", "Telecom refresh complete. Messages processed: $count")
         }
     }
 }

@@ -141,34 +141,40 @@ class SmsRepository @Inject constructor(
     }
 
     /**
-     * Read the latest SMS from 251994 and process it to update telecom assets.
-     * Called on app start and screen load to ensure correct package data.
+     * Read the last [limit] SMS from 251994 and process them to update telecom assets.
+     * Called on app start, screen load, and after sync timeout to ensure correct package data.
+     * Only the most recent messages are read to avoid stale data from older SMS.
      */
-    suspend fun refreshTelecomFromLatestSms(): Int = withContext(Dispatchers.IO) {
+    suspend fun refreshTelecomFromLatestSms(limit: Int = 2): Int = withContext(Dispatchers.IO) {
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
         val selection = "(address = ? OR address = ? OR address = ? OR address = ?)"
         val selectionArgs = arrayOf("994", "251994", "+251994", "0994")
 
         val cursor = context.contentResolver.query(
-            uri, projection, selection, selectionArgs, "date DESC"
+            uri, projection, selection, selectionArgs, "date DESC LIMIT $limit"
         )
 
         var count = 0
         cursor?.use {
-            if (it.moveToFirst()) {
-                val sender = it.getString(it.getColumnIndex("address")) ?: return@use
-                val body = it.getString(it.getColumnIndex("body")) ?: return@use
-                val timestamp = it.getLong(it.getColumnIndex("date"))
+            val addressIdx = it.getColumnIndex("address")
+            val bodyIdx    = it.getColumnIndex("body")
+            val dateIdx    = it.getColumnIndex("date")
+
+            while (it.moveToNext()) {
+                val sender    = it.getString(addressIdx) ?: continue
+                val body      = it.getString(bodyIdx)    ?: continue
+                val timestamp = it.getLong(dateIdx)
                 try {
                     reconciliationEngine.processSms(sender, body, timestamp, forceReparse = true)
-                    count = 1
-                    Log.d("SmsRepository", "Refreshed telecom from latest 251994 SMS (ts=$timestamp)")
+                    count++
+                    Log.d("SmsRepository", "Refreshed telecom from 251994 SMS #$count (ts=$timestamp)")
                 } catch (e: Exception) {
                     Log.e("SmsRepository", "Failed to refresh telecom: ${e.message}")
                 }
             }
         }
+        Log.d("SmsRepository", "refreshTelecomFromLatestSms: processed $count of max $limit messages")
         count
     }
 

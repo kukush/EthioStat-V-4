@@ -53,17 +53,31 @@ fun TransactionItem(
 ) {
     val isIncome = transaction.type.uppercase() == "INCOME"
 
-    // Colors mapping to React's emerald-50/40 etc
-    val bgColor = if (isIncome) Emerald50.copy(alpha=0.6f) else Rose50.copy(alpha=0.6f)
-    val borderColor = if (isIncome) Emerald100.copy(alpha=0.6f) else Rose100.copy(alpha=0.6f)
+    // Use MaterialTheme colors for theme-aware backgrounds (supports dark/forest/midnight themes)
+    val colorScheme = MaterialTheme.colorScheme
     
-    val selectedBgColor = if (isIncome) Emerald50 else Rose50
-    val selectedBorderColor = if (isIncome) Emerald200 else Rose200
+    // Background colors using surfaceVariant with income/expense tinting
+    val bgColor = if (isIncome) 
+        colorScheme.surfaceVariant.copy(alpha=0.7f) 
+    else 
+        colorScheme.surfaceVariant.copy(alpha=0.7f)
+    
+    val borderColor = if (isIncome)
+        Emerald500.copy(alpha=0.3f)
+    else
+        Rose500.copy(alpha=0.3f)
+    
+    val selectedBgColor = if (isIncome) 
+        Emerald500.copy(alpha=0.15f) 
+    else 
+        Rose500.copy(alpha=0.15f)
+    
+    val selectedBorderColor = if (isIncome) Emerald500.copy(alpha=0.5f) else Rose500.copy(alpha=0.5f)
 
     val currentBgColor = if (isSelected) selectedBgColor else bgColor
     val currentBorderColor = if (isSelected) selectedBorderColor else borderColor
-    val amountColor = if (isIncome) Emerald600 else Rose600
-    val iconBgColor = if (isIncome) Emerald100.copy(alpha=0.6f) else Rose100.copy(alpha=0.6f)
+    val amountColor = if (isIncome) Emerald500 else Rose500
+    val iconBgColor = colorScheme.surfaceVariant.copy(alpha=0.8f)
     
     val sign = if (isIncome) "+" else "-"
 
@@ -79,7 +93,11 @@ fun TransactionItem(
         "UTILITY", "BILLS" -> Pair(Icons.Default.Bolt, Blue500)
         "GROCERY", "SHOPPING", "MARKET" -> Pair(Icons.Default.ShoppingBag, Purple500)
         "DINING", "FOOD", "RESTAURANT" -> Pair(Icons.Default.Restaurant, Orange500)
-        "TELECOM", "RECHARGE", "PHONE" -> Pair(Icons.Default.Smartphone, Green500)
+        "TELECOM", "RECHARGE", "PHONE", "AIRTIME" -> Pair(Icons.Default.Smartphone, Green500)
+        "INTERNET" -> Pair(Icons.Default.Wifi, Blue500)
+        "VOICE" -> Pair(Icons.Default.Phone, Green500)
+        "SMS" -> Pair(Icons.Default.Message, Purple500)
+        "PURCHASE" -> Pair(Icons.Default.ShoppingCart, Orange500)
         else -> if (isIncome) Pair(Icons.Default.TrendingUp, Emerald500) else Pair(Icons.Default.TrendingDown, Rose500)
     }
 
@@ -118,15 +136,33 @@ fun TransactionItem(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Column {
-                    
+                        // Show package name for telecom purchases, party name for transfers, or date
+                        val displayText = when {
+                            transaction.partyName != null && transaction.category.uppercase() in listOf("INTERNET", "VOICE", "SMS", "TELECOM") ->
+                                transaction.partyName
+                            transaction.partyName != null -> "To: ${transaction.partyName}"
+                            else -> formattedDate
+                        }
                         Text(
-                            text = transaction.partyName?.let { "To: $it" } ?: formattedDate,
+                            text = displayText,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Slate400,
+                            color = colorScheme.onSurfaceVariant,
                             letterSpacing = 1.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 2.dp)
                         )
+                        // Show category badge for purchases
+                        if (transaction.category.uppercase() in listOf("INTERNET", "VOICE", "SMS", "TELECOM", "PURCHASE", "AIRTIME")) {
+                            Text(
+                                text = translateCategory(language, transaction.category),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
                 }
 
@@ -145,7 +181,7 @@ fun TransactionItem(
                             text = translateType(language, transaction.type),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Slate400,
+                            color = colorScheme.onSurfaceVariant,
                             letterSpacing = 2.sp,
                             modifier = Modifier.padding(top = 4.dp)
                         )

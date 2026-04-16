@@ -178,10 +178,11 @@ fun PackageCard(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        text = Translations.t(language, "left").uppercase().takeIf { it.isNotEmpty() } ?: "LEFT",
-                        color = theme.text.copy(alpha=0.6f),
-                        fontSize = 8.sp,
+                        text = "${total.toInt()} ${unit}",
+                        color = theme.text.copy(alpha=0.8f),
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }

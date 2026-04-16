@@ -209,15 +209,9 @@ class ReconciliationEngine @Inject constructor(
             }
 
             SmsScenario.BALANCE_UPDATE, SmsScenario.BALANCE_QUERY -> {
-                // Clear stale telecom packages before inserting fresh data
-                val hasTelecom = parsedResult.packages.any { it.type in setOf("voice", "internet", "sms", "bonus") }
-                if (hasTelecom) {
-                    balancePackageDao.deleteTelecomPackages()
-                    Log.d("ReconciliationEngine", "Cleared old telecom packages before update")
-                }
                 parsedResult.packages.forEach { 
                     balancePackageDao.insertOrUpdate(it) 
-                    Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type} - ${it.remainingAmount} ${it.unit}")
+                    Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type}/${it.subType} - ${it.remainingAmount} ${it.unit}")
                 }
             }
 

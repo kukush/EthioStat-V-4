@@ -66,15 +66,15 @@ class TelecomViewModel @Inject constructor(
         viewModelScope.launch {
             _isSyncing.value = true
             _syncError.value = null
+            _syncWarning.value = null
 
             val done = CompletableDeferred<Unit>()
 
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(ctx: Context, intent: Intent) {
-                    // Phase 1 complete (airtime captured), now scan for SMS packages
+                    // USSD response captured — refresh telecom from latest 2 SMS
                     viewModelScope.launch {
-                        smsRepo.scanTelecomHistory(days = 1)
-                        smsRepo.refreshTelecomFromLatestSms()
+                        smsRepo.refreshTelecomFromLatestSms(limit = 2)
                         _isSyncing.value = false
                         done.complete(Unit)
                     }
@@ -94,10 +94,14 @@ class TelecomViewModel @Inject constructor(
 
                 // Wait up to 120s for user to dial, read popup, and close it
                 withTimeoutOrNull(120_000) { done.await() } ?: run {
-                    _syncError.value = "Timeout — please try again"
+                    // Timeout — still refresh from latest 2 SMS so data is up-to-date
+                    smsRepo.refreshTelecomFromLatestSms(limit = 2)
+                    _syncWarning.value = "Sync timed out — showing latest available data"
                     _isSyncing.value = false
                 }
             } catch (e: Exception) {
+                // On error, still try to refresh from latest SMS
+                smsRepo.refreshTelecomFromLatestSms(limit = 2)
                 _syncError.value = e.message ?: "Sync failed"
                 _isSyncing.value = false
             } finally {

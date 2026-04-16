@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -93,7 +94,7 @@ fun HomeScreen(
                 text = Translations.t(language, "dashboard").takeIf { it.isNotEmpty() } ?: "Dashboard",
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Black,
-                color = Slate900,
+                color = MaterialTheme.colorScheme.onBackground,
                 letterSpacing = (-1).sp
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -101,7 +102,7 @@ fun HomeScreen(
                 text = "${Translations.t(language, "welcome").takeIf { it.isNotEmpty() } ?: "WELCOME"}, ${userName.ifEmpty { "USER" }}".uppercase(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = Slate400,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 2.sp
             )
             if (userPhone.isNotEmpty() && userPhone != "Unknown") {
@@ -118,7 +119,7 @@ fun HomeScreen(
                     text = "PRIMARY SIM ACTIVE",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Slate300,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.6f),
                     letterSpacing = 2.sp,
                     modifier = Modifier.padding(top = 2.dp)
                 )
@@ -151,7 +152,7 @@ fun HomeScreen(
         // Source Summaries
         if (uniqueSources.isNotEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                Text("SOURCE SUMMARIES", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp)
+                Text("SOURCE SUMMARIES", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp)
             }
             Spacer(modifier = Modifier.height(16.dp))
             uniqueSources.forEach { src ->
@@ -162,31 +163,31 @@ fun HomeScreen(
 
                 Surface(
                     shape = RoundedCornerShape(32.dp),
-                    color = Color.White,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier.padding(bottom = 12.dp)
                 ) {
                     Row(modifier = Modifier.padding(20.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Slate50), contentAlignment = Alignment.Center) {
-                            Text(src.take(2).uppercase(), fontSize = 16.sp, fontWeight = FontWeight.Black, color = Slate900)
+                        Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                            Text(src.take(2).uppercase(), fontSize = 16.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
                         }
                         Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(src, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
+                            Text(src, fontSize = 14.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
                             Text(
                                 if (srcTxs.isNotEmpty()) "${srcTxs.size} Transactions" else "Balance only",
-                                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp)
+                                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp)
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             if (srcTxs.isNotEmpty()) {
                                 Text(fmt.format(srcNet), fontSize = 14.sp, fontWeight = FontWeight.Black, color = if(srcNet >= 0) Emerald600 else Rose600)
-                                Text("NET FLOW", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                                Text("NET FLOW", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
                             }
                             val bal = bankBalances[src]
                             if (bal != null) {
                                 Text(fmt.format(bal), fontSize = 14.sp, fontWeight = FontWeight.Black, color = Blue600)
-                                Text("BALANCE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                                Text("BALANCE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
                             }
                         }
                     }
@@ -203,11 +204,11 @@ fun HomeScreen(
         ) {
             Text(
                 Translations.t(language, "recentActivity").takeIf { it.isNotEmpty() }?.uppercase() ?: "RECENT ACTIVITY",
-                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
+                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp
             )
             Text(
                 Translations.t(language, "viewAll").takeIf { it.isNotEmpty() }?.uppercase() ?: "VIEW ALL",
-                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Blue600, letterSpacing = 2.sp,
+                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 2.sp,
                 modifier = Modifier.clickable { onViewAllTransactions() }
             )
         }
@@ -217,15 +218,15 @@ fun HomeScreen(
         if (recentTransactions.isEmpty()) {
             Surface(
                 shape = RoundedCornerShape(32.dp),
-                color = Slate50,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "No recent transactions",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Slate400,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 32.dp),
                     textAlign = TextAlign.Center
                 )

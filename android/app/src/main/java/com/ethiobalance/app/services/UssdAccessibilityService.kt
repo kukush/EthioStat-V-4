@@ -8,8 +8,11 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.MainActivity
 import com.ethiobalance.app.data.AppDatabase
+import com.ethiobalance.app.data.BalancePackageDao
+import com.ethiobalance.app.data.BalancePackageEntity
 import com.ethiobalance.app.data.UssdDao
 import com.ethiobalance.app.data.UssdEntity
+import com.ethiobalance.app.repository.SmsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import javax.inject.Inject
@@ -22,6 +25,12 @@ class UssdAccessibilityService : AccessibilityService() {
     
     @Inject
     lateinit var ussdDao: UssdDao
+
+    @Inject
+    lateinit var balancePackageDao: BalancePackageDao
+
+    @Inject
+    lateinit var smsRepository: SmsRepository
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -60,7 +69,7 @@ class UssdAccessibilityService : AccessibilityService() {
         if (looksLikeUssdResponse(eventText)) {
             Log.d(TAG, "Captured USSD via event.text: $eventText")
             onUssdCaptured(eventText)
-            pendingReturnToApp = true
+            autoDismissAndReturn(rootInActiveWindow ?: event.source)
             return
         }
 
@@ -73,8 +82,29 @@ class UssdAccessibilityService : AccessibilityService() {
             if (looksLikeUssdResponse(harvested)) {
                 Log.d(TAG, "Captured USSD via node tree: $harvested")
                 onUssdCaptured(harvested)
-                pendingReturnToApp = true
+                autoDismissAndReturn(root)
                 return
+            }
+        }
+    }
+
+    /**
+     * After capturing USSD text: wait for user to dismiss popup, then return to app.
+     * Does NOT auto-click OK/Cancel — user must manually dismiss the dialog.
+     * Returns to app when dialer comes to foreground (popup dismissed) or after timeout.
+     */
+    private fun autoDismissAndReturn(root: AccessibilityNodeInfo?) {
+        pendingReturnToApp = true
+        // Note: We do NOT call attemptDismiss() here — user must manually click OK/Cancel
+        Log.d(TAG, "Waiting for user to dismiss USSD popup...")
+
+        // Fallback: return to app after 30s if user never dismisses (safety net)
+        serviceScope.launch {
+            delay(30_000)
+            if (pendingReturnToApp) {
+                pendingReturnToApp = false
+                Log.d(TAG, "Fallback timeout (30s): returning to app")
+                withContext(Dispatchers.Main) { returnToApp() }
             }
         }
     }
@@ -123,24 +153,63 @@ class UssdAccessibilityService : AccessibilityService() {
         }
     }
 
+    /** Regex patterns to extract airtime ETB balance from USSD popup text.
+     *  MUST match "Balance: X" format specifically — avoid promotional text like "win 20,000 Birr"
+     */
+    private val airtimeBalancePatterns = listOf(
+        // Primary: "Balance: 123.45" or "Balance: 0" — must have Balance prefix
+        Regex("""Balance[:\s]+(\d[\d,]*\.?\d*)""", RegexOption.IGNORE_CASE),
+        // Secondary: "ቀሪ ሒሳብ: 123" (Amharic)
+        Regex("""ቀሪ\s*ሒሳብ[:\s]+(\d[\d,]*\.?\d*)""", RegexOption.IGNORE_CASE),
+        // Fallback: line starting with balance info (avoiding promo text)
+        Regex("""^[\s]*(?:balance|ብር)[:\s]+(?:ETB\s*)?(\d[\d,]*\.?\d*)""", RegexOption.IGNORE_CASE)
+    )
+
     private fun onUssdCaptured(response: String) {
         serviceScope.launch {
             try {
-                // Persist raw USSD response using injected DAO
+                val now = System.currentTimeMillis()
+
+                // Persist raw USSD response
                 ussdDao.insert(
                     UssdEntity(
                         request = AppConstants.USSD_REQUEST_LABEL,
                         response = response,
-                        timestamp = System.currentTimeMillis(),
+                        timestamp = now,
                         simSlot = AppConstants.DEFAULT_SIM_SLOT
                     )
                 )
 
-                // Run through the dual-tracking reconciliation pipeline via injected engine
-                // forceReparse = true ensures balance always updates even if same text captured before
-                reconciliationEngine.processSms("804", response, System.currentTimeMillis(), forceReparse = true)
+                // Extract AIRTIME balance only — skip full package parsing
+                var airtimeBalance: Double? = null
+                for (pattern in airtimeBalancePatterns) {
+                    val match = pattern.find(response)
+                    if (match != null) {
+                        airtimeBalance = match.groupValues[1].replace(",", "").toDoubleOrNull()
+                        if (airtimeBalance != null && airtimeBalance > 0) break
+                    }
+                }
 
-                // Broadcast to UI for real-time display
+                if (airtimeBalance != null && airtimeBalance > 0) {
+                    balancePackageDao.insertOrUpdate(
+                        BalancePackageEntity(
+                            id = "airtime", simId = "", type = "airtime",
+                            subType = "", totalAmount = airtimeBalance,
+                            remainingAmount = airtimeBalance, unit = "ETB",
+                            expiryDate = now + (30 * 24 * 60 * 60 * 1000L),
+                            isActive = true, source = "USSD", lastUpdated = now
+                        )
+                    )
+                    Log.d(TAG, "Saved airtime balance: $airtimeBalance ETB")
+                } else {
+                    Log.w(TAG, "Could not extract airtime balance from USSD response")
+                }
+
+                // Refresh telecom packages from the last 2 SMS from 994
+                val refreshed = smsRepository.refreshTelecomFromLatestSms(limit = 2)
+                Log.d(TAG, "Refreshed $refreshed telecom packages from latest SMS")
+
+                // Broadcast to UI so TelecomViewModel knows sync is done
                 val intent = Intent(AppConstants.ACTION_USSD_RESPONSE).apply {
                     putExtra("ussd_text", response)
                     setPackage(packageName)
