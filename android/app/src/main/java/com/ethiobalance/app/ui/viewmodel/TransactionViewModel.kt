@@ -68,7 +68,7 @@ class TransactionViewModel @Inject constructor(
 
     val uniqueSources: StateFlow<List<Pair<String, String>>> = settingsRepo.getTransactionSources()
         .map { sources ->
-            sources.map { it.abbreviation to AppConstants.resolveSource(it.senderId) }
+            sources.map { it.abbreviation to it.abbreviation }
                 .filter { it.second != AppConstants.SOURCE_AIRTIME }
                 .distinctBy { it.second }
                 .sortedBy { it.second }

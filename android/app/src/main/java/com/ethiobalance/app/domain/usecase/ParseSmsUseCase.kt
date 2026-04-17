@@ -460,7 +460,8 @@ class ParseSmsUseCase @Inject constructor() {
             transactionCategory = transactionCategory,
             transactionSubType = transactionSubType,
             reference = reference,
-            partyName = partyName
+            partyName = partyName,
+            isMultiSegmentBalance = isMultiSegment
         )
     }
 

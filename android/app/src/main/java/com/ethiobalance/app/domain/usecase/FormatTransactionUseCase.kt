@@ -15,11 +15,11 @@ class FormatTransactionUseCase @Inject constructor() {
         configuredSources: List<TransactionSourceEntity>
     ): List<TransactionEntity> {
         val enabledResolved = configuredSources.map {
-            AppConstants.resolveSource(it.senderId).lowercase()
+            it.abbreviation.lowercase()
         }.toSet()
         
         var filtered = transactions.filter {
-            val resolved = AppConstants.resolveSource(it.source).lowercase()
+            val resolved = it.source.lowercase()
             resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledResolved.contains(resolved)
         }
 
@@ -33,7 +33,7 @@ class FormatTransactionUseCase @Inject constructor() {
 
         if (sourceFilter != null) {
             filtered = filtered.filter {
-                AppConstants.resolveSource(it.source).equals(sourceFilter, ignoreCase = true)
+                it.source.equals(sourceFilter, ignoreCase = true)
             }
         }
 

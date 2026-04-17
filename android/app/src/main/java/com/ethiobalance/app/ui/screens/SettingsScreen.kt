@@ -500,7 +500,7 @@ private fun EditProfileSheet(
 
 private val bankList = listOf(
     Triple("CBE", "Commercial Bank of Ethiopia", "847"),
-    Triple("TELEBIRR", "Telebirr", "127"),
+    Triple("TeleBirr", "Telebirr", "127"),
     Triple("AWASH", "Awash Bank", "901"),
     Triple("DASHEN", "Dashen Bank", "721"),
     Triple("BOA", "Bank of Abyssinia", "815"),

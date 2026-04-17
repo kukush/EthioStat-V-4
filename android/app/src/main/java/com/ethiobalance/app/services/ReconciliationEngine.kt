@@ -5,6 +5,7 @@ import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.*
 import com.ethiobalance.app.domain.model.SmsScenario
 import com.ethiobalance.app.domain.usecase.ParseSmsUseCase
+import kotlinx.coroutines.flow.first
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,6 +15,7 @@ class ReconciliationEngine @Inject constructor(
     private val smsLogDao: SmsLogDao,
     private val transactionDao: TransactionDao,
     private val balancePackageDao: BalancePackageDao,
+    private val transactionSourceDao: TransactionSourceDao,
     private val parseSmsUseCase: ParseSmsUseCase
 ) {
 
@@ -75,7 +77,11 @@ class ReconciliationEngine @Inject constructor(
 
         // Time-window dedup: reject if same (source, type, amount) exists within 60s
         if (!forceReparse) {
-            val resolvedSrcForDedup = AppConstants.resolveSource(normalizedSender)
+            val allSources = transactionSourceDao.getAllSources().first()
+            val configuredSource = allSources.find { src ->
+                src.senderId.split(",").map { it.trim() }.any { it.equals(normalizedSender, ignoreCase = true) }
+            }
+            val resolvedSrcForDedup = configuredSource?.abbreviation ?: AppConstants.resolveSource(normalizedSender)
             val txType = if ((parsedResult.addedAmount ?: 0.0) > 0) "INCOME" else "EXPENSE"
             val txAmount = parsedResult.addedAmount ?: parsedResult.deductedAmount ?: 0.0
             if (txAmount > 0 && transactionDao.existsNearDuplicate(resolvedSrcForDedup, txType, txAmount, timestamp, 60_000L)) {
@@ -109,7 +115,12 @@ class ReconciliationEngine @Inject constructor(
         }
 
         // 3. Save Transaction
-        val resolvedSrc = AppConstants.resolveSource(normalizedSender)
+        // Try to resolve the source to a user-configured abbreviation first
+        val allSources = transactionSourceDao.getAllSources().first()
+        val configuredSource = allSources.find { src ->
+            src.senderId.split(",").map { it.trim() }.any { it.equals(normalizedSender, ignoreCase = true) }
+        }
+        val resolvedSrc = configuredSource?.abbreviation ?: AppConstants.resolveSource(normalizedSender)
         Log.d("ReconciliationEngine", "Resolved source: $resolvedSrc for $normalizedSender")
 
         when (parsedResult.scenario) {
@@ -209,8 +220,14 @@ class ReconciliationEngine @Inject constructor(
             }
 
             SmsScenario.BALANCE_UPDATE, SmsScenario.BALANCE_QUERY -> {
-                parsedResult.packages.forEach { 
-                    balancePackageDao.insertOrUpdate(it) 
+                // Multi-segment 994 balance SMS → purge stale SMS-sourced telecom rows first.
+                // Single-segment package SMS (e.g. "received Night Internet 600MB") is additive: no purge.
+                if (parsedResult.isMultiSegmentBalance) {
+                    balancePackageDao.deleteTelecomPackages()
+                    Log.d("ReconciliationEngine", "🧹 PURGED stale telecom packages (multi-segment balance SMS)")
+                }
+                parsedResult.packages.forEach {
+                    balancePackageDao.insertOrUpdate(it)
                     Log.d("ReconciliationEngine", "✅ SAVED: Balance package ${it.type}/${it.subType} - ${it.remainingAmount} ${it.unit}")
                 }
             }

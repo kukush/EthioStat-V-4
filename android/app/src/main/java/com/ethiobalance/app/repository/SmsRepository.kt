@@ -117,7 +117,7 @@ class SmsRepository @Inject constructor(
         // Merge user-configured senders with the hardcoded whitelist
         // Exclude 994/251994 — telecom packages are handled by refreshTelecomFromLatestSms()
         val telecomExclude = setOf("994", "251994", "+251994", "0994")
-        val configuredSenders = transactionSourceDao.getEnabledSenderIds().toSet()
+        val configuredSenders = transactionSourceDao.getEnabledSenderIdsFlattened().toSet()
         val allSenders = (configuredSenders + AppConstants.SMS_SENDER_WHITELIST).distinct()
             .filter { it !in telecomExclude }
 
@@ -141,41 +141,75 @@ class SmsRepository @Inject constructor(
     }
 
     /**
-     * Read the last [limit] SMS from 251994 and process them to update telecom assets.
-     * Called on app start, screen load, and after sync timeout to ensure correct package data.
-     * Only the most recent messages are read to avoid stale data from older SMS.
+     * Kept for backwards compatibility — delegates to [refreshTelecomSmart].
      */
-    suspend fun refreshTelecomFromLatestSms(limit: Int = 2): Int = withContext(Dispatchers.IO) {
+    suspend fun refreshTelecomFromLatestSms(limit: Int = 2): Int =
+        refreshTelecomSmart(scanDepth = limit.coerceAtLeast(2))
+
+    companion object {
+        /** True if [body] is the multi-segment 994 balance format (has ";" + "from " + "expiry date on"). */
+        fun isMultiSegmentBalance(body: String): Boolean =
+            Regex(";\\s+from ", RegexOption.IGNORE_CASE).containsMatchIn(body) &&
+                body.contains("expiry date on", ignoreCase = true)
+
+        data class SmsRow(val sender: String, val body: String, val ts: Long)
+
+        /**
+         * Pure decision logic for [refreshTelecomSmart]. Given a DESC-ordered list of 994 SMS rows,
+         * returns the subset to process in order:
+         *  - latest multi-segment       → [latest]
+         *  - latest single + prior multi → [priorMulti, latest]
+         *  - latest single + no prior    → [latest]
+         *  - empty                       → []
+         */
+        fun pickRefreshTargets(rowsNewestFirst: List<SmsRow>): List<SmsRow> {
+            if (rowsNewestFirst.isEmpty()) return emptyList()
+            val latest = rowsNewestFirst.first()
+            if (isMultiSegmentBalance(latest.body)) return listOf(latest)
+            val priorMulti = rowsNewestFirst.drop(1).firstOrNull { isMultiSegmentBalance(it.body) }
+            return if (priorMulti != null) listOf(priorMulti, latest) else listOf(latest)
+        }
+    }
+
+    /**
+     * Smart telecom refresh:
+     *   - Latest 994 SMS is multi-segment       → process it (purge + insert).
+     *   - Latest is single-segment (e.g. "received Night Internet 600MB")
+     *       → find the most recent prior multi-segment SMS within [scanDepth] entries;
+     *         process the multi-segment first (purge + insert), then the latest single
+     *         (additive merge).
+     *   - No 994 SMS at all                     → no-op.
+     */
+    suspend fun refreshTelecomSmart(scanDepth: Int = 5): Int = withContext(Dispatchers.IO) {
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
         val selection = "(address = ? OR address = ? OR address = ? OR address = ?)"
         val selectionArgs = arrayOf("994", "251994", "+251994", "0994")
 
-        val cursor = context.contentResolver.query(
-            uri, projection, selection, selectionArgs, "date DESC LIMIT $limit"
-        )
-
-        var count = 0
-        cursor?.use {
-            val addressIdx = it.getColumnIndex("address")
-            val bodyIdx    = it.getColumnIndex("body")
-            val dateIdx    = it.getColumnIndex("date")
-
-            while (it.moveToNext()) {
-                val sender    = it.getString(addressIdx) ?: continue
-                val body      = it.getString(bodyIdx)    ?: continue
-                val timestamp = it.getLong(dateIdx)
-                try {
-                    reconciliationEngine.processSms(sender, body, timestamp, forceReparse = true)
-                    count++
-                    Log.d("SmsRepository", "Refreshed telecom from 251994 SMS #$count (ts=$timestamp)")
-                } catch (e: Exception) {
-                    Log.e("SmsRepository", "Failed to refresh telecom: ${e.message}")
-                }
+        val rows = mutableListOf<SmsRow>()
+        context.contentResolver.query(
+            uri, projection, selection, selectionArgs, "date DESC LIMIT $scanDepth"
+        )?.use { c ->
+            val ai = c.getColumnIndex("address")
+            val bi = c.getColumnIndex("body")
+            val di = c.getColumnIndex("date")
+            while (c.moveToNext()) {
+                val a = c.getString(ai) ?: continue
+                val b = c.getString(bi) ?: continue
+                rows += SmsRow(a, b, c.getLong(di))
             }
         }
-        Log.d("SmsRepository", "refreshTelecomFromLatestSms: processed $count of max $limit messages")
-        count
+
+        val targets = pickRefreshTargets(rows)
+        if (targets.isEmpty()) {
+            Log.d("SmsRepository", "refreshTelecomSmart: no 994 SMS to process")
+            return@withContext 0
+        }
+        targets.forEach { r ->
+            reconciliationEngine.processSms(r.sender, r.body, r.ts, forceReparse = true)
+            Log.d("SmsRepository", "refreshTelecomSmart: processed SMS ts=${r.ts} multi=${isMultiSegmentBalance(r.body)}")
+        }
+        targets.size
     }
 
     /**

@@ -54,11 +54,11 @@ fun HomeScreen(
     // Group transactions by resolved source name to normalize ("127" and "Telebirr" become "TeleBirr")
     // and filter out "AIRTIME" transactions from financial summaries.
     val financialTransactions = transactions.filter { 
-        com.ethiobalance.app.AppConstants.resolveSource(it.source) != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME 
+        it.source != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME 
     }
     
     val groupedTransactions = financialTransactions.groupBy { 
-        com.ethiobalance.app.AppConstants.resolveSource(it.source) 
+        it.source 
     }
     
     // Include sources that have transactions OR bank balances

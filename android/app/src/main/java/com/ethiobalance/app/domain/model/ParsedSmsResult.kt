@@ -13,5 +13,6 @@ data class ParsedSmsResult(
     val transactionCategory: String? = null,
     val reference: String? = null,
     val partyName: String? = null,
-    val transactionSubType: String? = null
+    val transactionSubType: String? = null,
+    val isMultiSegmentBalance: Boolean = false
 )

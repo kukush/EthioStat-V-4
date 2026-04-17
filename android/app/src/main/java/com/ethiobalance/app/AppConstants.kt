@@ -41,6 +41,7 @@ object AppConstants {
         "810",           // *810# (shared with ACSI)
         "830",           // CRBT — Caller Ring Back Tone subscription / management
         "806",           // Airtime / Credit Transfer between subscribers
+        "805",           // Airtime Recharge
       
         // NOTE: *999# (Voice/Data/SMS package menu) is a USSD *dial* code,
         // not an SMS sender — it is handled by UssdAccessibilityService.
@@ -49,108 +50,112 @@ object AppConstants {
         "127",
         "TELEBIRR",
 
-        // ── Commercial Bank of Ethiopia (CBE) — *847# ────────────────────────
-        "847",
-        "CBEBirr",
-        "CBEBIRR",
-        "CBE",
+        // ── Commercial Bank of Ethiopia (CBE) — *889#, *847# ───────────────────
+        "889", "847",
+        "CBE", "CBEBirr", "CBEBIRR",
 
         // ── Awash Bank — *901# ────────────────────────────────────────────────
         "901",
-        "AwashBank",
-        "Awash Bank",
+        "AwashBank", "Awash Bank",
 
-        // ── Bank of Abyssinia (BoA) — *815# ──────────────────────────────────
-        "815",
-        "AbyssiniaBank",
-        "BOA",
+        // ── Bank of Abyssinia (BoA) — *815#, *999# ────────────────────────────
+        "815", "999",
+        "BOA", "Abyssinia", "AbyssiniaBank",
 
-        // ── Dashen Bank — *721# ───────────────────────────────────────────────
-        "721",
-        "DashenBank",
+        // ── Dashen Bank — *996#, *675# ─────────────────────────────────────────
+        "996", "675",
+        "DashenBank", "Dashen Bank",
 
-        // ── Cooperative Bank of Oromia (Coopbank) — *896# ────────────────────
-        "896",
-        "Coopbank",
+        // ── Cooperative Bank of Oromia (Coopbank) — *841#, *896# ─────────────
+        "841", "896",
+        "Coopbank", "Cooperative Bank of Oromia",
 
-        // ── Hibret Bank — *844# ───────────────────────────────────────────────
+        // ── Oromia Bank — *840# ───────────────────────────────────────────────
+        "840",
+        "OromiaBank", "Oromia Bank",
+
+        // ── Hibret Bank — *811# ────────────────────────────────────────────────
+        "811",
+        "HibretBank", "Hibret Bank",
+
+        // ── Wegagen Bank — *866# ───────────────────────────────────────────────
+        "866",
+        "WegagenBank", "Wegagen Bank",
+
+        // ── Global Bank Ethiopia — *8027#, *9335# ─────────────────────────────
+        "8027", "9335",
+        "GBE", "GlobalBank", "Global Bank Ethiopia",
+
+        // ── Amhara Bank — *690# ────────────────────────────────────────────────
+        "690",
+        "AmharaBank", "Amhara Bank",
+
+        // ── Bunna Bank — *820# ────────────────────────────────────────────────
+        "820",
+        "BunnaBank", "Bunna Bank",
+
+        // ── Zemen Bank — *844# ────────────────────────────────────────────────
         "844",
-        "HibretBank",
+        "ZemenBank", "Zemen Bank",
 
-        // ── Wegagen Bank — *889# ──────────────────────────────────────────────
-        "889",
-        "WegagenBank",
+        // ── NIB International Bank — *865# ───────────────────────────────────
+        "865",
+        "NIBBank", "NibBank", "Nib Bank",
 
         // ── Abay Bank — *812# ─────────────────────────────────────────────────
         "812",
-        "AbayBank",
+        "AbayBank", "Abay Bank",
 
-        // ── Nib International Bank (NIB) — *865# ─────────────────────────────
-        "865",
-        "NIBBank",
+        // ── Berhan Bank — *881# ──────────────────────────────────────────────
+        "881",
+        "BerhanBank", "Berhan Bank",
 
-        // ── Bunna Bank — *252# ────────────────────────────────────────────────
-        "252",
-        "BunnaBank",
+        // ── Enat Bank — *845# ────────────────────────────────────────────────
+        "845",
+        "EnatBank", "Enat Bank",
 
-        // ── Zemen Bank — *710# ────────────────────────────────────────────────
-        "710",
-        "ZemenBank",
+        // ── Siinqee Bank — *871# ───────────────────────────────────────────────
+        "871",
+        "SiinqeeBank", "Siinqee Bank",
 
-        // ── Berhan Bank — *811# ───────────────────────────────────────────────
-        "811",
-        "BerhanBank",
+        // ── Tsedey Bank — *616# ───────────────────────────────────────────────
+        "616",
+        "TsedeyBank", "Tsedey Bank",
 
-        // ── Enat Bank — *846# ─────────────────────────────────────────────────
-        "846",
-        "EnatBank",
+        // ── Ahadu Bank — *611# ────────────────────────────────────────────────
+        "611",
+        "AhaduBank", "Ahadu Bank",
+
+        // ── Gadaa Bank — *877# ────────────────────────────────────────────────
+        "877",
+        "GadaaBank", "Gadaa Bank",
+
+        // ── Hijra Bank — *827# ────────────────────────────────────────────────
+        "827",
+        "HijraBank", "Hijra Bank",
+
+        // ── ZamZam Bank — *600# ───────────────────────────────────────────────
+        "600",
+        "ZamZamBank", "ZamZam Bank",
+
+        // ── Shabelle Bank — *866# ─────────────────────────────────────────────
+        "866",
+        "ShabelleBank", "Shabelle Bank",
 
         // ── Tsehay Bank — *921# ───────────────────────────────────────────────
         "921",
-        "TsehayBank",
-
-        // ── Siinqee Bank — *767# ──────────────────────────────────────────────
-        "767",
-        "SiinqeeBank",
-
-        // ── Amhara Bank — *946# ───────────────────────────────────────────────
-        "946",
-        "AmharaBank",
-
-        // ── Lion International Bank — *801# ───────────────────────────────────
-        "801",
-        "LionBank",
-
-        // ── Oromia Bank — *804# (alpha-sender used to distinguish from EthioTelecom 804)
-        "OromiaBank",
-
-        // ── Global Bank Ethiopia — *842# ──────────────────────────────────────
-        "842",
-        "GlobalBank",
-
-        // ── Gadaa Bank — *898# ────────────────────────────────────────────────
-        "898",
-        "GadaaBank",
-
-        // ── Hijra Bank — *881# ────────────────────────────────────────────────
-        "881",
-        "HijraBank",
+        "TsehayBank", "Tsehay Bank",
 
         // ── Zad Bank — *899# ──────────────────────────────────────────────────
         "899",
-        "ZadBank",
+        "ZadBank", "Zad Bank",
 
-        // ── Ahadu Bank — *895# ────────────────────────────────────────────────
-        "895",
-        "AhaduBank",
+        // ── Lion International Bank — *801# ────────────────────────────────────
+        "801",
+        "LionBank", "Lion International Bank",
 
-        // ── Shabelle Bank — *808# ─────────────────────────────────────────────
-        "808",
-        "ShabelleBank",
-
-        // ── Amhara Credit and Saving (ACSI) — *810# ──────────────────────────
-        "ACSI",
-        "ACSIBank"
+        // ── Amhara Credit and Saving (ACSI) — *690# ────────────────────────────
+        "ACSI", "ACSIBank"
     )
 
     // Source labels used in TransactionEntity.source
@@ -171,43 +176,88 @@ object AppConstants {
         // Telebirr (Normalize all variants to "TeleBirr")
         if (upper.contains("TELEBIRR") || TELEBIRR_SENDERS.contains(sender)) return SOURCE_TELEBIRR
         
-        // Commercial Bank of Ethiopia (CBE)
-        if (upper.contains("CBE") || sender == "847" || upper.contains("CBEBIRR")) return "CBE"
+        // Commercial Bank of Ethiopia (CBE) — 889, 847
+        if (sender in setOf("889", "847") || upper.contains("CBE") || upper.contains("CBEBIRR")) return "CBE"
         
-        // Awash Bank
-        if (upper.contains("AWASH") || sender == "901") return "AWASH"
+        // Awash Bank — 901
+        if (sender == "901" || upper.contains("AWASH")) return "AWASH"
         
-        // Dashen Bank
-        if (upper.contains("DASHEN") || sender == "721") return "DASHEN"
+        // Bank of Abyssinia (BoA) — 815, 999
+        if (sender in setOf("815", "999") || upper.contains("BOA") || upper.contains("ABYSSINIA")) return "BOA"
         
-        // Coopbank
-        if (upper.contains("COOP") || sender == "896") return "COOPBANK"
+        // Dashen Bank — 996, 675
+        if (sender in setOf("996", "675") || upper.contains("DASHEN")) return "DASHEN"
         
-        // Bank of Abyssinia (BoA)
-        if (upper.contains("BOA") || upper.contains("ABYSSINIA") || sender == "815") return "BOA"
+        // Cooperative Bank of Oromia (Coopbank) — 841, 896
+        if (sender in setOf("841", "896") || upper.contains("COOP")) return "COOPBANK"
         
-        // Hibret Bank
-        if (upper.contains("HIBRET") || sender == "844") return "HIBRET"
+        // Oromia Bank — 840 
+        if (sender == "840" || upper.contains("OROMIA")) return "OROMIA"
         
-        // Wegagen Bank
-        if (upper.contains("WEGAGEN") || sender == "889") return "WEGAGEN"
+        // Hibret Bank — 811 
+        if (sender == "811" || upper.contains("HIBRET")) return "HIBRET"
         
-        // Abay Bank
-        if (upper.contains("ABAY") || sender == "812") return "ABAY"
+        // Wegagen Bank — 866
+        if (sender == "866" || upper.contains("WEGAGEN")) return "WEGAGEN"
         
-        // NIB International Bank
-        if (upper.contains("NIB") || sender == "865") return "NIB"
+        // Global Bank Ethiopia — 8027, 9335 
+        if (sender in setOf("8027", "9335") || upper.contains("GLOBAL") || upper.contains("GBE")) return "GLOBAL"
         
-        // Bunna Bank
-        if (upper.contains("BUNNA") || sender == "252") return "BUNNA"
+        // Amhara Bank — 690 
+        if (sender == "690" || upper.contains("AMHARA")) return "AMHARA"
         
-        // Zemen Bank
-        if (upper.contains("ZEMEN") || sender == "710") return "ZEMEN"
+        // Bunna Bank — 820
+        if (sender == "820" || upper.contains("BUNNA")) return "BUNNA"
         
-        // Berhan Bank
-        if (upper.contains("BERHAN") || sender == "811") return "BERHAN"
+        // Zemen Bank — 844 
+        if (sender == "844" || upper.contains("ZEMEN")) return "ZEMEN"
         
-        // EthioTelecom (Airtime / Telecom Assets)
+        // NIB International Bank — 865
+        if (sender == "865" || upper.contains("NIB")) return "NIB"
+        
+        // Abay Bank — 812
+        if (sender == "812" || upper.contains("ABAY")) return "ABAY"
+        
+        // Berhan Bank — 881
+        if (sender == "881" || upper.contains("BERHAN")) return "BERHAN"
+        
+        // Enat Bank — 845 
+        if (sender == "845" || upper.contains("ENAT")) return "ENAT"
+        
+        // Siinqee Bank — 871
+        if (sender == "871" || upper.contains("SIINQEE")) return "SIINQEE"
+        
+        // Tsedey Bank — 616 (new)
+        if (sender == "616" || upper.contains("TSEDEY")) return "TSEDEY"
+        
+        // Ahadu Bank — 611 
+        if (sender == "611" || upper.contains("AHADU")) return "AHADU"
+        
+        // Gadaa Bank — 877 
+        if (sender == "877" || upper.contains("GADAA")) return "GADAA"
+        
+        // Hijra Bank — 827
+        if (sender == "827" || upper.contains("HIJRA")) return "HIJRA"
+        
+        // ZamZam Bank — 600 (new)
+        if (sender == "600" || upper.contains("ZAMZAM")) return "ZAMZAM"
+        
+        // Shabelle Bank — 866 (alpha disambiguation)
+        if (upper.contains("SHABELLE")) return "SHABELLE"
+        
+        // Tsehay Bank — 921
+        if (sender == "921" || upper.contains("TSEHAY")) return "TSEHAY"
+        
+        // Zad Bank — 899
+        if (sender == "899" || upper.contains("ZAD")) return "ZAD"
+        
+        // Lion International Bank — 801
+        if (sender == "801" || upper.contains("LION")) return "LION"
+        
+        // Amhara Credit and Saving (ACSI) — 690
+        if (upper.contains("ACSI")) return "ACSI"
+        
+        // EthioTelecom (Airtime / Telecom Assets) — must be after banks to avoid false matches
         val ethioTelecomSenders = setOf("804", "805", "806", "810", "830", "994", "251994", "8994")
         if (ethioTelecomSenders.contains(sender) || upper.contains("ETHIOTELECOM") || upper.contains("ETHIO TELECOM")) return SOURCE_AIRTIME
 
@@ -228,6 +278,7 @@ object AppConstants {
     // Broadcast Actions
     // -------------------------------------------------------------------------
     const val ACTION_USSD_RESPONSE = "com.ethiobalance.app.ACTION_USSD_RESPONSE"
+    const val ACTION_TRIGGER_REFRESH = "com.ethiobalance.app.ACTION_TRIGGER_REFRESH"
 
     // -------------------------------------------------------------------------
     // Notification Channel

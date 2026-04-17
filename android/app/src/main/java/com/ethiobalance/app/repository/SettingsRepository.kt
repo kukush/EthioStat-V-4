@@ -8,6 +8,7 @@ import com.ethiobalance.app.data.AppDatabase
 import com.ethiobalance.app.data.TransactionSourceEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -70,7 +71,7 @@ class SettingsRepository @Inject constructor(
     }
 
     private suspend fun updateSmsWhitelist() {
-        val enabledSenders = transactionSourceDao.getEnabledSenderIds()
+        val enabledSenders = transactionSourceDao.getEnabledSenderIdsFlattened()
         val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
         prefs.edit().putStringSet("sms_whitelist", enabledSenders.toSet()).apply()
     }

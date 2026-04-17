@@ -7,14 +7,28 @@ import android.os.Build
 import android.provider.Telephony
 import android.util.Log
 import com.ethiobalance.app.AppConstants
+import com.ethiobalance.app.repository.SmsRepository
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class SmsReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "SmsReceiver"
     }
 
+    @Inject
+    lateinit var smsRepository: SmsRepository
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
+        when (intent.action) {
+            Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
             val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
 
             // Concatenate multi-part SMS segments from the same sender to avoid
@@ -64,6 +78,19 @@ class SmsReceiver : BroadcastReceiver() {
                     }
                 } else {
                     Log.d(TAG, "Sender $sender is NOT whitelisted. Ignoring message.")
+                }
+            }
+            }
+            AppConstants.ACTION_TRIGGER_REFRESH -> {
+                val scanDepth = intent.getIntExtra("scan_depth", 5)
+                Log.d(TAG, "Received TRIGGER_REFRESH broadcast, scanDepth=$scanDepth")
+                if (::smsRepository.isInitialized) {
+                    scope.launch {
+                        val count = smsRepository.refreshTelecomSmart(scanDepth)
+                        Log.d(TAG, "TRIGGER_REFRESH completed, processed $count SMS")
+                    }
+                } else {
+                    Log.w(TAG, "smsRepository not initialized, cannot refresh")
                 }
             }
         }

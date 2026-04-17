@@ -10,6 +10,26 @@
 # Covered cases:  credit, debit, debit+service-charge, debit-for-party,
 #                 credit-from-party, transfer, airtime-received
 #
+# Telecom package coverage:
+#   • Case 1 — Multi-segment 994 balance SMS (Internet + Voice + SMS parsing)
+#   • Case 1b — Re-run with different expiry dates asserts PURGE-and-replace
+#     semantics: SMS-sourced telecom rows from a prior balance SMS are deleted
+#     before the new rows are inserted. Bank-balance rows are NOT affected.
+#   • Case 2 — Single-segment "received Night Internet 600MB" SMS is ADDITIVE:
+#     no purge; upserts by `{type}-{subType}-{expiryDate}` id.
+#
+# Smart Refresh scan depth:
+#   • Startup refresh scans last 5 SMS (default in refreshTelecomSmart).
+#   • Sync button scans last 10 SMS ( TelecomViewModel.handleSync ) to ensure
+#     the latest multi-segment balance SMS is found even when newer single-segment
+#     notifications (e.g. "received Night Internet") appear after it.
+#
+# Telecom value rounding: all remaining/total values are integers
+#   (e.g. "33 minute and 47 second" → 34 MIN, "10482.865 MB" → 10483 MB).
+#
+# JVM unit tests include ParseSmsUseCaseTest and SmsRepositorySmartRefreshTest
+# which validates the smart startup/sync behavior in SmsRepository.
+#
 # Usage:  chmod +x scripts/test-workflow.sh && ./scripts/test-workflow.sh
 # =============================================================================
 
@@ -121,6 +141,22 @@ else
   info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
 fi
 
+section "SmsRepository Smart Refresh Decision Tests (JVM)"
+
+if [[ -f "$ANDROID_DIR/gradlew" ]]; then
+  info "Running SmsRepositorySmartRefreshTest (startup/sync merge logic)..."
+  if "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" \
+      :app:testDebugUnitTest \
+      --tests "com.ethiobalance.app.repository.SmsRepositorySmartRefreshTest" \
+      --quiet 2>&1 | tail -5; then
+    pass "SmsRepositorySmartRefreshTest — all unit tests passed (multi-only / multi+single / single-only / empty / deep-scan for 10 SMS)"
+  else
+    fail "SmsRepositorySmartRefreshTest — one or more unit tests failed"
+  fi
+else
+  info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
+fi
+
 # ─── Accessibility Service Bound Check ───────────────────────────────────────
 
 section "Accessibility Service Check"
@@ -170,6 +206,19 @@ inject_sms() {
     --es sender '$sender' \
     --es body '$body' \
     --el timestamp $ts" 2>/dev/null || true
+}
+
+# ─── Helper: trigger telecom refresh via broadcast ──────────────────────────
+# Use this after injecting telecom SMS to ensure the SMS is picked up by the
+# smart refresh before real SMS from inbox overwrite the test data.
+trigger_telecom_refresh() {
+  info "Triggering telecom refresh..."
+  adb shell "am broadcast \
+    -a com.ethiobalance.app.ACTION_TRIGGER_REFRESH \
+    -p $APP_PACKAGE \
+    --ei scan_depth 5 \
+    2>/dev/null || true"
+  sleep 3
 }
 
 # ─── Assert helper ──────────────────────────────────────────────────────────
@@ -411,15 +460,17 @@ inject_sms "994" \
 
 info "Waiting 8 seconds for Case 1 processing..."
 sleep 8
+# Foreground service processes and saves packages directly - no refresh needed.
+# Refresh would scan inbox and could find real SMS, polluting test data.
 
 section "Asserting Case 1 Packages"
 
-assert_pkg 19 "Monthly Internet ~11458 MB" "internet-Monthly-20260516" "internet" "Monthly" "11458.902" "MB"
-assert_pkg 20 "Free Internet 200 MB"      "internet-Free-20260422"    "internet" "Free"    "200.0"     "MB"
-assert_pkg 21 "Recurring Voice 125 min"   "voice-Recurring-20260430"  "voice"    "Recurring" "125.0"   "MIN"
-assert_pkg 22 "Night Voice 52 min"        "voice-Night-20260430"      "voice"    "Night"   "52.0"      "MIN"
-assert_pkg 23 "Free Voice 44 min"         "voice-Free-20260422"       "voice"    "Free"    "44.05"     "MIN"
-assert_pkg 24 "Custom SMS 136"            "sms-Custom-20260419"       "sms"      "Custom"  "136.0"     "SMS"
+assert_pkg 19 "Monthly Internet ~11459 MB" "internet-Monthly-20260516" "internet" "Monthly"   "11459.0" "MB"
+assert_pkg 20 "Free Internet 200 MB"       "internet-Free-20260422"    "internet" "Free"      "200.0"   "MB"
+assert_pkg 21 "Recurring Voice 125 min"    "voice-Recurring-20260430"  "voice"    "Recurring" "125.0"   "MIN"
+assert_pkg 22 "Night Voice 52 min"         "voice-Night-20260430"      "voice"    "Night"     "52.0"    "MIN"
+assert_pkg 23 "Free Voice 44 min"          "voice-Free-20260422"       "voice"    "Free"      "44.0"    "MIN"
+assert_pkg 24 "Custom SMS 136"             "sms-Custom-20260419"       "sms"      "Custom"    "136.0"   "SMS"
 
 # Count internet packages — should be exactly 2
 INET_COUNT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type='internet';")
@@ -438,6 +489,8 @@ inject_sms "994" \
 
 info "Waiting 8 seconds for Case 2 processing..."
 sleep 8
+# Note: No refresh trigger here - foreground service already saved Case 2.
+# Refresh would re-find Case 1 (multi-segment) and purge Case 2.
 
 section "Asserting Case 2 Packages (additive, no overwrite)"
 
@@ -457,6 +510,80 @@ if [[ "$INET_TOTAL" == "3" ]]; then
   pass "Test 28: Total internet packages = 3 (Monthly + Free + Night)"
 else
   fail "Test 28: Total internet count (expected 3, got ${INET_TOTAL})"
+fi
+
+# ── Test 29: all 6 Case 1 rows still present after Case 2 (additive merge) ──
+CASE1_KEPT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE id IN (
+  'internet-Monthly-20260516',
+  'internet-Free-20260422',
+  'voice-Recurring-20260430',
+  'voice-Night-20260430',
+  'voice-Free-20260422',
+  'sms-Custom-20260419'
+);")
+if [[ "$CASE1_KEPT" == "6" ]]; then
+  pass "Test 29: All 6 Case 1 rows preserved after single-segment Case 2 SMS (additive)"
+else
+  fail "Test 29: Expected 6 Case 1 rows preserved, got ${CASE1_KEPT}"
+fi
+
+# ── Test 30: Total SMS-sourced telecom rows = 7 (Case 1 × 6 + Case 2 × 1) ──
+SMS_TELECOM_TOTAL=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type IN ('internet','voice','sms','bonus');")
+if [[ "$SMS_TELECOM_TOTAL" == "7" ]]; then
+  pass "Test 30: SMS-sourced telecom rows = 7 (6 Case 1 + 1 Case 2 night)"
+else
+  fail "Test 30: Expected 7 SMS-telecom rows, got ${SMS_TELECOM_TOTAL}"
+fi
+
+# =============================================================================
+#  TELECOM PACKAGE CASE 1b — Multi-segment Re-run (Purge + Replace)
+#
+#  Inject a second multi-segment 994 balance SMS with DIFFERENT expiry dates.
+#  The ReconciliationEngine must PURGE all prior SMS-sourced telecom rows
+#  (internet/voice/sms/bonus) before inserting the new set. USSD airtime and
+#  bank-balance rows must be preserved.
+# =============================================================================
+
+section "Telecom Package Case 1b — Multi-segment Re-run (purge + replace)"
+
+CASE1B_TS=$((NOW_MS - 1000))
+inject_sms "994" \
+  "Dear Customer, your remaining amount from Monthly Internet Package 12GB from telebirr to be expired after 30 days is 9000.0 MB with expiry date on 2026-06-15 at 11:42:05;  from Monthly Recurring 125 Min and 63Min night package bonus is 100 minute and 0 second with expiry date on 2026-05-30 at 16:02:16;    from Create Your Own Package Monthly is 50 SMS with expiry date on 2026-05-19 at 00:22:19;" \
+  "$CASE1B_TS"
+
+info "Waiting 8 seconds for Case 1b processing..."
+sleep 8
+# Foreground service handles purge (multi-segment) and saves new packages directly.
+
+section "Asserting Case 1b Packages (old rows purged)"
+
+# ── Test 31: New rows from Case 1b present ──
+assert_pkg 31 "Case 1b Monthly Internet 9000 MB" "internet-Monthly-20260615" "internet" "Monthly"   "9000.0" "MB"
+assert_pkg 32 "Case 1b Recurring Voice 100 min"  "voice-Recurring-20260530"  "voice"    "Recurring" "100.0"  "MIN"
+assert_pkg 33 "Case 1b Custom SMS 50"            "sms-Custom-20260519"       "sms"      "Custom"    "50.0"   "SMS"
+
+# ── Test 34: Old Case 1 rows are GONE (purged before Case 1b insert) ──
+OLD_CASE1_GONE=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE id IN (
+  'internet-Monthly-20260516',
+  'internet-Free-20260422',
+  'internet-Night-20260417',
+  'voice-Recurring-20260430',
+  'voice-Night-20260430',
+  'voice-Free-20260422',
+  'sms-Custom-20260419'
+);")
+if [[ "$OLD_CASE1_GONE" == "0" ]]; then
+  pass "Test 34: All Case 1 and Case 2 SMS-sourced telecom rows purged by Case 1b"
+else
+  fail "Test 34: Expected 0 stale rows, got ${OLD_CASE1_GONE}"
+fi
+
+# ── Test 35: SMS-sourced telecom row count = 3 (exactly the Case 1b set) ──
+POST_PURGE_COUNT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type IN ('internet','voice','sms','bonus');")
+if [[ "$POST_PURGE_COUNT" == "3" ]]; then
+  pass "Test 35: Only 3 SMS-sourced telecom rows remain (exactly the new Case 1b set)"
+else
+  fail "Test 35: Expected 3 SMS-telecom rows after purge, got ${POST_PURGE_COUNT}"
 fi
 
 # =============================================================================
