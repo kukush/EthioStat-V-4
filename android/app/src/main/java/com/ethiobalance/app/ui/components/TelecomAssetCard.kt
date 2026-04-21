@@ -130,9 +130,24 @@ fun TelecomAssetCard(
 
                 // Right Column: Package Summaries
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PackageItem("DATA", "%.1f".format(Locale.US, dataVol), " GB", Blue500)
-                    PackageItem("AUDIO", fmt.format(voiceVol), " Min", Emerald500)
-                    PackageItem("SMS", fmt.format(smsVol), " SMS", Purple500)
+                    PackageItem(
+                        Translations.t(language, "data_label").uppercase(),
+                        "%.1f".format(Locale.US, dataVol),
+                        " ${Translations.t(language, "gb_unit")}",
+                        Blue500
+                    )
+                    PackageItem(
+                        Translations.t(language, "audio_label").uppercase(),
+                        fmt.format(voiceVol),
+                        " ${Translations.t(language, "min_unit")}",
+                        Emerald500
+                    )
+                    PackageItem(
+                        Translations.t(language, "sms_label").uppercase(),
+                        fmt.format(smsVol),
+                        " ${Translations.t(language, "sms_unit")}",
+                        Purple500
+                    )
                 }
             }
         }

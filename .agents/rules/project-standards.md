@@ -382,7 +382,7 @@ import javax.inject.Inject
 
 ```properties
 ethiobalance.ussd.balance_check=*804#
-ethiobalance.ussd.recharge_self=*805#
+ethiobalance.ussd.recharge_self=*805*
 ethiobalance.ussd.recharge_other=*805*
 ethiobalance.ussd.transfer_airtime=*806*
 ethiobalance.ussd.gift_package=*999#

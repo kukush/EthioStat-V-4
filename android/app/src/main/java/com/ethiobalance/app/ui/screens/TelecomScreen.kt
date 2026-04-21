@@ -128,7 +128,7 @@ fun TelecomScreen(
                     Icon(Icons.Default.Settings, null, tint = Rose600, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Enable Accessibility Service for *804# sync",
+                        Translations.t(language, "enableAccessibility"),
                         fontSize = 13.sp,
                         color = Rose600,
                         modifier = Modifier.weight(1f)
@@ -226,14 +226,20 @@ fun TelecomScreen(
                 val daysLeft = kotlin.math.ceil(diffMs.toDouble() / (1000 * 60 * 60 * 24)).toInt()
                 val totalDays = 30
 
-                // Show only subType, but display "Regular" instead of "Recurring"
-                val packageLabel = if (pkg.subType == "Recurring") "Regular" else pkg.subType
+                // Translate subType: "Recurring" -> "regular" key, else lowercase key
+                val subtypeKey = if (pkg.subType.equals("Recurring", ignoreCase = true)) "recurring"
+                                 else pkg.subType.lowercase()
+                val packageLabel = Translations.t(language, subtypeKey)
+                    .ifBlank { if (pkg.subType == "Recurring") "Regular" else pkg.subType }
+
+                val unitKey = pkg.unit.lowercase()
+                val translatedUnit = Translations.t(language, unitKey).ifBlank { pkg.unit }
 
                 PackageCard(
                     type = pkg.type,
                     value = pkg.remainingAmount,
                     total = pkg.totalAmount,
-                    unit = pkg.unit,
+                    unit = translatedUnit,
                     label = packageLabel,
                     expiryMs = pkg.expiryDate,
                     daysLeft = daysLeft,

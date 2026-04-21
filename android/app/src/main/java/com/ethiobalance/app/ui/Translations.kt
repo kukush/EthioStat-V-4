@@ -85,7 +85,19 @@ object Translations {
         "utility" to "Utility", "bills" to "Bills", "grocery" to "Grocery",
         "shopping" to "Shopping", "market" to "Market", "dining" to "Dining",
         "food" to "Food", "restaurant" to "Restaurant", "telecom" to "Telecom",
-        "recharge" to "Recharge", "phone" to "Phone"
+        "recharge" to "Recharge", "phone" to "Phone",
+        // Package subtypes
+        "monthly" to "Monthly", "night" to "Night", "free" to "Free",
+        "recurring" to "Regular", "regular" to "Regular",
+        "yearly" to "Yearly", "custom" to "Custom",
+        // Units
+        "mb" to "MB", "gb" to "GB", "min" to "Min", "mins" to "Min",
+        "sms_unit" to "SMS", "etb" to "ETB",
+        // TelecomAssetCard summary labels
+        "data_label" to "DATA", "audio_label" to "AUDIO", "sms_label" to "SMS",
+        "gb_unit" to "GB", "min_unit" to "Min",
+        // Accessibility warning
+        "enableAccessibility" to "Enable Accessibility Service for *804# sync"
     )
 
     private val am = mapOf(
@@ -175,7 +187,19 @@ object Translations {
         "utility" to "የመረጃ ዘዴ", "bills" to "ክፍያዎች", "grocery" to "የምግብ ግዢ",
         "shopping" to "ግዢ", "market" to "ገበያ", "dining" to "ምግብ ቤት",
         "food" to "ምግብ", "restaurant" to "ምግብ ቤት", "telecom" to "ቴሌኮም",
-        "recharge" to "መሙያ", "phone" to "ስልክ"
+        "recharge" to "መሙያ", "phone" to "ስልክ",
+        // Package subtypes
+        "monthly" to "ወርሃዊ", "night" to "ምሽት", "free" to "ነፃ",
+        "recurring" to "መደበኛ", "regular" to "መደበኛ",
+        "yearly" to "ዓመታዊ", "custom" to "ብጁ",
+        // Units
+        "mb" to "ሜባ", "gb" to "ጊባ", "min" to "ደቂቃ", "mins" to "ደቂቃ",
+        "sms_unit" to "ኤስኤምኤስ", "etb" to "ብር",
+        // TelecomAssetCard summary labels
+        "data_label" to "ዳታ", "audio_label" to "ድምፅ", "sms_label" to "ኤስኤምኤስ",
+        "gb_unit" to "ጊባ", "min_unit" to "ደቂቃ",
+        // Accessibility warning
+        "enableAccessibility" to "የ*804# ሲንክ ፈቃድ ለማግኘት Accessibility Service ያንቁ"
     )
 
     private val om = mapOf(
@@ -270,7 +294,19 @@ object Translations {
         "utility" to "Utilitii", "bills" to "Billiiwwan", "grocery" to "Nyaata",
         "shopping" to "Bituu", "market" to "Gabaa", "dining" to "Manca'uu",
         "food" to "Nyaata", "restaurant" to "Mana nyaataa", "telecom" to "Telekoomii",
-        "recharge" to "Guuti", "phone" to "Bilbila"
+        "recharge" to "Guuti", "phone" to "Bilbila",
+        // Package subtypes
+        "monthly" to "Ji'ootaa", "night" to "Halkan", "free" to "Bilisaa",
+        "recurring" to "Idilee", "regular" to "Idilee",
+        "yearly" to "Waggootaa", "custom" to "Filatamaa",
+        // Units
+        "mb" to "MB", "gb" to "GB", "min" to "Daqiiqaa", "mins" to "Daqiiqaa",
+        "sms_unit" to "SMS", "etb" to "ETB",
+        // TelecomAssetCard summary labels
+        "data_label" to "DAATAA", "audio_label" to "SAGALEE", "sms_label" to "SMS",
+        "gb_unit" to "GB", "min_unit" to "Daqiiqaa",
+        // Accessibility warning
+        "enableAccessibility" to "Tajaajila *804# sync godhuf Accessibility Service Banaa"
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)
