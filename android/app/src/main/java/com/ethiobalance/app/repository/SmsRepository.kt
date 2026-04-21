@@ -43,7 +43,7 @@ class SmsRepository @Inject constructor(
 
         // Ensure we scan at least the last 90 days on initial run.
         // On subsequent runs, overlap slightly or start from the last processed timestamp.
-        val windowStart = System.currentTimeMillis() - (days * 24L * 60L * 60L * 1000L)
+        val windowStart = System.currentTimeMillis() - (days * AppConstants.MILLISECONDS_PER_DAY)
         val cutoffTime = if (lastTimestamp == null || forceReparse) {
             windowStart 
         } else {
@@ -115,8 +115,8 @@ class SmsRepository @Inject constructor(
      */
     suspend fun scanAllTransactionSources(days: Int = 90): Int = withContext(Dispatchers.IO) {
         // Merge user-configured senders with the hardcoded whitelist
-        // Exclude 994/251994 — telecom packages are handled by refreshTelecomFromLatestSms()
-        val telecomExclude = setOf("994", "251994", "+251994", "0994")
+        // Exclude telecom senders — packages are handled by refreshTelecomFromLatestSms()
+        val telecomExclude = AppConstants.TELECOM_SENDERS
         val configuredSenders = transactionSourceDao.getEnabledSenderIdsFlattened().toSet()
         val allSenders = (configuredSenders + AppConstants.SMS_SENDER_WHITELIST).distinct()
             .filter { it !in telecomExclude }
@@ -134,9 +134,8 @@ class SmsRepository @Inject constructor(
      * Includes common senders like 804, ETC, and other telecom numbers.
      */
     suspend fun scanTelecomHistory(days: Int = 1): Int = withContext(Dispatchers.IO) {
-        val telecomSenders = setOf("994", "251994")
         var total = 0
-        telecomSenders.forEach { total += scanHistory(it, days) }
+        AppConstants.TELECOM_SENDERS.take(2).forEach { total += scanHistory(it, days) }
         total
     }
 
@@ -183,8 +182,8 @@ class SmsRepository @Inject constructor(
     suspend fun refreshTelecomSmart(scanDepth: Int = 5): Int = withContext(Dispatchers.IO) {
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
-        val selection = "(address = ? OR address = ? OR address = ? OR address = ?)"
-        val selectionArgs = arrayOf("994", "251994", "+251994", "0994")
+        val selection = AppConstants.TELECOM_SENDERS.joinToString(" OR ") { "address = ?" }.let { "($it)" }
+        val selectionArgs = AppConstants.TELECOM_SENDERS.toTypedArray()
 
         val rows = mutableListOf<SmsRow>()
         context.contentResolver.query(

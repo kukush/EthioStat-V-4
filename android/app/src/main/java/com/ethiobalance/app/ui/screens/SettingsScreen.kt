@@ -31,11 +31,11 @@ import com.ethiobalance.app.data.TransactionSourceEntity
 import com.ethiobalance.app.services.UssdAccessibilityService
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
+import com.ethiobalance.app.constants.Avatars
+import com.ethiobalance.app.constants.Languages
+import com.ethiobalance.app.constants.PhoneConstants
+import com.ethiobalance.app.AppConstants
 
-private val avatarList = listOf(
-    "👤", "🧑", "👩", "👨", "🧔", "👵", "🧑‍💼", "👩‍💻", "👨‍🎓",
-    "🦁", "🐯", "🦊", "🐻", "🐼", "🐨", "🐸", "🦉", "🐝"
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +86,7 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (userAvatar.isNotEmpty()) userAvatar else "👤",
+                        text = userAvatar.ifEmpty { Avatars.DEFAULT },
                         fontSize = 48.sp
                     )
                 }
@@ -173,11 +173,9 @@ fun SettingsScreen(
             shadowElevation = 1.dp
         ) {
             Column {
-                listOf(
-                    "en" to "English",
-                    "am" to "አማርኛ",
-                    "om" to "Afaan Oromoo"
-                ).forEachIndexed { idx, (code, label) ->
+                Languages.SUPPORTED.forEachIndexed { idx, lang ->
+                    val code = lang.code
+                    val label = lang.displayName
                     val isActive = language == code
                     if (idx > 0) HorizontalDivider(color = Slate50)
                     Box(
@@ -418,8 +416,8 @@ private fun EditProfileSheet(
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = phone, 
-                onValueChange = { 
-                    if (it.length <= 13) phone = it 
+                onValueChange = {
+                    if (it.length <= PhoneConstants.MAX_FULL_LENGTH) phone = it
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = LocalTextStyle.current.copy(color = Slate900),
@@ -428,9 +426,9 @@ private fun EditProfileSheet(
                         modifier = Modifier.padding(start = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("🇪🇹", fontSize = 20.sp)
+                        Text(PhoneConstants.FLAG_EMOJI, fontSize = 20.sp)
                         Spacer(Modifier.width(8.dp))
-                        Text("+251", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate600)
+                        Text(PhoneConstants.COUNTRY_CODE, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate600)
                         Spacer(Modifier.width(8.dp))
                         Box(modifier = Modifier.width(1.dp).height(24.dp).background(Slate200))
                     }
@@ -452,7 +450,7 @@ private fun EditProfileSheet(
             Spacer(Modifier.height(16.dp))
 
             // Avatar grid
-            val rows = avatarList.chunked(6)
+            val rows = Avatars.OPTIONS.chunked(6)
             rows.forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                     row.forEach { emoji ->
@@ -480,14 +478,14 @@ private fun EditProfileSheet(
 
             Spacer(Modifier.height(32.dp))
             Button(
-                onClick = { 
-                    val validatedPhone = if (phone.startsWith("0")) phone.substring(1) else phone
-                    if (name.isNotBlank() && validatedPhone.length >= 9) {
-                        onSave(name, "+251$validatedPhone", avatar) 
+                onClick = {
+                    val validatedPhone = if (phone.startsWith(PhoneConstants.LOCAL_PREFIX)) phone.substring(1) else phone
+                    if (name.isNotBlank() && validatedPhone.length >= PhoneConstants.MAX_LOCAL_LENGTH) {
+                        onSave(name, "${PhoneConstants.COUNTRY_CODE}$validatedPhone", avatar)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(60.dp),
-                enabled = name.isNotBlank() && (phone.startsWith("0") && phone.length == 10 || !phone.startsWith("0") && phone.length == 9),
+                enabled = name.isNotBlank() && (phone.startsWith(PhoneConstants.LOCAL_PREFIX) && phone.length == 10 || !phone.startsWith(PhoneConstants.LOCAL_PREFIX) && phone.length == PhoneConstants.MAX_LOCAL_LENGTH),
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Slate900)
             ) {
@@ -498,34 +496,6 @@ private fun EditProfileSheet(
     }
 }
 
-private val bankList = listOf(
-    Triple("CBE", "Commercial Bank of Ethiopia", "847"),
-    Triple("TeleBirr", "Telebirr", "127"),
-    Triple("AWASH", "Awash Bank", "901"),
-    Triple("DASHEN", "Dashen Bank", "721"),
-    Triple("BOA", "Bank of Abyssinia", "815"),
-    Triple("COOPBANK", "Cooperative Bank of Oromia", "896"),
-    Triple("HIBRET", "Hibret Bank", "844"),
-    Triple("WEGAGEN", "Wegagen Bank", "889"),
-    Triple("ABAY", "Abay Bank", "812"),
-    Triple("NIB", "Nib International Bank", "865"),
-    Triple("BUNNA", "Bunna Bank", "252"),
-    Triple("ZEMEN", "Zemen Bank", "710"),
-    Triple("BERHAN", "Berhan Bank", "811"),
-    Triple("ENAT", "Enat Bank", "846"),
-    Triple("TSEHAY", "Tsehay Bank", "921"),
-    Triple("SIINQEE", "Siinqee Bank", "767"),
-    Triple("AMHARA", "Amhara Bank", "946"),
-    Triple("LION", "Lion International Bank", "801"),
-    Triple("OROMIA", "Oromia Bank", ""),
-    Triple("GLOBAL", "Global Bank Ethiopia", "842"),
-    Triple("GADAA", "Gadaa Bank", "898"),
-    Triple("HIJRA", "Hijra Bank", "881"),
-    Triple("ZAD", "Zad Bank", "899"),
-    Triple("AHADU", "Ahadu Bank", "895"),
-    Triple("SHABELLE", "Shabelle Bank", "808"),
-    Triple("ACSI", "Amhara Credit and Saving", "810"),
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -537,10 +507,10 @@ private fun AddSourceSheet(
     var newSource by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
 
-    val filtered = if (searchQuery.isBlank()) bankList
-    else bankList.filter {
-        it.first.contains(searchQuery, ignoreCase = true) ||
-        it.second.contains(searchQuery, ignoreCase = true)
+    val filtered = if (searchQuery.isBlank()) AppConstants.KNOWN_BANKS
+    else AppConstants.KNOWN_BANKS.filter {
+        it.abbreviation.contains(searchQuery, ignoreCase = true) ||
+        it.fullName.contains(searchQuery, ignoreCase = true)
     }
 
     ModalBottomSheet(
@@ -608,16 +578,16 @@ private fun AddSourceSheet(
                 modifier = Modifier.weight(1f, fill=false).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                filtered.forEach { (abbr, name, senderId) ->
+                filtered.forEach { bank ->
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 onAdd(TransactionSourceEntity(
-                                    abbreviation = abbr,
-                                    name = name,
+                                    abbreviation = bank.abbreviation,
+                                    name = bank.fullName,
                                     ussd = "",
-                                    senderId = senderId.ifEmpty { abbr },
+                                    senderId = bank.senderId.ifEmpty { bank.abbreviation },
                                     isEnabled = true
                                 ))
                             },
@@ -636,8 +606,8 @@ private fun AddSourceSheet(
                             }
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(name, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
-                                Text("$abbr • $senderId", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp, modifier = Modifier.padding(top=4.dp))
+                                Text(bank.fullName, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
+                                Text("${bank.abbreviation} • ${bank.senderId}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp, modifier = Modifier.padding(top=4.dp))
                             }
                             Icon(Icons.Default.Add, null, tint = Slate400)
                         }

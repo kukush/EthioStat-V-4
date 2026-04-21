@@ -309,4 +309,49 @@ object AppConstants {
     // SmsLogEntity parsed type labels
     // -------------------------------------------------------------------------
     const val SMS_LOG_TYPE_PROCESSING = "PROCESSING"
+
+    // -------------------------------------------------------------------------
+    // Known Banks — single source of truth for bank metadata
+    // Format: Triple(abbreviation, fullName, senderId)
+    // -------------------------------------------------------------------------
+    data class BankInfo(val abbreviation: String, val fullName: String, val senderId: String)
+
+    val KNOWN_BANKS: List<BankInfo> = listOf(
+        BankInfo("CBE", "Commercial Bank of Ethiopia", "847"),
+        BankInfo("TeleBirr", "Telebirr", "127"),
+        BankInfo("AWASH", "Awash Bank", "901"),
+        BankInfo("DASHEN", "Dashen Bank", "721"),
+        BankInfo("BOA", "Bank of Abyssinia", "815"),
+        BankInfo("COOPBANK", "Cooperative Bank of Oromia", "896"),
+        BankInfo("HIBRET", "Hibret Bank", "844"),
+        BankInfo("WEGAGEN", "Wegagen Bank", "889"),
+        BankInfo("ABAY", "Abay Bank", "812"),
+        BankInfo("NIB", "Nib International Bank", "865"),
+        BankInfo("BUNNA", "Bunna Bank", "252"),
+        BankInfo("ZEMEN", "Zemen Bank", "710"),
+        BankInfo("BERHAN", "Berhan Bank", "811"),
+        BankInfo("ENAT", "Enat Bank", "846"),
+        BankInfo("TSEHAY", "Tsehay Bank", "921"),
+        BankInfo("SIINQEE", "Siinqee Bank", "767"),
+        BankInfo("AMHARA", "Amhara Bank", "946"),
+        BankInfo("LION", "Lion International Bank", "801"),
+        BankInfo("OROMIA", "Oromia Bank", ""),
+        BankInfo("GLOBAL", "Global Bank Ethiopia", "842"),
+        BankInfo("GADAA", "Gadaa Bank", "898"),
+        BankInfo("HIJRA", "Hijra Bank", "881"),
+        BankInfo("ZAD", "Zad Bank", "899"),
+        BankInfo("AHADU", "Ahadu Bank", "895"),
+        BankInfo("SHABELLE", "Shabelle Bank", "808"),
+        BankInfo("ACSI", "Amhara Credit and Saving", "810")
+    )
+
+    // -------------------------------------------------------------------------
+    // Telecom Senders — centralized to avoid duplication
+    // -------------------------------------------------------------------------
+    val TELECOM_SENDERS = setOf("994", "251994", "+251994", "0994")
+
+    // -------------------------------------------------------------------------
+    // Time Constants
+    // -------------------------------------------------------------------------
+    const val MILLISECONDS_PER_DAY = 24L * 60L * 60L * 1000L
 }
