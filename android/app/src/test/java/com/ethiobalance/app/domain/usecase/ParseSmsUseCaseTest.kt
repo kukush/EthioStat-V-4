@@ -251,4 +251,153 @@ class ParseSmsUseCaseTest {
         val overlap = ids1.intersect(ids2)
         assertTrue("Case 1 and Case 2 IDs should not overlap, but got: $overlap", overlap.isEmpty())
     }
+
+    // ═════════════════════════════════════════════════════
+    //  Real-device SMS formats (from adb content query)
+    //  Verbatim messages captured from actual device inbox
+    // ═════════════════════════════════════════════════════
+
+    // ── Awash: "paid X BIRR" school fee (actual inbox sender = "Awash") ──────
+
+    @Test
+    fun testAwash_paidBirr_schoolFee_amount() {
+        val body = "You have paid 2,574 BIRR School Fee for YN/566/18 - Hermon  Faris in YENEGEW FRE.\n" +
+                "Please Click the below link to download your receipt  https://eschool.awashbank.com/-5O18B\n" +
+                "For any complaint or enquiry, please call 8980. Thank You. Awash Bank."
+        val result = parseSmsUseCase("Awash", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.SELF_PURCHASE, result.scenario)
+        assertEquals(2574.0, result.deductedAmount!!, 0.01)
+        assertEquals(0.95f, result.confidence, 0.01f)
+    }
+
+    @Test
+    fun testAwash_paidBirr_schoolFee_partyName() {
+        val body = "You have paid 2,574 BIRR School Fee for YN/566/18 - Hermon  Faris in YENEGEW FRE.\n" +
+                "Please Click the below link to download your receipt  https://eschool.awashbank.com/-5O18B\n" +
+                "For any complaint or enquiry, please call 8980. Thank You. Awash Bank."
+        val result = parseSmsUseCase("Awash", body, System.currentTimeMillis())
+
+        assertNotNull("partyName should be extracted from Awash school fee SMS", result.partyName)
+        assertTrue(
+            "partyName should contain student name, got: '${result.partyName}'",
+            result.partyName!!.contains("Faris", ignoreCase = true) ||
+            result.partyName!!.contains("Hermon", ignoreCase = true)
+        )
+    }
+
+    @Test
+    fun testAwash_paidBirr_secondPayment() {
+        val body = "You have paid 2,610 BIRR School Fee for YF2017/127 - Leul Faris in YENEGEW FRE.\n" +
+                "Please Click the below link to download your receipt  https://eschool.awashbank.com/-5G6S8\n" +
+                "For any complaint or enquiry, please call 8980. Thank You. Awash Bank."
+        val result = parseSmsUseCase("Awash", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.SELF_PURCHASE, result.scenario)
+        assertEquals(2610.0, result.deductedAmount!!, 0.01)
+    }
+
+    // ── Awash: ETB credit (existing format, verify still works) ──────────────
+
+    @Test
+    fun testAwash_creditEtb_fromParty() {
+        val body = "Dear Customer, your Account 01320xxxxx1400 has been Credited with ETB 1300.00 on 2026-03-31 11:32:14 by ABEBECH WOLDE. Your balance now is ETB 17535.60. For any complaint or enquiry, please call 8980. Thank You. Awash Bank."
+        val result = parseSmsUseCase("Awash", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(1300.0, result.addedAmount!!, 0.01)
+    }
+
+    @Test
+    fun testAwash_creditEtb_fromTransfer() {
+        val body = "Dear Customer, ETB 50 has been credited to your account from SAMUEL MITIKU GUDINA on : 2026-01-28 20:12:21  with Txn ID: 260128201223255 . Your available balance is now ETB 50.00. Receipt  Link: https://awashpay.awashbank.com:8225/-2K7H8UP3KN-3JLL2T. Contact center  8980."
+        val result = parseSmsUseCase("Awash", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(50.0, result.addedAmount!!, 0.01)
+    }
+
+    // ── Dashen: debit (actual inbox sender = "DashenBank") ───────────────────
+
+    @Test
+    fun testDashen_debit_simple() {
+        val body = "Dear Customer, your account '5128******011' is debited with ETB 2,000.00 on 17/04/2026 at 07:26:07 PM. Your current balance is ETB 73,108.33.\nDashen Bank - Always one step ahead!"
+        val result = parseSmsUseCase("DashenBank", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(2000.0, result.deductedAmount!!, 0.01)
+        assertTrue(result.confidence >= 0.85f)
+    }
+
+    @Test
+    fun testDashen_debit_withServiceCharge() {
+        val body = "Dear Customer, your account '5128******011' is debited with ETB 804.80.Including Service charge of ETB 4.00 ,VAT(15%) of ETB .60 and DRRF fee of ETB .20 on 09/04/2026 at 08:47:47 AM. Your current balance is ETB 75,114.33.\nDashen Bank - Always one step ahead!."
+        val result = parseSmsUseCase("DashenBank", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(804.8, result.deductedAmount!!, 0.01)
+    }
+
+    @Test
+    fun testDashen_credit() {
+        val body = "Dear Customer, your account '5128******011' is credited with ETB 2,011.50 on 06/04/2026 at 09:09:47 AM. Your current balance is ETB 75,919.13.\nDashen Bank - Always one step ahead!"
+        val result = parseSmsUseCase("DashenBank", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(2011.5, result.addedAmount!!, 0.01)
+    }
+
+    @Test
+    fun testDashen_resolveSource() {
+        val resolved = com.ethiobalance.app.AppConstants.resolveSource("DashenBank")
+        assertEquals("DASHEN", resolved)
+    }
+
+    // ── CBE: transfer with party name ─────────────────────────────────────────
+
+    @Test
+    fun testCbe_transfer_partyNameExtracted() {
+        val body = "Dear Mrs, You have transfered ETB 500.00 to Alemtsehay Kifle on 18/04/2026 at 12:17:49 from your account 1*********3627. Your account has been debited with a S.charge of ETB 0.50 and VAT(15%) of ETB0.08 and Disaster Fund (5%) of ETB0.03, with a total of ETB 500.61. Your Current Balance is ETB 93,438.40. Thank you for Banking with CBE!"
+        val result = parseSmsUseCase("CBE", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(500.0, result.deductedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from CBE transfer", result.partyName)
+        assertTrue(
+            "partyName should be 'Alemtsehay Kifle', got: '${result.partyName}'",
+            result.partyName!!.contains("Alemtsehay", ignoreCase = true)
+        )
+    }
+
+    @Test
+    fun testCbe_debit_noPartyName() {
+        val body = "Dear Mrs your Account 1*********3627 has been debited with ETB3,000.00. Service charge of  ETB 10.00 and VAT(15%) of ETB1.50 and Disaster Fund (5%) of ETB0.50 with a total of ETB 3012.00. Your Current Balance is ETB 90,426.40. Thank you for Banking with CBE!"
+        val result = parseSmsUseCase("CBE", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(3000.0, result.deductedAmount!!, 0.01)
+    }
+
+    // ── Telebirr: received ETB from CBE ──────────────────────────────────────
+
+    @Test
+    fun testTelebirr_receivedFromCBE() {
+        val body = "Dear SELAMAWIT,\nYou have received  ETB 3,000.00 by transaction number DDK32XAG75 on 2026-04-20 19:52:02 from Commercial Bank of Ethiopia to your telebirr Account 251910960146 - SELAMAWIT ALEMU GETAHUN. Your current balance is ETB 3,222.65."
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(3000.0, result.addedAmount!!, 0.01)
+    }
+
+    // ── Currency normalisation: BIRR and ETB both parse correctly ────────────
+
+    @Test
+    fun testCurrencyBirr_parsedSameAsEtb() {
+        val birrBody = "You have paid 1,000 BIRR for services."
+        val etbBody  = "You have paid 1,000 ETB for services."
+        val birrResult = parseSmsUseCase("Awash", birrBody, System.currentTimeMillis())
+        val etbResult  = parseSmsUseCase("CBE",   etbBody,  System.currentTimeMillis())
+
+        assertEquals(birrResult.deductedAmount!!, etbResult.deductedAmount!!, 0.01)
+    }
 }

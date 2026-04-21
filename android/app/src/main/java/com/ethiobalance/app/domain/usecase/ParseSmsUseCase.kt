@@ -231,14 +231,19 @@ class ParseSmsUseCase @Inject constructor() {
                 // Telebirr Package Purchase alt: "paid ETB X for [package name] purchase made for"
                 Regex("paid\\s+ETB\\s+[\\d,.]+\\s+for\\s+(.+?)\\s+purchase\\s+made", RegexOption.IGNORE_CASE),
                 // CBE/BOA Transfer: "to Lenco Getachew"
-                Regex("(?:transfered|transferred)\\s+ETB\\s+[\\d,.]+\\s+to\\s+([A-Za-z0-9\\s./]+?)(?:\\s+on|from your account)", RegexOption.IGNORE_CASE),
-                // Telebirr Merchant/Utility: "to Ethiopian Electric Utility"
-                Regex("paid\\s+[\\d,.]+\\s+ETB\\s+to\\s+([^.]+?)(?:\\s+for|\\. Your current balance)", RegexOption.IGNORE_CASE),
+                Regex("(?:transfered|transferred)\\s+(?:ETB\\s*)?[\\d,.]+\\s+to\\s+([A-Za-z0-9\\s./]+?)(?:\\s+on|from your account)", RegexOption.IGNORE_CASE),
+                // Awash School Fee: "paid 2,574 BIRR School Fee for YN/566/18 - Hermon Faris in"
+                Regex("paid\\s+[\\d,]+\\s+BIRR\\s+.+?\\s+for\\s+[^-]+-\\s*([A-Za-z\\s]+?)\\s+in\\s", RegexOption.IGNORE_CASE),
+                // Awash generic: "for [description] - [Name]"
+                Regex("for\\s+[A-Z0-9/]+\\s*-\\s*([A-Za-z\\s]+?)\\s+in\\s", RegexOption.IGNORE_CASE),
+                // Telebirr Merchant/Utility: "paid ETB X to [merchant]"
+                Regex("paid\\s+[\\d,.]+\\s+(?:ETB|BIRR)\\s+to\\s+([^.]+?)(?:\\s+for|\\. Your current balance)", RegexOption.IGNORE_CASE),
+                Regex("paid\\s+(?:ETB|BIRR)\\s*[\\d,.]+\\s+to\\s+([^.]+?)(?:\\s+for|\\. Your current balance)", RegexOption.IGNORE_CASE),
                 // Cash In/Out: "by Agent [Agent Name/ID]"
                 Regex("by\\s+(Agent\\s*\\[[^\\]]+\\])", RegexOption.IGNORE_CASE),
                 // CBE/BOA Credit: "by A/r Tele Birr"
                 Regex("by\\s+([A-Za-z0-9\\s./]+?)\\. Available Balance", RegexOption.IGNORE_CASE),
-                // Telebirr Transfer: "to 0911XXXXXX (Abebe Kebede)" or "to 0922123456" (most generic, last)
+                // Telebirr Transfer: "to 0911XXXXXX (Abebe Kebede)"
                 Regex("to\\s+([^\\.]+)", RegexOption.IGNORE_CASE)
             )
 
@@ -270,7 +275,7 @@ class ParseSmsUseCase @Inject constructor() {
 
             // Bank credit / income
             val creditMatch = Regex(
-                """(?:credited|credit of|has been credited|received\s+a\s+gift\s+of|received\s+ETB|transferred\s+to\s+you)\s*(?:with\s+)?(?:ETB\s*)?([\d,]+\.?\d*)""",
+                """(?:credited|credit of|has been credited|received\s+a\s+gift\s+of|received\s+ETB|received\s+BIRR|transferred\s+to\s+you)\s*(?:with\s+)?(?:ETB\s*|BIRR\s*)?([\d,]+\.?\d*)""",
                 RegexOption.IGNORE_CASE
             ).find(body)
             
@@ -289,7 +294,7 @@ class ParseSmsUseCase @Inject constructor() {
             }
 
             // Debit / Deduction
-            val debitMatch = Regex("(?:debited|debit of|deducted)\\s*(?:with\\s+)?(?:ETB\\s*)?(\\d[\\d,]*\\.?\\d*)", RegexOption.IGNORE_CASE).find(body)
+            val debitMatch = Regex("(?:debited|debit of|deducted)\\s*(?:with\\s+)?(?:ETB\\s*|BIRR\\s*)?(\\d[\\d,]*\\.?\\d*)", RegexOption.IGNORE_CASE).find(body)
             
             // Alternative: "debited for [party] with ETB X" (amount after "with ETB")
             val debitMatchAlt = Regex("debited\\s+for\\s+.+?\\swith\\s+ETB\\s*(\\d[\\d,]*\\.?\\d*)", RegexOption.IGNORE_CASE).find(body)
@@ -302,8 +307,8 @@ class ParseSmsUseCase @Inject constructor() {
                 confidenceScore = 0.9f
             }
 
-            // Payment / Purchase (Telebirr style: "You have paid X ETB to...")
-            val telebirrPaymentMatch = Regex("(?:you\\s+have\\s+)?(?:successfully\\s+)?(?:paid|payment|purchase).*?([\\d,.]+)\\s*(?:ETB|ብር)", RegexOption.IGNORE_CASE).find(body)
+            // Payment / Purchase (Telebirr/Awash: "You have paid X ETB" or "paid 2,574 BIRR")
+            val telebirrPaymentMatch = Regex("(?:you\\s+have\\s+)?(?:successfully\\s+)?(?:paid|payment|purchase).*?([\\d,.]+)\\s*(?:ETB|BIRR|ብር)", RegexOption.IGNORE_CASE).find(body)
             if (telebirrPaymentMatch != null && loanMatch == null && creditMatch == null && repayMatch == null && debitMatch == null) {
                 scenario = SmsScenario.SELF_PURCHASE
                 deductedAmount = telebirrPaymentMatch.groupValues[1].replace(",", "").toDoubleOrNull()
@@ -319,8 +324,8 @@ class ParseSmsUseCase @Inject constructor() {
                 confidenceScore = 0.95f
             }
 
-            // Transfer / Gift Sent (Telebirr: "You have sent X ETB to...")
-            val telebirrTransferMatch = Regex("(?:you\\s+have\\s+)?(?:sent|transfer).*?([\\d,.]+)\\s*(?:ETB|ብር)", RegexOption.IGNORE_CASE).find(body)
+            // Transfer / Gift Sent
+            val telebirrTransferMatch = Regex("(?:you\\s+have\\s+)?(?:sent|transfer).*?([\\d,.]+)\\s*(?:ETB|BIRR|ብር)", RegexOption.IGNORE_CASE).find(body)
             if (telebirrTransferMatch != null) {
                 scenario = SmsScenario.EXPENSE
                 deductedAmount = telebirrTransferMatch.groupValues[1].replace(",", "").toDoubleOrNull()
@@ -329,8 +334,8 @@ class ParseSmsUseCase @Inject constructor() {
                 confidenceScore = 0.95f
             }
 
-            // Received / Cash In (Telebirr: "You have received X ETB from...")
-            val telebirrReceivedMatch = Regex("(?:you\\s+have\\s+)?(?:received).*?([\\d,.]+)\\s*(?:ETB|ብር)", RegexOption.IGNORE_CASE).find(body)
+            // Received / Cash In
+            val telebirrReceivedMatch = Regex("(?:you\\s+have\\s+)?(?:received).*?([\\d,.]+)\\s*(?:ETB|BIRR|ብር)", RegexOption.IGNORE_CASE).find(body)
             if (telebirrReceivedMatch != null && scenario == SmsScenario.UNKNOWN) {
                 scenario = SmsScenario.INCOME
                 addedAmount = telebirrReceivedMatch.groupValues[1].replace(",", "").toDoubleOrNull()

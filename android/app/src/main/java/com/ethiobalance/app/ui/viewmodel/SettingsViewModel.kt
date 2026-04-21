@@ -2,6 +2,7 @@ package com.ethiobalance.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionSourceEntity
 import com.ethiobalance.app.repository.BalanceRepository
 import com.ethiobalance.app.repository.SettingsRepository
@@ -53,8 +54,17 @@ class SettingsViewModel @Inject constructor(
     fun addTransactionSource(source: TransactionSourceEntity) {
         viewModelScope.launch {
             settingsRepo.addTransactionSource(source)
-            // Read 90 days of history for the new source, forcing reparse of previously ignored SMS
-            transactionRepo.smsRepo.scanHistory(source.senderId, days = 90, forceReparse = true)
+            // Scan ALL whitelist senders that resolve to the same bank abbreviation.
+            // This is critical because many banks use alpha senders (e.g. "CBEBirr", "AwashBank")
+            // in addition to numeric short codes (e.g. "847", "901").
+            // A single scanHistory(senderId) would miss alpha-sender SMS entirely.
+            val targetAbbrev = AppConstants.resolveSource(source.abbreviation).uppercase()
+            val sendersToScan = (AppConstants.SMS_SENDER_WHITELIST + source.senderId.split(",").map { it.trim() })
+                .filter { AppConstants.resolveSource(it).uppercase() == targetAbbrev }
+                .distinct()
+            for (sender in sendersToScan) {
+                transactionRepo.smsRepo.scanHistory(sender, days = 90, forceReparse = true)
+            }
         }
     }
 

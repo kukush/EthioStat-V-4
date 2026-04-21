@@ -68,9 +68,9 @@ class TransactionViewModel @Inject constructor(
 
     val uniqueSources: StateFlow<List<Pair<String, String>>> = settingsRepo.getTransactionSources()
         .map { sources ->
-            sources.map { it.abbreviation to it.abbreviation }
-                .filter { it.second != AppConstants.SOURCE_AIRTIME }
-                .distinctBy { it.second }
+            sources.map { it.abbreviation to AppConstants.displaySource(it.abbreviation) }
+                .filter { it.first != AppConstants.SOURCE_AIRTIME }
+                .distinctBy { it.first }
                 .sortedBy { it.second }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

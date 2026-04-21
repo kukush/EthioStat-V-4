@@ -173,7 +173,7 @@ fun HomeScreen(
                         }
                         Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(src, fontSize = 14.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                            Text(com.ethiobalance.app.AppConstants.displaySource(src), fontSize = 14.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
                             Text(
                                 if (srcTxs.isNotEmpty()) "${srcTxs.size} Transactions" else "Balance only",
                                 fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp)

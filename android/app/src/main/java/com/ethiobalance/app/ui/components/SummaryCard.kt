@@ -66,7 +66,7 @@ fun SummaryCard(
                         Icon(Icons.Default.Payments, null, tint = Blue600, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(8.dp))
-                    val titleLabel = sourceFilter?.uppercase() 
+                    val titleLabel = sourceFilter?.let { com.ethiobalance.app.AppConstants.displaySource(it).uppercase() }
                         ?: Translations.t(language, "financialSummary").takeIf { it.isNotEmpty() }?.uppercase() 
                         ?: "FINANCIAL SUMMARY"
                     Text(

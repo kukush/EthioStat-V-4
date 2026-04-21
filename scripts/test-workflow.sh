@@ -6,9 +6,11 @@
 # All test messages are copied verbatim from actual Ethiopian bank/telecom SMS
 # captured via: adb shell "content query --uri content://sms/inbox ..."
 #
-# Covered banks:  CBE, BOA, Awash Bank, Telebirr (127)
+# Covered banks:  CBE, BOA, Awash Bank (sender="Awash"), Dashen (sender="DashenBank"),
+#                 Telebirr (127)
 # Covered cases:  credit, debit, debit+service-charge, debit-for-party,
-#                 credit-from-party, transfer, airtime-received
+#                 credit-from-party, transfer, airtime-received,
+#                 paid-X-BIRR (Awash school fee)
 #
 # Telecom package coverage:
 #   • Case 1 — Multi-segment 994 balance SMS (Internet + Voice + SMS parsing)
@@ -27,8 +29,10 @@
 # Telecom value rounding: all remaining/total values are integers
 #   (e.g. "33 minute and 47 second" → 34 MIN, "10482.865 MB" → 10483 MB).
 #
-# JVM unit tests include ParseSmsUseCaseTest and SmsRepositorySmartRefreshTest
-# which validates the smart startup/sync behavior in SmsRepository.
+# JVM unit tests include:
+#   • AppConstantsTest          — resolveSource(), displaySource(), whitelist coverage
+#   • ParseSmsUseCaseTest       — real-device SMS formats incl. Awash BIRR, Dashen, CBE transfer
+#   • SmsRepositorySmartRefreshTest — smart startup/sync behavior
 #
 # Usage:  chmod +x scripts/test-workflow.sh && ./scripts/test-workflow.sh
 # =============================================================================
@@ -93,6 +97,22 @@ info "App is installed."
 #     NOTE: CALL_PHONE permission is NOT declared. Dialing uses ACTION_DIAL only.
 # =============================================================================
 
+section "AppConstants Unit Tests (JVM)"
+
+if [[ -f "$ANDROID_DIR/gradlew" ]]; then
+  info "Running AppConstantsTest (resolveSource / displaySource / whitelist)..."
+  if "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" \
+      :app:testDebugUnitTest \
+      --tests "com.ethiobalance.app.AppConstantsTest" \
+      --quiet 2>&1 | tail -5; then
+    pass "AppConstantsTest — all unit tests passed"
+  else
+    fail "AppConstantsTest — one or more unit tests failed"
+  fi
+else
+  info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
+fi
+
 section "TelecomScreen Data Volume Conversion Tests (JVM)"
 
 if [[ -f "$ANDROID_DIR/gradlew" ]]; then
@@ -120,6 +140,34 @@ if [[ -f "$ANDROID_DIR/gradlew" ]]; then
     pass "UssdAccessibilityServiceTest — all unit tests passed"
   else
     fail "UssdAccessibilityServiceTest — one or more unit tests failed"
+  fi
+else
+  info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
+fi
+
+section "ParseSmsUseCase Real-Device SMS Tests (JVM)"
+
+if [[ -f "$ANDROID_DIR/gradlew" ]]; then
+  info "Running ParseSmsUseCaseTest real-device cases (Awash BIRR, Dashen, CBE transfer)..."
+  if "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" \
+      :app:testDebugUnitTest \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testAwash_paidBirr_schoolFee_amount" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testAwash_paidBirr_schoolFee_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testAwash_paidBirr_secondPayment" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testAwash_creditEtb_fromParty" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testAwash_creditEtb_fromTransfer" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testDashen_debit_simple" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testDashen_debit_withServiceCharge" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testDashen_credit" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testDashen_resolveSource" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCbe_transfer_partyNameExtracted" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCbe_debit_noPartyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testTelebirr_receivedFromCBE" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCurrencyBirr_parsedSameAsEtb" \
+      --quiet 2>&1 | tail -5; then
+    pass "ParseSmsUseCaseTest real-device cases — all passed"
+  else
+    fail "ParseSmsUseCaseTest real-device cases — one or more failed"
   fi
 else
   info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
@@ -347,23 +395,45 @@ inject_sms "BOA" \
   "Dear ABEBECH, your account 1*****07 was credited with ETB 100,000.00 by Cash Deposit-ABEBECH WELDE SHOLATO. Available Balance:  ETB 100,107.40. Receipt: https://cs.bankofabyssinia.com/slip/?trx=TT25202BV0J174607" \
   "$T10_TS"
 
-# ── Awash: Credit with party ────────────────────────────────────────────────
+# ── Awash: Credit with party (sender = "Awash" — real device address) ───────
 T11_TS=$((NOW_MS - 100000))
-inject_sms "Awash Bank" \
+inject_sms "Awash" \
   "Dear Customer, your Account 01320xxxxx1400 has been Credited with ETB 1300.00 on 2026-03-31 11:32:14 by ABEBECH WOLDE. Your balance now is ETB 17535.60. For any complaint or enquiry, please call 8980. Thank You. Awash Bank." \
   "$T11_TS"
 
 # ── Awash: Credit via transfer ──────────────────────────────────────────────
 T12_TS=$((NOW_MS - 90000))
-inject_sms "Awash Bank" \
+inject_sms "Awash" \
   "Dear Customer, ETB 50 has been credited to your account from SAMUEL MITIKU GUDINA on : 2026-01-28 20:12:21  with Txn ID: 260128201223255 . Your available balance is now ETB 50.00. Receipt  Link: https://awashpay.awashbank.com:8225/-2K7H8UP3KN-3JLL2T. Contact center  8980." \
   "$T12_TS"
 
 # ── Awash: Larger credit ────────────────────────────────────────────────────
 T13_TS=$((NOW_MS - 80000))
-inject_sms "Awash Bank" \
+inject_sms "Awash" \
   "Dear Customer, your Account 01320xxxxxx1400 has been Credited with ETB 4000.00 on 2026-01-20 09:52:38 by sd. Your balance now is ETB 28696.65. For any complaint or enquiry, please call 8980. Thank You. Awash Bank." \
   "$T13_TS"
+
+# ── Awash: Paid BIRR school fee (real device format — sender = "Awash") ─────
+T_AWASH_BIRR1_TS=$((NOW_MS - 75000))
+inject_sms "Awash" \
+  "You have paid 2,574 BIRR School Fee for YN/566/18 - Hermon  Faris in YENEGEW FRE. Please Click the below link to download your receipt  https://eschool.awashbank.com/-5O18B For any complaint or enquiry, please call 8980. Thank You. Awash Bank." \
+  "$T_AWASH_BIRR1_TS"
+
+T_AWASH_BIRR2_TS=$((NOW_MS - 72000))
+inject_sms "Awash" \
+  "You have paid 2,610 BIRR School Fee for YF2017/127 - Leul Faris in YENEGEW FRE. Please Click the below link to download your receipt  https://eschool.awashbank.com/-5G6S8 For any complaint or enquiry, please call 8980. Thank You. Awash Bank." \
+  "$T_AWASH_BIRR2_TS"
+
+# ── Dashen: debit + credit (real device sender = "DashenBank") ──────────────
+T_DASHEN1_TS=$((NOW_MS - 68000))
+inject_sms "DashenBank" \
+  "Dear Customer, your account '5128******011' is debited with ETB 2,000.00 on 17/04/2026 at 07:26:07 PM. Your current balance is ETB 73,108.33. Dashen Bank - Always one step ahead!" \
+  "$T_DASHEN1_TS"
+
+T_DASHEN2_TS=$((NOW_MS - 65000))
+inject_sms "DashenBank" \
+  "Dear Customer, your account '5128******011' is credited with ETB 2,011.50 on 06/04/2026 at 09:09:47 AM. Your current balance is ETB 75,919.13. Dashen Bank - Always one step ahead!" \
+  "$T_DASHEN2_TS"
 
 # ── Telebirr: Airtime received ──────────────────────────────────────────────
 T14_TS=$((NOW_MS - 70000))
@@ -425,26 +495,34 @@ assert_tx 11 "Awash credit 1,300 ETB (from ABEBECH)"      "INCOME"  "1300.0"    
 assert_tx 12 "Awash credit 50 ETB (from SAMUEL)"          "INCOME"  "50.0"      "AWASH"
 assert_tx 13 "Awash credit 4,000 ETB"                     "INCOME"  "4000.0"    "AWASH"
 
+# ── Awash BIRR Tests ───────────────────────────────────────────────────────
+assert_tx 14a "Awash paid 2,574 BIRR school fee"          "EXPENSE" "2574.0"    "AWASH"
+assert_tx 14b "Awash paid 2,610 BIRR school fee"          "EXPENSE" "2610.0"    "AWASH"
+
+# ── Dashen Tests ────────────────────────────────────────────────────────────
+assert_tx 14c "Dashen debit 2,000 ETB"                    "EXPENSE" "2000.0"    "DASHEN"
+assert_tx 14d "Dashen credit 2,011.50 ETB"                "INCOME"  "2011.5"    "DASHEN"
+
 # ── Telebirr Tests ─────────────────────────────────────────────────────────
-assert_tx 14 "Telebirr airtime received 25 ETB"           "INCOME"  "25.0"      "TeleBirr"
-assert_tx 15 "Telebirr package purchase 100 ETB"          "EXPENSE" "100.0"     "TeleBirr"
-assert_tx 16 "Telebirr transfer 450.50 ETB"               "EXPENSE" "450.5"     "TeleBirr"
+assert_tx 15 "Telebirr airtime received 25 ETB"           "INCOME"  "25.0"      "TELEBIRR"
+assert_tx 16 "Telebirr package purchase 100 ETB"          "EXPENSE" "100.0"     "TELEBIRR"
+assert_tx 17 "Telebirr transfer 450.50 ETB"               "EXPENSE" "450.5"     "TELEBIRR"
 
 # ── USSD Airtime Balance Tests ──────────────────────────────────────────────
 section "Asserting USSD Airtime Balance"
 
 USSD_BALANCE=$(db_query "SELECT amount FROM balance_packages WHERE type='airtime' ORDER BY timestamp DESC LIMIT 1;")
 if [[ "$USSD_BALANCE" == "12.5" || "$USSD_BALANCE" == "12.50" ]]; then
-  pass "Test 17: USSD airtime balance 12.50 Birr persisted to balance_packages"
+  pass "Test 18: USSD airtime balance 12.50 Birr persisted to balance_packages"
 else
-  fail "Test 17: USSD airtime balance not found (got: '${USSD_BALANCE}', expected 12.5)"
+  fail "Test 18: USSD airtime balance not found (got: '${USSD_BALANCE}', expected 12.5)"
 fi
 
 USSD_COUNT=$(db_query "SELECT COUNT(*) FROM ussd_events;")
 if [[ "$USSD_COUNT" -ge 1 ]]; then
-  pass "Test 18: USSD event persisted to ussd_events table"
+  pass "Test 19: USSD event persisted to ussd_events table"
 else
-  fail "Test 18: No USSD events in ussd_events table"
+  fail "Test 19: No USSD events in ussd_events table"
 fi
 
 # =============================================================================
@@ -465,19 +543,19 @@ sleep 8
 
 section "Asserting Case 1 Packages"
 
-assert_pkg 19 "Monthly Internet ~11459 MB" "internet-Monthly-20260516" "internet" "Monthly"   "11459.0" "MB"
-assert_pkg 20 "Free Internet 200 MB"       "internet-Free-20260422"    "internet" "Free"      "200.0"   "MB"
-assert_pkg 21 "Recurring Voice 125 min"    "voice-Recurring-20260430"  "voice"    "Recurring" "125.0"   "MIN"
-assert_pkg 22 "Night Voice 52 min"         "voice-Night-20260430"      "voice"    "Night"     "52.0"    "MIN"
-assert_pkg 23 "Free Voice 44 min"          "voice-Free-20260422"       "voice"    "Free"      "44.0"    "MIN"
-assert_pkg 24 "Custom SMS 136"             "sms-Custom-20260419"       "sms"      "Custom"    "136.0"   "SMS"
+assert_pkg 20 "Monthly Internet ~11459 MB" "internet-Monthly-20260516" "internet" "Monthly"   "11459.0" "MB"
+assert_pkg 21 "Free Internet 200 MB"       "internet-Free-20260422"    "internet" "Free"      "200.0"   "MB"
+assert_pkg 22 "Recurring Voice 125 min"    "voice-Recurring-20260430"  "voice"    "Recurring" "125.0"   "MIN"
+assert_pkg 23 "Night Voice 52 min"         "voice-Night-20260430"      "voice"    "Night"     "52.0"    "MIN"
+assert_pkg 24 "Free Voice 44 min"          "voice-Free-20260422"       "voice"    "Free"      "44.0"    "MIN"
+assert_pkg 25 "Custom SMS 136"             "sms-Custom-20260419"       "sms"      "Custom"    "136.0"   "SMS"
 
 # Count internet packages — should be exactly 2
 INET_COUNT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type='internet';")
 if [[ "$INET_COUNT" == "2" ]]; then
-  pass "Test 25: Case 1 has exactly 2 internet packages"
+  pass "Test 26: Case 1 has exactly 2 internet packages"
 else
-  fail "Test 25: Case 1 internet count (expected 2, got ${INET_COUNT})"
+  fail "Test 26: Case 1 internet count (expected 2, got ${INET_COUNT})"
 fi
 
 section "Telecom Package Case 2 — Night Internet 600MB (new SMS)"
@@ -494,25 +572,25 @@ sleep 8
 
 section "Asserting Case 2 Packages (additive, no overwrite)"
 
-assert_pkg 26 "Night Internet 600 MB" "internet-Night-20260417" "internet" "Night" "600.0" "MB"
+assert_pkg 27 "Night Internet 600 MB" "internet-Night-20260417" "internet" "Night" "600.0" "MB"
 
 # Case 1 Monthly internet still exists
 MONTH_COUNT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE id='internet-Monthly-20260516';")
 if [[ "$MONTH_COUNT" == "1" ]]; then
-  pass "Test 27: Case 1 Monthly internet preserved after Case 2"
+  pass "Test 28: Case 1 Monthly internet preserved after Case 2"
 else
-  fail "Test 27: Case 1 Monthly internet was overwritten (count=${MONTH_COUNT})"
+  fail "Test 28: Case 1 Monthly internet was overwritten (count=${MONTH_COUNT})"
 fi
 
 # Total internet count should be 3 (Monthly + Free + Night)
 INET_TOTAL=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type='internet';")
 if [[ "$INET_TOTAL" == "3" ]]; then
-  pass "Test 28: Total internet packages = 3 (Monthly + Free + Night)"
+  pass "Test 29: Total internet packages = 3 (Monthly + Free + Night)"
 else
-  fail "Test 28: Total internet count (expected 3, got ${INET_TOTAL})"
+  fail "Test 29: Total internet count (expected 3, got ${INET_TOTAL})"
 fi
 
-# ── Test 29: all 6 Case 1 rows still present after Case 2 (additive merge) ──
+# ── Test 30: all 6 Case 1 rows still present after Case 2 (additive merge) ──
 CASE1_KEPT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE id IN (
   'internet-Monthly-20260516',
   'internet-Free-20260422',
@@ -522,17 +600,17 @@ CASE1_KEPT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE id IN (
   'sms-Custom-20260419'
 );")
 if [[ "$CASE1_KEPT" == "6" ]]; then
-  pass "Test 29: All 6 Case 1 rows preserved after single-segment Case 2 SMS (additive)"
+  pass "Test 30: All 6 Case 1 rows preserved after single-segment Case 2 SMS (additive)"
 else
-  fail "Test 29: Expected 6 Case 1 rows preserved, got ${CASE1_KEPT}"
+  fail "Test 30: Expected 6 Case 1 rows preserved, got ${CASE1_KEPT}"
 fi
 
-# ── Test 30: Total SMS-sourced telecom rows = 7 (Case 1 × 6 + Case 2 × 1) ──
+# ── Test 31: Total SMS-sourced telecom rows = 7 (Case 1 × 6 + Case 2 × 1) ──
 SMS_TELECOM_TOTAL=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type IN ('internet','voice','sms','bonus');")
 if [[ "$SMS_TELECOM_TOTAL" == "7" ]]; then
-  pass "Test 30: SMS-sourced telecom rows = 7 (6 Case 1 + 1 Case 2 night)"
+  pass "Test 31: SMS-sourced telecom rows = 7 (6 Case 1 + 1 Case 2 night)"
 else
-  fail "Test 30: Expected 7 SMS-telecom rows, got ${SMS_TELECOM_TOTAL}"
+  fail "Test 31: Expected 7 SMS-telecom rows, got ${SMS_TELECOM_TOTAL}"
 fi
 
 # =============================================================================
@@ -557,12 +635,12 @@ sleep 8
 
 section "Asserting Case 1b Packages (old rows purged)"
 
-# ── Test 31: New rows from Case 1b present ──
-assert_pkg 31 "Case 1b Monthly Internet 9000 MB" "internet-Monthly-20260615" "internet" "Monthly"   "9000.0" "MB"
-assert_pkg 32 "Case 1b Recurring Voice 100 min"  "voice-Recurring-20260530"  "voice"    "Recurring" "100.0"  "MIN"
-assert_pkg 33 "Case 1b Custom SMS 50"            "sms-Custom-20260519"       "sms"      "Custom"    "50.0"   "SMS"
+# ── Test 32: New rows from Case 1b present ──
+assert_pkg 32 "Case 1b Monthly Internet 9000 MB" "internet-Monthly-20260615" "internet" "Monthly"   "9000.0" "MB"
+assert_pkg 33 "Case 1b Recurring Voice 100 min"  "voice-Recurring-20260530"  "voice"    "Recurring" "100.0"  "MIN"
+assert_pkg 34 "Case 1b Custom SMS 50"            "sms-Custom-20260519"       "sms"      "Custom"    "50.0"   "SMS"
 
-# ── Test 34: Old Case 1 rows are GONE (purged before Case 1b insert) ──
+# ── Test 35: Old Case 1 rows are GONE (purged before Case 1b insert) ──
 OLD_CASE1_GONE=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE id IN (
   'internet-Monthly-20260516',
   'internet-Free-20260422',
@@ -573,17 +651,17 @@ OLD_CASE1_GONE=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE id IN (
   'sms-Custom-20260419'
 );")
 if [[ "$OLD_CASE1_GONE" == "0" ]]; then
-  pass "Test 34: All Case 1 and Case 2 SMS-sourced telecom rows purged by Case 1b"
+  pass "Test 35: All Case 1 and Case 2 SMS-sourced telecom rows purged by Case 1b"
 else
-  fail "Test 34: Expected 0 stale rows, got ${OLD_CASE1_GONE}"
+  fail "Test 35: Expected 0 stale rows, got ${OLD_CASE1_GONE}"
 fi
 
-# ── Test 35: SMS-sourced telecom row count = 3 (exactly the Case 1b set) ──
+# ── Test 36: SMS-sourced telecom row count = 3 (exactly the Case 1b set) ──
 POST_PURGE_COUNT=$(db_query "SELECT COUNT(*) FROM balance_packages WHERE type IN ('internet','voice','sms','bonus');")
 if [[ "$POST_PURGE_COUNT" == "3" ]]; then
-  pass "Test 35: Only 3 SMS-sourced telecom rows remain (exactly the new Case 1b set)"
+  pass "Test 36: Only 3 SMS-sourced telecom rows remain (exactly the new Case 1b set)"
 else
-  fail "Test 35: Expected 3 SMS-telecom rows after purge, got ${POST_PURGE_COUNT}"
+  fail "Test 36: Expected 3 SMS-telecom rows after purge, got ${POST_PURGE_COUNT}"
 fi
 
 # =============================================================================

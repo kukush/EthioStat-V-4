@@ -46,20 +46,22 @@ class SmsReceiver : BroadcastReceiver() {
                 }
             }
 
-            val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
-            val userWhitelist = prefs.getStringSet("sms_whitelist", emptySet()) ?: emptySet()
+            val prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
+            val userWhitelist = prefs.getStringSet(AppConstants.PREF_KEY_SMS_WHITELIST, emptySet()) ?: emptySet()
 
             for ((sender, pair) in grouped) {
                 val body = pair.first.toString()
                 val timestamp = pair.second
 
+                // A sender is whitelisted if:
+                //  (a) resolveSource() maps it to a known bank/service (i.e. doesn't fall back to itself), OR
+                //  (b) it is in the user's custom whitelist.
+                // This handles all case variants: "Awash", "AWASH", "AwashBank", "901" all pass.
+                val resolvedSender = AppConstants.resolveSource(sender)
+                val isKnownSource = resolvedSender != sender.trim().uppercase()
                 val isWhitelisted = sender.isNotEmpty() && (
-                                  sender.contains("TELEBIRR", ignoreCase = true) ||
-                                  sender.contains("CBE", ignoreCase = true) ||
-                                  sender.contains("AWASH", ignoreCase = true) ||
-                                  sender.contains("DASHEN", ignoreCase = true) ||
-                                  AppConstants.SMS_SENDER_WHITELIST.any { it.equals(sender, ignoreCase = true) } ||
-                                  userWhitelist.any { it.equals(sender, ignoreCase = true) }
+                    isKnownSource ||
+                    userWhitelist.any { it.equals(sender, ignoreCase = true) }
                 )
 
                 Log.d(TAG, "Checking sender: $sender, isWhitelisted: $isWhitelisted, segments: ${messages.count { (it.displayOriginatingAddress ?: "") == sender }}")

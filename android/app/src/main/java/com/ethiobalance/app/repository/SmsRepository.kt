@@ -73,9 +73,12 @@ class SmsRepository @Inject constructor(
                 cutoffTime.toString()
             )
         } else {
-            // Alpha sender — exact match (LIKE would be too broad e.g. "CBE" matching "CBEBirr")
-            selection = "address = ? AND date > ?"
-            selectionArgs = arrayOf(senderId, cutoffTime.toString())
+            // Alpha sender — case-insensitive match.
+            // Android SMS content provider stores the original-case address (e.g. "AwashBank"),
+            // but normalizeSender() uppercases it ("AWASHBANK"). We must match both cases.
+            // LIKE is safe here because we are matching the full sender string, not a prefix.
+            selection = "(address = ? OR upper(address) = upper(?)) AND date > ?"
+            selectionArgs = arrayOf(senderId, senderId, cutoffTime.toString())
         }
 
         val cursor = context.contentResolver.query(
