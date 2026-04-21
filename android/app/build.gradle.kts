@@ -19,7 +19,7 @@ android {
         
         // Property injection
         buildConfigField("String", "USSD_BALANCE_CHECK", "\"${project.findProperty("ethiobalance.ussd.balance_check") ?: "*804#"}\"")
-        buildConfigField("String", "USSD_RECHARGE_SELF", "\"${project.findProperty("ethiobalance.ussd.recharge_self") ?: "*805#"}\"")
+        buildConfigField("String", "USSD_RECHARGE_SELF", "\"${project.findProperty("ethiobalance.ussd.recharge_self") ?: "*805*"}\"")
         buildConfigField("String", "USSD_RECHARGE_OTHER", "\"${project.findProperty("ethiobalance.ussd.recharge_other") ?: "*805*"}\"")
         buildConfigField("String", "USSD_TRANSFER_AIRTIME", "\"${project.findProperty("ethiobalance.ussd.transfer_airtime") ?: "*806*"}\"")
         buildConfigField("String", "USSD_GIFT_PACKAGE", "\"${project.findProperty("ethiobalance.ussd.gift_package") ?: "*999#"}\"")
