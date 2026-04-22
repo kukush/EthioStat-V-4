@@ -33,6 +33,7 @@
 #   • AppConstantsTest          — resolveSource(), displaySource(), whitelist coverage
 #   • ParseSmsUseCaseTest       — real-device SMS formats incl. Awash BIRR, Dashen, CBE transfer
 #   • SmsRepositorySmartRefreshTest — smart startup/sync behavior
+#   • SettingsRepositoryTest    — default source seeding, sender variant handling, permission-aware SMS checking
 #
 # Usage:  chmod +x scripts/test-workflow.sh && ./scripts/test-workflow.sh
 # =============================================================================
@@ -164,8 +165,14 @@ if [[ -f "$ANDROID_DIR/gradlew" ]]; then
       --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCbe_debit_noPartyName" \
       --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testTelebirr_receivedFromCBE" \
       --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCurrencyBirr_parsedSameAsEtb" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_telebirrPromo_mentionsGB_doesNotCreateInternetPackage" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_telebirrPurchase_mentionsMB_doesNotCreateInternetPackage" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_cbeSms_mentionsMinutes_doesNotCreateVoicePackage" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_awashWeeklyOfferWording_fromNonTelecomSender_isIgnored" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_boaCredit_mentionsGB_doesNotCreatePackage" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_control_994NightInternet_createsInternetPackage" \
       --quiet 2>&1 | tail -5; then
-    pass "ParseSmsUseCaseTest real-device cases — all passed"
+    pass "ParseSmsUseCaseTest real-device cases — all passed (incl. ghost-package regression tests)"
   else
     fail "ParseSmsUseCaseTest real-device cases — one or more failed"
   fi
@@ -200,6 +207,22 @@ if [[ -f "$ANDROID_DIR/gradlew" ]]; then
     pass "SmsRepositorySmartRefreshTest — all unit tests passed (multi-only / multi+single / single-only / empty / deep-scan for 10 SMS)"
   else
     fail "SmsRepositorySmartRefreshTest — one or more unit tests failed"
+  fi
+else
+  info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
+fi
+
+section "SettingsRepository Default Source Seeding Tests (JVM)"
+
+if [[ -f "$ANDROID_DIR/gradlew" ]]; then
+  info "Running SettingsRepositoryTest (sender variants, seeding logic, permission handling)..."
+  if "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" \
+      :app:testDebugUnitTest \
+      --tests "com.ethiobalance.app.repository.SettingsRepositoryTest" \
+      --quiet 2>&1 | tail -5; then
+    pass "SettingsRepositoryTest — all unit tests passed (getAllSenderIdsForBank, seedDefaultSourcesIfEmpty, DEFAULT_TRANSACTION_SOURCES)"
+  else
+    fail "SettingsRepositoryTest — one or more unit tests failed"
   fi
 else
   info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"

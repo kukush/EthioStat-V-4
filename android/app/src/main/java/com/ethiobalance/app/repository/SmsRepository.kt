@@ -109,26 +109,24 @@ class SmsRepository @Inject constructor(
     }
 
     /**
-     * Full historical scan — covers BOTH:
-     *  (a) User-configured sources in the transaction_sources table
-     *  (b) The built-in SMS_SENDER_WHITELIST in AppConstants
+     * Full historical scan — scans ONLY user-configured sources in transaction_sources table.
+     * Does NOT merge with SMS_SENDER_WHITELIST (per project standards).
      *
-     * Using 90 days so the past 3 months of SMS are always captured on first run.
+     * Using 90 days so the past 3 months of SMS are captured on first run.
      * De-duplication inside ReconciliationEngine prevents double-counting.
      */
     suspend fun scanAllTransactionSources(days: Int = 90): Int = withContext(Dispatchers.IO) {
-        // Merge user-configured senders with the hardcoded whitelist
-        // Exclude telecom senders — packages are handled by refreshTelecomFromLatestSms()
+        // Scan only configured sources from DB — no hardcoded whitelist union
+        // Exclude telecom senders — packages are handled by refreshTelecomSmart()
         val telecomExclude = AppConstants.TELECOM_SENDERS
         val configuredSenders = transactionSourceDao.getEnabledSenderIdsFlattened().toSet()
-        val allSenders = (configuredSenders + AppConstants.SMS_SENDER_WHITELIST).distinct()
-            .filter { it !in telecomExclude }
+        val allSenders = configuredSenders.filter { it !in telecomExclude }
 
         var totalScanned = 0
         for (senderId in allSenders) {
             totalScanned += scanHistory(senderId, days = days)
         }
-        Log.d("SmsRepository", "scanAllTransactionSources done: $totalScanned total")
+        Log.d("SmsRepository", "scanAllTransactionSources done: $totalScanned total (sources: ${allSenders.size})")
         totalScanned
     }
 

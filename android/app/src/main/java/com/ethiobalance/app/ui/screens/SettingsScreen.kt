@@ -308,8 +308,10 @@ fun SettingsScreen(
 
     // Add Source Modal
     if (showAddSource) {
+        val configuredAbbreviations = transactionSources.map { it.abbreviation }
         AddSourceSheet(
             _language = language,
+            configuredSources = configuredAbbreviations,
             onDismiss = { showAddSource = false },
             onAdd = { source ->
                 onAddSource(source)
@@ -501,16 +503,49 @@ private fun EditProfileSheet(
 @Composable
 private fun AddSourceSheet(
     _language: String,
+    configuredSources: List<String>,
     onDismiss: () -> Unit,
     onAdd: (TransactionSourceEntity) -> Unit
 ) {
     var newSource by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
 
-    val filtered = if (searchQuery.isBlank()) AppConstants.KNOWN_BANKS
-    else AppConstants.KNOWN_BANKS.filter {
+    // Filter out already-configured sources so users can't add duplicates
+    val availableBanks = AppConstants.KNOWN_BANKS.filter {
+        it.abbreviation !in configuredSources
+    }
+
+    val filtered = if (searchQuery.isBlank()) availableBanks
+    else availableBanks.filter {
         it.abbreviation.contains(searchQuery, ignoreCase = true) ||
         it.fullName.contains(searchQuery, ignoreCase = true)
+    }
+
+    // Helper to get all sender variants for a bank (mirrors SettingsRepository.getAllSenderIdsForBank)
+    fun getAllSenderIdsForBank(abbreviation: String): String {
+        val upper = abbreviation.uppercase()
+        val variants = mutableSetOf<String>()
+
+        // Add all entries from SMS_SENDER_WHITELIST that resolve to this abbreviation
+        AppConstants.SMS_SENDER_WHITELIST.forEach { senderId ->
+            if (AppConstants.resolveSource(senderId) == upper) {
+                variants.add(senderId)
+            }
+        }
+
+        // Add the abbreviation itself
+        variants.add(upper)
+
+        // Also check TELECOM_SENDERS for Telebirr
+        if (upper == "TELEBIRR") {
+            AppConstants.TELECOM_SENDERS.forEach { senderId ->
+                if (AppConstants.resolveSource(senderId) == upper) {
+                    variants.add(senderId)
+                }
+            }
+        }
+
+        return variants.joinToString(",")
     }
 
     ModalBottomSheet(
@@ -583,13 +618,16 @@ private fun AddSourceSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
+                                // Populate all sender variants for this bank
+                                val allSenderIds = getAllSenderIdsForBank(bank.abbreviation)
                                 onAdd(TransactionSourceEntity(
                                     abbreviation = bank.abbreviation,
                                     name = bank.fullName,
                                     ussd = "",
-                                    senderId = bank.senderId.ifEmpty { bank.abbreviation },
+                                    senderId = allSenderIds, // e.g., "889,847,CBE,CBEBirr,CBEBIRR"
                                     isEnabled = true
                                 ))
+                                onDismiss()
                             },
                         shape = RoundedCornerShape(24.dp),
                         color = Slate50

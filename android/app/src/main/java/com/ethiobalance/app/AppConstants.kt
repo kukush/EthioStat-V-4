@@ -336,7 +336,13 @@ object AppConstants {
     val USSD_RECHARGE_OTHER: String get() = BuildConfig.USSD_RECHARGE_OTHER
     val USSD_TRANSFER_AIRTIME: String get() = BuildConfig.USSD_TRANSFER_AIRTIME
     val USSD_GIFT_PACKAGE: String get() = BuildConfig.USSD_GIFT_PACKAGE
-    
+
+    // -------------------------------------------------------------------------
+    // Default Transaction Sources — sourced from gradle.properties via BuildConfig
+    // -------------------------------------------------------------------------
+    val DEFAULT_TRANSACTION_SOURCES: List<String>
+        get() = BuildConfig.DEFAULT_TRANSACTION_SOURCES.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
     // -------------------------------------------------------------------------
     // Broadcast Actions
     // -------------------------------------------------------------------------

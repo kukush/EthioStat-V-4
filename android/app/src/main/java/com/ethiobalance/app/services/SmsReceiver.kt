@@ -53,18 +53,19 @@ class SmsReceiver : BroadcastReceiver() {
                 val body = pair.first.toString()
                 val timestamp = pair.second
 
-                // A sender is whitelisted if:
-                //  (a) resolveSource() maps it to a known bank/service (i.e. doesn't fall back to itself), OR
-                //  (b) it is in the user's custom whitelist.
-                // This handles all case variants: "Awash", "AWASH", "AwashBank", "901" all pass.
-                val resolvedSender = AppConstants.resolveSource(sender)
-                val isKnownSource = resolvedSender != sender.trim().uppercase()
-                val isWhitelisted = sender.isNotEmpty() && (
-                    isKnownSource ||
-                    userWhitelist.any { it.equals(sender, ignoreCase = true) }
-                )
+                // A sender is whitelisted ONLY if:
+                //  (a) it is in the DB-backed user whitelist (which includes all variants for configured sources), OR
+                //  (b) it is a telecom sender (994, 804, etc.)
+                // NOTE: The broad resolveSource() gate has been removed per project standards.
+                // Only configured transaction sources + telecom are accepted.
+                val upperSender = sender.trim().uppercase()
+                val isTelecomSender = AppConstants.TELECOM_SENDERS.any {
+                    it.equals(sender, ignoreCase = true) || it == upperSender
+                }
+                val isInUserWhitelist = userWhitelist.any { it.equals(sender, ignoreCase = true) }
+                val isWhitelisted = sender.isNotEmpty() && (isInUserWhitelist || isTelecomSender)
 
-                Log.d(TAG, "Checking sender: $sender, isWhitelisted: $isWhitelisted, segments: ${messages.count { (it.displayOriginatingAddress ?: "") == sender }}")
+                Log.d(TAG, "Checking sender: $sender, isWhitelisted: $isWhitelisted, telecom: $isTelecomSender, userList: $isInUserWhitelist, segments: ${messages.count { (it.displayOriginatingAddress ?: "") == sender }}")
 
                 if (isWhitelisted) {
                     Log.d(TAG, "Triggering foreground service for $sender")

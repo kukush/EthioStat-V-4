@@ -24,6 +24,7 @@ android {
         buildConfigField("String", "USSD_TRANSFER_AIRTIME", "\"${project.findProperty("ethiobalance.ussd.transfer_airtime") ?: "*806*"}\"")
         buildConfigField("String", "USSD_GIFT_PACKAGE", "\"${project.findProperty("ethiobalance.ussd.gift_package") ?: "*999#"}\"")
         buildConfigField("String", "PHONE_APP_PACKAGE", "\"${project.findProperty("ethiobalance.phone_app_package") ?: "com.android.phone"}\"")
+        buildConfigField("String", "DEFAULT_TRANSACTION_SOURCES", "\"${project.findProperty("ethiobalance.default_sources") ?: "CBE,TELEBIRR"}\"")
     }
 
     buildTypes {

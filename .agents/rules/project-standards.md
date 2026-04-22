@@ -387,6 +387,7 @@ ethiobalance.ussd.recharge_other=*805*
 ethiobalance.ussd.transfer_airtime=*806*
 ethiobalance.ussd.gift_package=*999#
 ethiobalance.phone_app_package=com.android.phone
+ethiobalance.default_sources=CBE,TELEBIRR
 ```
 
 ### BuildConfig Access
@@ -412,3 +413,21 @@ val USSD_BALANCE_CHECK: String get() = BuildConfig.USSD_BALANCE_CHECK
 - [ ] Screens use `RoundedCornerShape` and theme-consistent spacing
 - [ ] Translations use `Translations.t()` with fallback
 - [ ] Tests added for new use cases and repositories
+
+---
+
+## SMS Source Scoping (Non-Negotiable)
+
+Rules governing how SMS sources are managed and processed:
+
+- **Scanning Restriction**: `SmsRepository.scanAllTransactionSources()` MUST scan ONLY user-configured sources in `transaction_sources` table. NEVER union with `AppConstants.SMS_SENDER_WHITELIST`.
+
+- **Real-time Restriction**: `SmsReceiver` MUST gate incoming SMS on the DB-synced SharedPreferences whitelist (`sms_whitelist`) only. The broad `resolveSource()` fallback must NOT be used as an acceptance gate. Telecom senders (994, 804, etc.) are accepted via separate check.
+
+- **Default Sources**: Defined in `gradle.properties` via `ethiobalance.default_sources` and accessed through `BuildConfig.DEFAULT_TRANSACTION_SOURCES` → `AppConstants.DEFAULT_TRANSACTION_SOURCES`. Do not hardcode them in Kotlin.
+
+- **Sender Variants**: When storing transaction sources, populate `senderId` with ALL known variants (comma-separated) using `getAllSenderIdsForBank()`. Example: CBE stores `"889,847,CBE,CBEBirr,CBEBIRR"`.
+
+- **Metadata Only**: `KNOWN_BANKS` and `SMS_SENDER_WHITELIST` exist for metadata/parsing only, not for deciding which SMS to process.
+
+- **UI Filtering**: Add-source UI MUST filter out already-configured sources (defaults + user-added) to prevent duplicates.

@@ -400,4 +400,78 @@ class ParseSmsUseCaseTest {
 
         assertEquals(birrResult.deductedAmount!!, etbResult.deductedAmount!!, 0.01)
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Ghost balance_packages regression tests
+    //
+    //  Non-telecom SMS (CBE, Telebirr=127, Awash, BOA, etc.) frequently mention
+    //  "MB", "GB", "Min" in promos, purchase receipts, or greetings. These must
+    //  NOT create balance_packages rows — only the Ethio Telecom sender 994
+    //  (and variants) is authoritative for telecom assets.
+    //
+    //  These tests lock in the sender-gating fix in ParseSmsUseCase.parse().
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private fun assertNoTelecomPackages(result: com.ethiobalance.app.domain.model.ParsedSmsResult, label: String) {
+        val telecomPkgs = result.packages.filter {
+            it.type in setOf("voice", "internet", "sms", "bonus")
+        }
+        assertTrue(
+            "$label: expected NO telecom packages, got ${telecomPkgs.size}: " +
+                telecomPkgs.joinToString { "${it.type}/${it.subType}=${it.remainingAmount}${it.unit}" },
+            telecomPkgs.isEmpty()
+        )
+    }
+
+    @Test
+    fun ghostPkg_telebirrPromo_mentionsGB_doesNotCreateInternetPackage() {
+        // Real-device Telebirr promo SMS mentions "10GB" — must not create a package.
+        val body = "Buy the 10GB Internet package from telebirr SuperApp and save 20%. Download: https://bit.ly/telebirr"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+        assertNoTelecomPackages(result, "Telebirr promo with 10GB")
+    }
+
+    @Test
+    fun ghostPkg_telebirrPurchase_mentionsMB_doesNotCreateInternetPackage() {
+        // Telebirr purchase receipt for a 5GB package — creates an EXPENSE, NOT a telecom asset.
+        val body = "You have paid 100.00 ETB for 5GB Monthly Internet package. Transaction ID: TX001. Your new balance is 2400.00 ETB."
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+        assertNoTelecomPackages(result, "Telebirr 5GB purchase")
+    }
+
+    @Test
+    fun ghostPkg_cbeSms_mentionsMinutes_doesNotCreateVoicePackage() {
+        // A CBE SMS that happens to contain "Min" should never create a voice package.
+        val body = "Dear Customer, your Account has been debited with ETB 500.00 after 3 Min. Current balance ETB 10,000."
+        val result = parseSmsUseCase("CBE", body, System.currentTimeMillis())
+        assertNoTelecomPackages(result, "CBE debit mentioning 3 Min")
+    }
+
+    @Test
+    fun ghostPkg_awashWeeklyOfferWording_fromNonTelecomSender_isIgnored() {
+        // Same "weekly Internet Package 3GB … will be expired on Apr 2, 2026" wording
+        // but sent from a non-telecom sender must NOT create a telecom package.
+        val body = "As per your request the new service offer weekly Internet Package 3GB from telebirr to be expired after 7days is added. The offer will be expired on Apr 2, 2026 3:08:30 PM."
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+        assertNoTelecomPackages(result, "Weekly offer wording from 127")
+    }
+
+    @Test
+    fun ghostPkg_boaCredit_mentionsGB_doesNotCreatePackage() {
+        val body = "Dear customer, your account 1*****07 was credited with ETB 5,000.00 via 2GB data reward promo."
+        val result = parseSmsUseCase("BOA", body, System.currentTimeMillis())
+        assertNoTelecomPackages(result, "BOA credit mentioning 2GB")
+    }
+
+    // ── Positive control: a genuine 994 single-segment package SMS DOES create an asset ──
+    @Test
+    fun ghostPkg_control_994NightInternet_createsInternetPackage() {
+        val body = "Dear customer You have received Night Internet package 600MB from telebirr expire after 24 hr from 0. The package Will be expired on 17-04-2026 06:59:59."
+        val result = parseSmsUseCase("994", body, System.currentTimeMillis())
+        val internetPkgs = result.packages.filter { it.type == "internet" }
+        assertEquals("994 single-segment must create exactly 1 internet package", 1, internetPkgs.size)
+        assertEquals(600.0, internetPkgs[0].remainingAmount, 0.01)
+        assertEquals("MB", internetPkgs[0].unit)
+    }
+
 }

@@ -20,6 +20,9 @@ interface TransactionDao {
     @Query("SELECT SUM(amount) FROM transactions WHERE type = :type")
     suspend fun getTotalByType(type: String): Double?
 
+    @Query("SELECT COUNT(*) FROM transactions WHERE source = :source")
+    suspend fun countBySource(source: String): Int
+
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
 }

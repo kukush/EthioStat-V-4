@@ -404,8 +404,17 @@ class ParseSmsUseCase @Inject constructor() {
                 reference = refMatch.groupValues[1]
             }
 
-            // Package parsing (skip if multi-segment already parsed)
-            if (!isMultiSegment) {
+            // Package parsing (skip if multi-segment already parsed).
+            // ONLY run for Ethio Telecom senders (994 and variants) — other
+            // sources like Telebirr (127) or CBE can mention MB/GB/Min in
+            // promo/purchase SMS but must NOT create telecom asset rows.
+            // Telecom assets are authoritatively driven by 994 multi-segment
+            // balance SMS (purge + replace) and 994 single-segment "You have
+            // received …" SMS (additive upsert) via refreshTelecomSmart.
+            val isTelecomSender = AppConstants.TELECOM_SENDERS.any {
+                it.equals(sender, ignoreCase = true)
+            }
+            if (!isMultiSegment && isTelecomSender) {
                 parsePackageDetails(body, now, result)
             }
 
