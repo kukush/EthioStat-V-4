@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
 
@@ -45,10 +46,11 @@ val navTabs = listOf(
 fun BottomNavBar(
     currentRoute: String,
     language: String,
-    onTabSelected: (String) -> Unit
+    onTabSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         color = Color.White.copy(alpha = 0.95f),
         tonalElevation = 0.dp,
         shadowElevation = 8.dp
@@ -118,4 +120,10 @@ fun BottomNavBar(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun BottomNavBarPreview() {
+    BottomNavBar(currentRoute = "home", language = "en", onTabSelected = {})
 }

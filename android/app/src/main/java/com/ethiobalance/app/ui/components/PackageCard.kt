@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.ui.theme.*
+import androidx.compose.ui.tooling.preview.Preview
 import com.ethiobalance.app.ui.Translations
 import java.util.*
 
@@ -198,3 +199,19 @@ data class PackageTheme(
     val barBg: Color,
     val barFg: Color
 )
+
+@Preview(showBackground = true)
+@Composable
+private fun PackageCardPreview() {
+    PackageCard(
+        type = "internet",
+        value = 3500.0,
+        total = 5120.0,
+        unit = "MB",
+        label = "5GB Monthly",
+        expiryMs = System.currentTimeMillis() + 86400000L * 15,
+        daysLeft = 15,
+        totalDays = 30,
+        language = "en"
+    )
+}

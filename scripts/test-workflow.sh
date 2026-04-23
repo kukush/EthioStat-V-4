@@ -12,6 +12,17 @@
 #                 credit-from-party, transfer, airtime-received,
 #                 paid-X-BIRR (Awash school fee)
 #
+# Party name extraction coverage:
+#   • Telebirr received-from (with parenthesized phone number)
+#   • Telebirr transferred-to (with parenthesized phone number)
+#   • Telebirr bank transfer (to Commercial Bank of Ethiopia)
+#   • CBE credited-from ("Credited with ETB X from [Name]")
+#   • CBE debited-for ("debited for [Name] with ETB")
+#   • Awash credited-by ("Credited with ETB X ... by [Name]")
+#   • Awash credited-from ("credited to your account from [Name]")
+#   • BOA credited-by ("credited with ETB X by [Name]")
+#   • Translations: "from"/"to" keys for en/am/om
+#
 # Telecom package coverage:
 #   • Case 1 — Multi-segment 994 balance SMS (Internet + Voice + SMS parsing)
 #   • Case 1b — Re-run with different expiry dates asserts PURGE-and-replace
@@ -31,7 +42,7 @@
 #
 # JVM unit tests include:
 #   • AppConstantsTest          — resolveSource(), displaySource(), whitelist coverage
-#   • ParseSmsUseCaseTest       — real-device SMS formats incl. Awash BIRR, Dashen, CBE transfer
+#   • ParseSmsUseCaseTest       — real-device SMS formats incl. Awash BIRR, Dashen, CBE transfer, party name extraction
 #   • SmsRepositorySmartRefreshTest — smart startup/sync behavior
 #   • SettingsRepositoryTest    — default source seeding, sender variant handling, permission-aware SMS checking
 #
@@ -153,8 +164,18 @@ if [[ -f "$ANDROID_DIR/gradlew" ]]; then
       --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_awashWeeklyOfferWording_fromNonTelecomSender_isIgnored" \
       --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_boaCredit_mentionsGB_doesNotCreatePackage" \
       --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.ghostPkg_control_994NightInternet_createsInternetPackage" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testTelebirr_receivedFrom_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testTelebirr_transferredTo_partyNameWithPhone" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testTelebirr_bankTransfer_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCbe_creditedFrom_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCbe_debitedFor_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testAwash_creditedBy_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testAwash_creditedFrom_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testBoa_creditedBy_partyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testCbe_simpleCredit_noPartyName" \
+      --tests "com.ethiobalance.app.domain.usecase.ParseSmsUseCaseTest.testTranslations_fromToKeys_exist" \
       --quiet 2>&1 | tail -5; then
-    pass "ParseSmsUseCaseTest real-device cases — all passed (incl. ghost-package regression tests)"
+    pass "ParseSmsUseCaseTest real-device cases — all passed (incl. ghost-package + party name extraction tests)"
   else
     fail "ParseSmsUseCaseTest real-device cases — one or more failed"
   fi
@@ -268,6 +289,31 @@ assert_tx() {
     pass "Test ${test_num}: ${label}"
   else
     fail "Test ${test_num}: ${label} (expected ${type} ${amount} from ${source})"
+  fi
+}
+
+assert_party() {
+  local test_num="$1"
+  local label="$2"
+  local type="$3"
+  local amount="$4"
+  local source="$5"
+  local expected_party="$6"
+  local actual_party
+  actual_party=$(db_query "SELECT partyName FROM transactions WHERE type='${type}' AND amount=${amount} AND source='${source}' LIMIT 1;")
+  if [[ -z "$expected_party" ]]; then
+    # Expect null/empty partyName
+    if [[ -z "$actual_party" ]]; then
+      pass "Test ${test_num}: ${label} (partyName is null as expected)"
+    else
+      fail "Test ${test_num}: ${label} (expected null partyName, got '${actual_party}')"
+    fi
+  else
+    if echo "$actual_party" | grep -qi "$expected_party"; then
+      pass "Test ${test_num}: ${label} (partyName='${actual_party}')"
+    else
+      fail "Test ${test_num}: ${label} (expected partyName containing '${expected_party}', got '${actual_party}')"
+    fi
   fi
 }
 
@@ -479,6 +525,18 @@ assert_tx 14d "Dashen credit 2,011.50 ETB"                "INCOME"  "2011.5"    
 assert_tx 15 "Telebirr airtime received 25 ETB"           "INCOME"  "25.0"      "TELEBIRR"
 assert_tx 16 "Telebirr package purchase 100 ETB"          "EXPENSE" "100.0"     "TELEBIRR"
 assert_tx 17 "Telebirr transfer 450.50 ETB"               "EXPENSE" "450.5"     "TELEBIRR"
+
+# ── Party Name Extraction Tests ───────────────────────────────────────────
+section "Asserting Party Name Extraction"
+
+assert_party P1 "CBE credit from Metawal Taye"          "INCOME"  "20000.0"  "CBE"   "Metawal Taye"
+assert_party P2 "CBE debit for SELAMAWIT ALEMU GETAHUN" "EXPENSE" "50011.5"  "CBE"   "SELAMAWIT"
+assert_party P3 "CBE debit for GULELE utility"          "EXPENSE" "2005.75"  "CBE"   "GULELE"
+assert_party P4 "CBE simple credit — no party"          "INCOME"  "7000.0"   "CBE"   ""
+assert_party P5 "BOA credit by Cash Deposit"             "INCOME"  "5000.0"   "BOA"   "ABEBECH WELDE SHOLATO"
+assert_party P6 "BOA credit 100K by Cash Deposit"        "INCOME"  "100000.0" "BOA"   "ABEBECH WELDE SHOLATO"
+assert_party P7 "Awash credit by ABEBECH WOLDE"          "INCOME"  "1300.0"   "AWASH" "ABEBECH WOLDE"
+assert_party P8 "Awash credit from SAMUEL MITIKU"        "INCOME"  "50.0"     "AWASH" "SAMUEL MITIKU"
 
 # =============================================================================
 #  TELECOM PACKAGE INTEGRATION TESTS

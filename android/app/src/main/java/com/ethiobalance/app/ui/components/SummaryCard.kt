@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
@@ -219,4 +220,17 @@ fun SummaryCard(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SummaryCardPreview() {
+    SummaryCard(
+        language = "en",
+        netBalance = 12500.50,
+        totalIncome = 25000.00,
+        totalExpense = 12499.50,
+        transactionCount = 42,
+        timeFilter = "90 DAYS"
+    )
 }

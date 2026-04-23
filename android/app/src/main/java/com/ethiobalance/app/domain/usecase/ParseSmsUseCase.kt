@@ -230,8 +230,18 @@ class ParseSmsUseCase @Inject constructor() {
                 Regex("for\\s+package\\s+(.+?)\\s+purchase", RegexOption.IGNORE_CASE),
                 // Telebirr Package Purchase alt: "paid ETB X for [package name] purchase made for"
                 Regex("paid\\s+ETB\\s+[\\d,.]+\\s+for\\s+(.+?)\\s+purchase\\s+made", RegexOption.IGNORE_CASE),
-                // CBE/BOA Transfer: "to Lenco Getachew"
-                Regex("(?:transfered|transferred)\\s+(?:ETB\\s*)?[\\d,.]+\\s+to\\s+([A-Za-z0-9\\s./]+?)(?:\\s+on|from your account)", RegexOption.IGNORE_CASE),
+                // Telebirr/CBE "received ETB X from [Name]" — income
+                Regex("received\\s+(?:ETB\\s*)?[\\d,.]+\\s+from\\s+(.+?)(?:\\s+on\\s|,\\s+on\\s|\\.\\s)", RegexOption.IGNORE_CASE),
+                // Awash "credited to your account from [Name]"
+                Regex("credited\\s+to\\s+your\\s+account\\s+from\\s+(.+?)(?:\\s+on\\s)", RegexOption.IGNORE_CASE),
+                // CBE "Credited with ETB X from [Name], on" or "from [Name]. on"
+                Regex("(?:credited|Credited)\\s+with\\s+ETB\\s+[\\d,.]+\\s+from\\s+(.+?)(?:,\\s+on\\s|\\.\\s+on\\s|\\s+on\\s)", RegexOption.IGNORE_CASE),
+                // CBE "debited for [Name] with ETB"
+                Regex("debited\\s+for\\s+(.+?)\\s+with\\s+ETB", RegexOption.IGNORE_CASE),
+                // Telebirr transfer: "transferred ETB X to [Name(phone)] on" (handles parenthesized phone numbers)
+                Regex("(?:transfered|transferred)\\s+ETB\\s+[\\d,.]+\\s+to\\s+(.+?)(?:\\s+on\\s)", RegexOption.IGNORE_CASE),
+                // Telebirr bank transfer: "transferred ETB X successfully from ... to [Bank Name] account"
+                Regex("(?:transfered|transferred)\\s+ETB\\s+[\\d,.]+\\s+successfully\\s+from\\s+.+?\\s+to\\s+(.+?)\\s+account\\s+(?:number\\s+)?\\S+\\s+on\\s", RegexOption.IGNORE_CASE),
                 // Awash School Fee: "paid 2,574 BIRR School Fee for YN/566/18 - Hermon Faris in"
                 Regex("paid\\s+[\\d,]+\\s+BIRR\\s+.+?\\s+for\\s+[^-]+-\\s*([A-Za-z\\s]+?)\\s+in\\s", RegexOption.IGNORE_CASE),
                 // Awash generic: "for [description] - [Name]"
@@ -241,9 +251,9 @@ class ParseSmsUseCase @Inject constructor() {
                 Regex("paid\\s+(?:ETB|BIRR)\\s*[\\d,.]+\\s+to\\s+([^.]+?)(?:\\s+for|\\. Your current balance)", RegexOption.IGNORE_CASE),
                 // Cash In/Out: "by Agent [Agent Name/ID]"
                 Regex("by\\s+(Agent\\s*\\[[^\\]]+\\])", RegexOption.IGNORE_CASE),
-                // CBE/BOA Credit: "by A/r Tele Birr"
-                Regex("by\\s+([A-Za-z0-9\\s./]+?)\\. Available Balance", RegexOption.IGNORE_CASE),
-                // Telebirr Transfer: "to 0911XXXXXX (Abebe Kebede)"
+                // Awash/BOA/CBE: "Credited with ETB X ... by [Name]." or "by [Name]. Available Balance"
+                Regex("(?:credited|Credited)\\s+with\\s+ETB\\s+[\\d,.]+.*?\\bby\\s+(.+?)(?:\\.\\s|\\. |$)", RegexOption.IGNORE_CASE),
+                // Telebirr Transfer fallback: "to 0911XXXXXX (Abebe Kebede)"
                 Regex("to\\s+([^\\.]+)", RegexOption.IGNORE_CASE)
             )
 

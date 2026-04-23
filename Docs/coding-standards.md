@@ -1,342 +1,387 @@
 # EthioStat Coding Standards
 
-This document establishes comprehensive coding standards and conventions for the EthioStat project to ensure consistent, maintainable, and high-quality code across the development team.
+This document establishes comprehensive coding standards and conventions for the EthioStat native Android project. The application is **100% Kotlin** with **Jetpack Compose** UI, following **Clean Architecture + MVVM**.
 
-## File Organization Rules
+---
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Language | Kotlin | 1.9.24 |
+| JDK | Java | 21 |
+| Build System | Gradle Kotlin DSL | 8.13 |
+| UI Framework | Jetpack Compose (Material 3) | BOM 2024.12.01 |
+| Architecture | MVVM + Clean Architecture | - |
+| Dependency Injection | Hilt (Dagger) | 2.51.1 |
+| Database | Room | 2.6.1 |
+| Preferences | DataStore | 1.1.1 |
+| Async | Kotlin Coroutines + Flow | - |
+| Min SDK | Android API | 24 |
+| Target SDK | Android API | 36 |
+| Font | Manrope (Google Fonts) | - |
+
+---
+
+## File Organization
 
 ### Root Directory Policy
-- **Only README.md allowed in root directory**
-- All other documentation must be placed in the `Docs/` directory
-- Configuration files (package.json, tsconfig.json, etc.) remain in root as required by tooling
-- Build and deployment scripts belong in `scripts/` directory
+- **Only `README.md`** allowed in the project root
+- All documentation in `Docs/`
+- Build and deployment scripts in `scripts/`
+- Agent rules in `.agents/rules/`
 
-### Documentation Structure
-- **Consolidate related documentation** into single files when functionality overlaps
-- **Merge implementation guides** with architectural documentation where appropriate
-- **Maintain clear separation** between user documentation and technical specifications
-
-### Directory Structure Standards
+### Project Structure
 ```
-src/
-├── constants/          # Application constants and configuration
-├── data/              # Data services, persistence, and external integrations
-├── domain/            # Business logic, types, and use cases
-├── lib/               # Utility functions and shared libraries
-├── components/        # Reusable UI components
-├── screens/           # Screen-level components
-└── store/             # State management
-```
-
-## TypeScript Standards
-
-### Language Requirements
-- **Use TypeScript for all code** - no JavaScript files allowed
-- **Prefer interfaces over types** for object definitions
-- **Avoid enums** - use const objects or maps instead
-- **Use functional components** with TypeScript interfaces for React
-
-### Type Definitions
-```typescript
-// ✅ Good - Interface
-interface UserData {
-  id: string;
-  name: string;
-  isActive: boolean;
-}
-
-// ❌ Avoid - Type alias for objects
-type UserData = {
-  id: string;
-  name: string;
-  isActive: boolean;
-}
-
-// ✅ Good - Const object instead of enum
-const Status = {
-  PENDING: 'pending',
-  COMPLETED: 'completed',
-  FAILED: 'failed'
-} as const;
-
-// ❌ Avoid - Enum
-enum Status {
-  PENDING = 'pending',
-  COMPLETED = 'completed',
-  FAILED = 'failed'
-}
+android/app/src/main/java/com/ethiobalance/app/
+├── data/           # Entities, DAOs, Database (Room)
+├── domain/         # Use cases, domain models
+│   ├── model/
+│   └── usecase/
+├── repository/     # Data repositories (single source of truth)
+├── services/       # Background services, engines
+├── ui/             # UI layer (Compose)
+│   ├── components/ # Reusable UI components
+│   ├── screens/    # Screen composables
+│   ├── theme/      # Colors, Typography, Theme
+│   ├── viewmodel/  # ViewModels (Hilt-injected)
+│   └── Translations.kt  # i18n (en, am, om)
+├── constants/      # Constants (Avatars, Languages, Phone)
+├── di/             # Dependency injection modules (Hilt)
+└── AppConstants.kt # App-wide constants, SMS sender whitelist
 ```
 
-## Code Style and Structure
+---
 
-### Programming Patterns
-- **Use functional and declarative programming patterns**
-- **Avoid classes** - prefer functions and hooks
-- **Prefer iteration and modularization** over code duplication
-- **Write concise, technical code** with accurate examples
+## Kotlin Style
 
-### Variable Naming
-- **Use descriptive variable names** with auxiliary verbs
-- **Boolean variables** should use `is`, `has`, `can`, `should` prefixes
-- **Event handlers** should use `handle` or `on` prefixes
+### General Rules
+- **Trailing commas** in multi-line parameter lists
+- **Explicit visibility** modifiers (`private`, `internal`)
+- **Expression bodies** for single-expression functions
+- **Type inference** where obvious
 
-```typescript
-// ✅ Good
-const isLoading = true;
-const hasError = false;
-const canSubmit = form.isValid;
-const handleSubmit = () => { /* ... */ };
+### Naming Conventions
 
-// ❌ Avoid
-const loading = true;
-const error = false;
-const submit = form.isValid;
-const onSubmit = () => { /* ... */ };
+| Type | Pattern | Example |
+|------|---------|---------|
+| Classes | PascalCase | `TransactionRepository` |
+| Functions | camelCase | `scanHistory()` |
+| Constants | UPPER_SNAKE | `SMS_SENDER_WHITELIST` |
+| Compose functions | PascalCase | `SettingsScreen()` |
+| Private vals | camelCase | `telecomTypes` |
+| Boolean variables | `is`/`has`/`can` prefix | `isLoading`, `hasError` |
+
+### Import Organization
+
+```kotlin
+// 1. Android imports
+import android.content.Context
+import android.provider.Telephony
+
+// 2. AndroidX imports
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.ViewModel
+
+// 3. Project imports (alphabetical by package)
+import com.ethiobalance.app.AppConstants
+import com.ethiobalance.app.data.TransactionEntity
+import com.ethiobalance.app.ui.theme.*
+
+// 4. Third-party imports
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
+import javax.inject.Inject
 ```
 
-### File Structure
-Organize file contents in this order:
-1. **Exported component** (main component)
-2. **Subcomponents** (internal components)
-3. **Helper functions** (utilities specific to this file)
-4. **Static content** (constants, default values)
-5. **Type definitions** (interfaces, types)
+---
 
-## Naming Conventions
+## Architecture Standards
 
-### Directory Naming
-- **Use lowercase with dashes** for directories
-- **Be descriptive and consistent**
+### Clean Architecture Layers
 
 ```
-// ✅ Good
-components/auth-wizard/
-screens/transaction-history/
-utils/date-helpers/
-
-// ❌ Avoid
-components/AuthWizard/
-screens/transactionHistory/
-utils/dateHelpers/
+Compose UI  →  ViewModel  →  Use Case  →  Repository  →  DAO / Room
+(presentation)   (state)     (domain)      (data)        (persistence)
 ```
 
-### Component Exports
-- **Favor named exports** for components
-- **Use default exports sparingly** - only for main entry points
+- **Presentation**: Compose screens, collect state with `collectAsStateWithLifecycle()`
+- **ViewModel**: `@HiltViewModel`, expose `StateFlow`, delegate to Use Cases
+- **Domain**: Pure Kotlin — zero Android imports. `operator fun invoke()` for Use Cases
+- **Data**: Room entities, DAOs (`Flow` for reads, `suspend` for writes), Repositories
 
-```typescript
-// ✅ Good
-export function AuthWizard() { /* ... */ }
-export function LoginForm() { /* ... */ }
+### Dependency Direction
+Domain defines interfaces; Data implements them. Never import UI into ViewModel or Domain.
 
-// ❌ Avoid (unless main entry point)
-export default function AuthWizard() { /* ... */ }
+---
+
+## Data Layer (Room)
+
+### Entity Conventions
+
+```kotlin
+@Entity(tableName = "transactions")
+data class TransactionEntity(
+    @PrimaryKey val id: String,  // UUID, not auto-generated
+    val type: String,            // Enum values as String constants
+    val amount: Double,
+    val timestamp: Long,         // Unix milliseconds
+    val reference: String?,      // Nullable fields marked with ?
+)
 ```
 
-## Syntax and Formatting
+### DAO Conventions
 
-### Function Declarations
-- **Use the "function" keyword** for pure functions
-- **Use arrow functions** for callbacks and inline functions
-- **Avoid unnecessary curly braces** in conditionals
+```kotlin
+@Dao
+interface TransactionDao {
+    @Query("SELECT * FROM transactions ORDER BY timestamp DESC")
+    fun getAll(): Flow<List<TransactionEntity>>  // Flow for reactive streams
 
-```typescript
-// ✅ Good - Pure function
-function calculateBalance(transactions: Transaction[]): number {
-  return transactions.reduce((sum, t) => sum + t.amount, 0);
-}
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entity: TransactionEntity)  // suspend for writes
 
-// ✅ Good - Callback
-const handleClick = () => setIsOpen(true);
-
-// ✅ Good - Concise conditional
-if (isLoading) return <Spinner />;
-
-// ❌ Avoid - Unnecessary braces
-if (isLoading) {
-  return <Spinner />;
+    @Query("SELECT * FROM transactions WHERE id = :id")
+    suspend fun getById(id: String): TransactionEntity?
 }
 ```
 
-### JSX Standards
-- **Use declarative JSX** patterns
-- **Prefer explicit boolean props**
-- **Use fragments when needed**
+### Database Versioning
+- Increment `version` in `@Database` annotation for schema changes
+- Use `fallbackToDestructiveMigration()` only in development
+- Migration scripts required for production releases
 
-```typescript
-// ✅ Good
-<Button disabled={isLoading} variant="primary">
-  Submit
-</Button>
+---
 
-// ❌ Avoid
-<Button disabled={isLoading ? true : false} variant="primary">
-  Submit
-</Button>
-```
+## Dependency Injection (Hilt)
 
-## React and Performance Standards
+### Module Pattern
 
-### Component Architecture
-- **Use functional components** with TypeScript interfaces
-- **Minimize 'use client' usage** - favor React Server Components (RSC)
-- **Wrap client components in Suspense** with fallback
-- **Use dynamic loading** for non-critical components
-
-### Performance Optimization
-- **Minimize 'useEffect' and 'setState'** usage
-- **Favor server-side rendering** when possible
-- **Implement lazy loading** for heavy components
-- **Optimize images**: WebP format, include size data, implement lazy loading
-
-```typescript
-// ✅ Good - Server Component
-function TransactionList({ transactions }: { transactions: Transaction[] }) {
-  return (
-    <div>
-      {transactions.map(transaction => (
-        <TransactionCard key={transaction.id} transaction={transaction} />
-      ))}
-    </div>
-  );
-}
-
-// ✅ Good - Client Component with Suspense
-'use client';
-import { Suspense } from 'react';
-
-function InteractiveChart() {
-  return (
-    <Suspense fallback={<ChartSkeleton />}>
-      <Chart />
-    </Suspense>
-  );
+```kotlin
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+    @Provides
+    @Singleton
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(context, AppDatabase::class.java, "ethio_balance_db")
+            .fallbackToDestructiveMigration()
+            .build()
+    }
 }
 ```
 
-## UI and Styling Standards
+### Injection Points
+- **ViewModels**: `@HiltViewModel` with `@Inject` constructor
+- **Use Cases**: `@Inject` constructor
+- **Repositories**: `@Inject` constructor with `@ApplicationContext` for Context
+- **Services**: `@AndroidEntryPoint` for field injection in lifecycle components
+- **App class**: `@HiltAndroidApp`
 
-### UI Framework Requirements
-- **Use Shadcn UI** for component library
-- **Use Radix** for headless UI primitives
-- **Use Tailwind CSS** for styling
-- **Implement responsive design** with mobile-first approach
+---
 
-### Styling Patterns
-```typescript
-// ✅ Good - Mobile-first responsive design
-<div className="w-full p-4 md:p-6 lg:p-8">
-  <h1 className="text-lg md:text-xl lg:text-2xl font-bold">
-    Transaction History
-  </h1>
-</div>
+## ViewModel Layer
 
-// ✅ Good - Consistent spacing and typography
-<Card className="p-6 space-y-4">
-  <CardHeader>
-    <CardTitle className="text-xl font-semibold">Balance Overview</CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-2">
-    {/* Content */}
-  </CardContent>
-</Card>
+```kotlin
+@HiltViewModel
+class TransactionViewModel @Inject constructor(
+    private val repository: TransactionRepository,
+    private val parseUseCase: ParseSmsUseCase,
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(UiState())
+    val state: StateFlow<UiState> = _state.asStateFlow()
+
+    fun loadData() {
+        viewModelScope.launch {
+            // ...
+        }
+    }
+}
 ```
 
-## State Management and URL Handling
+### Rules
+- Use `StateFlow` with private `MutableStateFlow` backing
+- Use `viewModelScope` for all coroutines
+- **No Compose imports** — no `androidx.compose.*` in this layer
+- Expose read-only state for unidirectional data flow
+
+---
+
+## UI (Compose) Standards
+
+### Screen Structure
+
+```kotlin
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ScreenName(
+    param1: String,
+    onEvent: () -> Unit,
+    viewModel: ScreenViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    // Screen content
+}
+```
 
 ### State Management
-- **Use 'nuqs' for URL search parameter state management**
-- **Minimize global state** - prefer local state when possible
-- **Use React Context** for shared state across components
+- Collect with `collectAsStateWithLifecycle()` — never bare `collectAsState()`
+- Use `SharingStarted.WhileSubscribed(5000)` for automatic cleanup
 
-### URL State Management
-```typescript
-// ✅ Good - Using nuqs for URL state
-import { useQueryState } from 'nuqs';
+### Theme Usage
+- **Never** use hardcoded colors — use theme colors from `Color.kt`
+- Import theme: `import com.ethiobalance.app.ui.theme.*`
+- Available scales: `Slate*`, `Blue*`, `Emerald*`, `Rose*`, `Purple*`, `Amber*`
 
-function TransactionFilter() {
-  const [filter, setFilter] = useQueryState('filter', { defaultValue: 'all' });
-  const [dateRange, setDateRange] = useQueryState('dateRange');
-  
-  return (
-    <FilterControls 
-      filter={filter} 
-      onFilterChange={setFilter}
-      dateRange={dateRange}
-      onDateRangeChange={setDateRange}
-    />
-  );
+### Component Guidelines
+- Use `RoundedCornerShape(16.dp)` or `RoundedCornerShape(24.dp)` for cards
+- Use `CircleShape` for avatars / action buttons
+- Use `Modifier.padding(horizontal = 20.dp)` for screen horizontal padding
+- Spacer pattern: `Spacer(Modifier.height(16.dp))` between sections
+- Accept `modifier: Modifier = Modifier` as first optional param in reusable composables
+- Handle side effects with `LaunchedEffect`, `DisposableEffect`, or `SideEffect`
+
+---
+
+## Constants Management
+
+| Constant Type | Location | Example |
+|--------------|----------|---------|
+| App-wide (SMS senders, USSD) | `AppConstants.kt` | `SMS_SENDER_WHITELIST` |
+| Bank metadata | `AppConstants.kt` | `KNOWN_BANKS` |
+| Avatars | `constants/Avatars.kt` | `Avatars.OPTIONS` |
+| Languages | `constants/Languages.kt` | `Languages.SUPPORTED` |
+| Phone formatting | `constants/PhoneConstants.kt` | `COUNTRY_CODE` |
+| Build-time config | `gradle.properties` | `ethiobalance.ussd.balance_check` |
+| UI-only constants | Within screen file | `private val ITEM_HEIGHT = 48.dp` |
+
+### No Hardcoded Values
+
+**Never allow:**
+- Magic numbers (e.g., `13` for phone length) — use `PhoneConstants.MAX_FULL_LENGTH`
+- Hardcoded phone prefixes (`"+251"`) — use `PhoneConstants.COUNTRY_CODE`
+- Inline color values (`Color(0xFF123456)`) — use theme colors
+- Duplicated bank lists — use `AppConstants.KNOWN_BANKS`
+- Duplicated telecom senders — use `AppConstants.TELECOM_SENDERS`
+
+---
+
+## Internationalization (i18n)
+
+```kotlin
+// Translations.kt
+object Translations {
+    private val strings = mapOf(
+        "en" to mapOf("key" to "English text"),
+        "am" to mapOf("key" to "Amharic text"),
+        "om" to mapOf("key" to "Afaan Oromo text")
+    )
+
+    fun t(lang: String, key: String): String =
+        strings[lang]?.get(key) ?: strings["en"]?.get(key) ?: key
+}
+
+// Usage in UI
+Text(Translations.t(language, "settings"))
+```
+
+- Three languages supported: **en**, **am**, **om**
+- Ethiopian calendar formatting via `android.icu.util.EthiopicCalendar` (min SDK 24)
+- Manual month name maps for Amharic and Oromo (ICU produces wrong names)
+
+---
+
+## SMS Parsing Standards
+
+### ParseSmsUseCase Pattern
+
+```kotlin
+class ParseSmsUseCase @Inject constructor() {
+    operator fun invoke(sender: String, body: String, timestamp: Long): ParsedSmsResult {
+        // Parsing logic with confidence scoring
+        return ParsedSmsResult(scenario, confidence, ...)
+    }
 }
 ```
 
-## Code Quality and Configuration
+### Confidence Scoring
+- `0.95f` — High confidence (Telebirr patterns, exact matches)
+- `0.9f` — Standard confidence (bank patterns)
+- `0.85f` — Lower confidence (generic patterns)
+- `< 0.7f` — Reject (unknown/ambiguous)
 
-### No Hardcoded Values Rule
-- **Move all configuration to .env files** or constants
-- **Use environment variables** for API endpoints, feature flags
-- **Create constants files** for application-specific values
+### Regex Guidelines
+- Use `RegexOption.IGNORE_CASE` for case-insensitive matching
+- Support multilingual: English, Amharic (`[\u1200-\u137F]`), Afaan Oromo
+- Use non-capturing groups: `(?:pattern)`
 
-```typescript
-// ✅ Good - Environment configuration
-const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:3000';
-const FEATURE_FLAGS = {
-  ENABLE_SMS_PARSING: process.env.VITE_ENABLE_SMS_PARSING === 'true',
-  ENABLE_USSD: process.env.VITE_ENABLE_USSD === 'true'
-};
+---
 
-// ✅ Good - Constants file
-export const TRANSACTION_TYPES = {
-  INCOME: 'income',
-  EXPENSE: 'expense',
-  TRANSFER: 'transfer'
-} as const;
+## SMS Source Scoping (Non-Negotiable)
 
-// ❌ Avoid - Hardcoded values
-const apiUrl = 'http://localhost:3000'; // Should be in .env
-const maxRetries = 3; // Should be in constants
+- **Scanning**: `SmsRepository.scanAllTransactionSources()` scans ONLY user-configured sources in `transaction_sources` table
+- **Real-time**: `SmsReceiver` gates on the DB-synced SharedPreferences whitelist (`sms_whitelist`) only
+- **Default Sources**: Defined in `gradle.properties` via `ethiobalance.default_sources`, accessed through `BuildConfig`
+- **Sender Variants**: Populate `senderId` with ALL known variants (comma-separated)
+- **Metadata Only**: `KNOWN_BANKS` and `SMS_SENDER_WHITELIST` exist for metadata/parsing, not for acceptance gating
+
+---
+
+## Testing Standards
+
+### Test Structure
+```
+android/app/src/test/java/com/ethiobalance/app/
+├── domain/usecase/     # Use case unit tests
+├── repository/         # Repository tests (mock DAOs)
+├── services/           # Service logic tests
+└── ui/                 # ViewModel tests
 ```
 
-### Performance Metrics
-- **Optimize Web Vitals** (LCP, CLS, FID)
-- **Monitor bundle size** and implement code splitting
-- **Use React DevTools Profiler** for performance analysis
+### Testing Patterns
+- Use JUnit 4 (`@Test` annotation)
+- Mock dependencies with manual fakes or Mockito
+- Test file naming: `{ClassUnderTest}Test.kt`
+- Test method naming: `methodName_condition_expectedResult()`
 
-## Framework-Specific Guidelines
+### Running Tests
+```bash
+# JVM unit tests
+./gradlew testDebugUnitTest
 
-### Next.js Patterns (if applicable)
-- **Follow Next.js documentation** for Data Fetching, Rendering, and Routing
-- **Use App Router** for new features
-- **Implement proper SEO** with metadata API
+# Integration tests (device required)
+./scripts/test-workflow.sh
+```
 
-### Capacitor Integration
-- **Use proper TypeScript types** for Capacitor plugins
-- **Handle platform differences** gracefully
-- **Implement proper error handling** for native features
+---
 
-## Code Review and Quality Assurance
+## Code Review Checklist
 
-### Before Committing
-- [ ] All TypeScript errors resolved
-- [ ] No hardcoded values present
-- [ ] Components follow naming conventions
-- [ ] Responsive design implemented
-- [ ] Performance considerations addressed
-- [ ] Documentation updated if needed
-
-### Testing Standards
-- **Write unit tests** for utility functions
-- **Test component behavior** not implementation details
-- **Mock external dependencies** properly
-- **Maintain high test coverage** for critical paths
+- [ ] Uses existing constants from `AppConstants` or appropriate `constants/` file
+- [ ] No hardcoded colors (use theme colors)
+- [ ] No hardcoded phone numbers/prefixes (use `PhoneConstants`)
+- [ ] No magic numbers (use named constants)
+- [ ] Proper Hilt injection (`@Inject` constructor or `@HiltViewModel`)
+- [ ] Room entities use appropriate nullable markers (`?`)
+- [ ] DAO methods use `suspend` for IO operations
+- [ ] ViewModels expose `StateFlow` with proper `SharingStarted` strategy
+- [ ] UI uses `collectAsStateWithLifecycle()`
+- [ ] Screens use `RoundedCornerShape` and theme-consistent spacing
+- [ ] Translations use `Translations.t()` with fallback
+- [ ] Tests added for new use cases and repositories
+- [ ] No Compose imports in ViewModel layer
+- [ ] No Android imports in Domain layer
 
 ---
 
 ## Enforcement
 
-These standards should be enforced through:
-- **ESLint configuration** with TypeScript rules
-- **Prettier configuration** for consistent formatting
-- **Pre-commit hooks** to validate code quality
-- **Code review process** to ensure adherence
-- **Documentation updates** when standards evolve
+These standards are enforced through:
+- **`.agents/rules/`** — AI agent rules auto-applied during development
+- **Gradle build** — compile-time type safety via Kotlin DSL
+- **CI pipeline** — `./gradlew testDebugUnitTest` in GitHub Actions
+- **Code review process** — checklist above
+- **Documentation updates** — when standards evolve
 
-This document serves as the authoritative source for all EthioStat development standards and should be referenced during development, code reviews, and onboarding of new team members.
+This document serves as the authoritative source for all EthioStat development standards and should be referenced during development, code reviews, and onboarding.

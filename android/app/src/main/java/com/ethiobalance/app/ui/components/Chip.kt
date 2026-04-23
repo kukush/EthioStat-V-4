@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.ui.theme.*
@@ -41,4 +42,10 @@ fun Chip(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ChipPreview() {
+    Chip(label = "Internet", variant = "internet")
 }

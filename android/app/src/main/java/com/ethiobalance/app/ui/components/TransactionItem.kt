@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
@@ -116,29 +117,39 @@ fun TransactionItem(
             ) {
                 // Left Side (Icon + Text)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(iconBgColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = iconData.first,
-                            contentDescription = null,
-                            tint = iconData.second,
-                            modifier = Modifier.size(24.dp)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(iconBgColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = iconData.first,
+                                contentDescription = null,
+                                tint = iconData.second,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Text(
+                            text = transaction.source,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            maxLines = 1
                         )
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Column {
-                        // Show package name for telecom purchases, party name for transfers, or date
+                        // Show party name with From:/To: prefix, or date if no party
                         val displayText = when {
                             transaction.partyName != null && transaction.category.uppercase() in listOf("INTERNET", "VOICE", "SMS", "TELECOM") ->
                                 transaction.partyName
-                            transaction.partyName != null -> "To: ${transaction.partyName}"
+                            transaction.partyName != null && isIncome -> "${Translations.t(language, "from")}: ${transaction.partyName}"
+                            transaction.partyName != null -> "${Translations.t(language, "to")}: ${transaction.partyName}"
                             else -> formattedDate
                         }
                         Text(
@@ -151,6 +162,16 @@ fun TransactionItem(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 2.dp)
                         )
+                        // Show date below party name
+                        if (transaction.partyName != null) {
+                            Text(
+                                text = formattedDate,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(top = 1.dp)
+                            )
+                        }
                         // Show category badge for purchases
                         if (transaction.category.uppercase() in listOf("INTERNET", "VOICE", "SMS", "TELECOM", "PURCHASE", "AIRTIME")) {
                             Text(
@@ -188,4 +209,23 @@ fun TransactionItem(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TransactionItemPreview() {
+    TransactionItem(
+        transaction = TransactionEntity(
+            id = "preview-1",
+            type = "INCOME",
+            amount = 1500.00,
+            category = "PURCHASE",
+            source = "TELEBIRR",
+            timestamp = System.currentTimeMillis(),
+            reference = null,
+            partyName = "Abebe Kebede",
+            transactionSubType = null
+        ),
+        language = "en"
+    )
 }

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
@@ -149,4 +150,10 @@ private fun PackageItem(label: String, value: String, unit: String, color: Color
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TelecomAssetCardPreview() {
+    TelecomAssetCard(language = "en", dataVol = 3.5, voiceVol = 120.0, smsVol = 50.0)
 }

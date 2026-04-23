@@ -474,4 +474,153 @@ class ParseSmsUseCaseTest {
         assertEquals("MB", internetPkgs[0].unit)
     }
 
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Party Name Extraction — new/fixed patterns
+    //  Verbatim SMS from real device (via adb)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // ── Telebirr: "received ETB X from [Name(phone)]" ─────────────────────
+    @Test
+    fun testTelebirr_receivedFrom_partyName() {
+        val body = "You have received ETB 10,000.00 from SELAMAWIT ALEMU(2519****0146) on 23/04/2026 18:31:08. Your transaction number is DDN95FXST9. Your current E-Money Account balance is ETB 10,173.19. Thank you for using telebirr"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(10000.0, result.addedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from Telebirr received-from SMS", result.partyName)
+        assertTrue(
+            "partyName should contain 'SELAMAWIT ALEMU', got: '${result.partyName}'",
+            result.partyName!!.contains("SELAMAWIT ALEMU")
+        )
+        assertTrue(
+            "partyName should contain phone number in parens, got: '${result.partyName}'",
+            result.partyName!!.contains("2519****0146")
+        )
+    }
+
+    // ── Telebirr: "transferred ETB X to [Name (phone)]" ──────────────────
+    @Test
+    fun testTelebirr_transferredTo_partyNameWithPhone() {
+        val body = "You have transferred ETB 240.00 to Shemsu Ertiban (2519****7573) on 23/04/2026 17:49:22. Your transaction number is DDN78YXKQN. Your current E-Money Account balance is ETB 173.19. Thank you for using telebirr"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(240.0, result.deductedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from Telebirr transfer-to SMS", result.partyName)
+        assertTrue(
+            "partyName should contain 'Shemsu Ertiban', got: '${result.partyName}'",
+            result.partyName!!.contains("Shemsu Ertiban")
+        )
+        assertTrue(
+            "partyName should contain phone in parens, got: '${result.partyName}'",
+            result.partyName!!.contains("2519****7573")
+        )
+    }
+
+    // ── Telebirr: bank transfer "from telebirr account to [Bank] account number" ──
+    @Test
+    fun testTelebirr_bankTransfer_partyName() {
+        val body = "You have transferred ETB 150.00 successfully from your telebirr account 251970824468 to Commercial Bank of Ethiopia account number 1000252266187 on 22/04/2026 23:31:25. Your transaction number is DDM69JDL2P. Your current E-Money Account balance is ETB 413.19. Thank you for using telebirr"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(150.0, result.deductedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from Telebirr bank transfer", result.partyName)
+        assertTrue(
+            "partyName should contain 'Commercial Bank of Ethiopia', got: '${result.partyName}'",
+            result.partyName!!.contains("Commercial Bank of Ethiopia")
+        )
+    }
+
+    // ── CBE: "Credited with ETB X from [Name], on" ───────────────────────
+    @Test
+    fun testCbe_creditedFrom_partyName() {
+        val body = "Dear Abebech your Account 1*********0247 has been Credited with ETB 10,200.00 from Meron Bedada, on 18/03/2026 at 14:37:09 with Ref No FT25071234A Your Current Balance is ETB 87,037.78. Thank you for Banking with CBE!"
+        val result = parseSmsUseCase("CBE", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(10200.0, result.addedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from CBE credited-from SMS", result.partyName)
+        assertEquals("Meron Bedada", result.partyName)
+    }
+
+    // ── CBE: "debited for [Name] with ETB" ───────────────────────────────
+    @Test
+    fun testCbe_debitedFor_partyName() {
+        val body = "Dear Mr Abebech your Account 1********3618 has been debited for ABEBECH WOLDE SHOLATO with ETB 8505.75 including Service charge ETB5.00 and VAT(15%) ETB0.75. Your Current Balance is ETB 36949.71. Thank you for Banking with CBE!"
+        val result = parseSmsUseCase("CBE", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(8505.75, result.deductedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from CBE debited-for SMS", result.partyName)
+        assertEquals("ABEBECH WOLDE SHOLATO", result.partyName)
+    }
+
+    // ── Awash: "Credited with ETB X on ... by [Name]" ────────────────────
+    @Test
+    fun testAwash_creditedBy_partyName() {
+        val body = "Dear Customer, your Account 01320xxxxx1400 has been Credited with ETB 1300.00 on 2026-03-31 11:32:14 by ABEBECH WOLDE. Your balance now is ETB 17535.60. For any complaint or enquiry, please call 8980. Thank You. Awash Bank."
+        val result = parseSmsUseCase("Awash", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(1300.0, result.addedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from Awash credited-by SMS", result.partyName)
+        assertEquals("ABEBECH WOLDE", result.partyName)
+    }
+
+    // ── Awash: "credited to your account from [Name]" ────────────────────
+    @Test
+    fun testAwash_creditedFrom_partyName() {
+        val body = "Dear Customer, ETB 50 has been credited to your account from SAMUEL MITIKU GUDINA on : 2026-01-28 20:12:21  with Txn ID: 260128201223255 . Your available balance is now ETB 50.00."
+        val result = parseSmsUseCase("Awash", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(50.0, result.addedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from Awash credited-from SMS", result.partyName)
+        assertEquals("SAMUEL MITIKU GUDINA", result.partyName)
+    }
+
+    // ── BOA: "credited with ETB X by Cash Deposit-[Name]" ────────────────
+    @Test
+    fun testBoa_creditedBy_partyName() {
+        val body = "Dear Ababech, your account 1******07 was credited with ETB 5,000.00 by Cash Deposit-abebech Welde Sholato. Available Balance: ETB 86,944.36."
+        val result = parseSmsUseCase("BOA", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(5000.0, result.addedAmount!!, 0.01)
+        assertNotNull("partyName should be extracted from BOA credited-by SMS", result.partyName)
+        assertTrue(
+            "partyName should contain 'Cash Deposit-abebech Welde Sholato', got: '${result.partyName}'",
+            result.partyName!!.contains("abebech Welde Sholato", ignoreCase = true)
+        )
+    }
+
+    // ── CBE: simple credit with no party — partyName should be null ──────
+    @Test
+    fun testCbe_simpleCredit_noPartyName() {
+        val body = "Dear Mr Abebech your Account 1********3618 has been credited with ETB 7000.00. Your Current Balance is ETB 72764.47. Thank you for Banking with CBE!"
+        val result = parseSmsUseCase("CBE", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.INCOME, result.scenario)
+        assertEquals(7000.0, result.addedAmount!!, 0.01)
+        // No party information in this SMS — partyName might be null or generic
+    }
+
+    // ── Translations: "from" and "to" keys exist ─────────────────────────
+    @Test
+    fun testTranslations_fromToKeys_exist() {
+        assertEquals("From", com.ethiobalance.app.ui.Translations.t("en", "from"))
+        assertEquals("To", com.ethiobalance.app.ui.Translations.t("en", "to"))
+        // Amharic
+        val amFrom = com.ethiobalance.app.ui.Translations.t("am", "from")
+        assertNotEquals("from", amFrom) // should be translated, not the key itself
+        val amTo = com.ethiobalance.app.ui.Translations.t("am", "to")
+        assertNotEquals("to", amTo)
+        // Oromo
+        val omFrom = com.ethiobalance.app.ui.Translations.t("om", "from")
+        assertNotEquals("from", omFrom)
+        val omTo = com.ethiobalance.app.ui.Translations.t("om", "to")
+        assertNotEquals("to", omTo)
+    }
+
 }

@@ -107,7 +107,7 @@ Processes every `ParsedSmsResult` and writes to both the financial and telecom a
 Scans the Android SMS Inbox (`content://sms/inbox`) for all known senders.
 
 **Key behaviours (updated April 2026):**
-- `scanAllTransactionSources(days = 90)` merges **both** user-configured sources AND `AppConstants.SMS_SENDER_WHITELIST` — Telebirr (`"127"`) is always scanned even if not manually configured by the user.
+- `scanAllTransactionSources(days = 90)` scans **only** user-configured sources in the `transaction_sources` table. `AppConstants.SMS_SENDER_WHITELIST` is used for metadata/parsing only, not for deciding which SMS to scan.
 - **90-day lookback** (was 7 days) — captures 3 months of history on first run.
 - **Exact address matching** instead of `LIKE '%127%'` — uses `address = "127" OR address = "+251127" OR address = "251127" OR address = "0127"` to avoid false positives.
 - **Wider-window honoring** — `cutoffTime = min(lastTimestamp, windowStart)` ensures that even if a previous scan ran, re-widening the window recovers missed messages.
@@ -135,7 +135,7 @@ Single source of truth for all sender IDs, source labels, USSD codes, and broadc
 
 #### `AndroidManifest.xml`
 
-- Scoped permissions: `READ_SMS`, `RECEIVE_SMS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`
+- Scoped permissions: `READ_SMS`, `RECEIVE_SMS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`
 - No accessibility service — USSD sync uses `ACTION_DIAL` (no `CALL_PHONE` needed) and reads 994 SMS responses
 
 ---
@@ -203,8 +203,8 @@ User taps Sync in TelecomScreen
 
 ## Testing
 
-### Unit Tests (`SmsParserTest.kt`)
-Located at `android/app/src/test/java/com/ethiobalance/app/services/`.
+### Unit Tests (`ParseSmsUseCaseTest.kt`)
+Located at `android/app/src/test/java/com/ethiobalance/app/domain/usecase/`.
 
 Covers (40+ cases):
 - Telebirr purchase (dual-impact: expense + internet package)
