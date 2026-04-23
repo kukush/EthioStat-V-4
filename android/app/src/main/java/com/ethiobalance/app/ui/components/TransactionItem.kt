@@ -23,7 +23,6 @@ import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
 import java.util.*
 
 // Translation helper for type display - converts to lowercase for key lookup
@@ -86,8 +85,7 @@ fun TransactionItem(
         maximumFractionDigits = 2
     }.format(transaction.amount)
 
-    val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.US)
-    val formattedDate = try { dateFormat.format(Date(transaction.timestamp)) } catch(e:Exception) { "N/A" }
+    val formattedDate = try { Translations.formatDate(language, transaction.timestamp) } catch(e:Exception) { "N/A" }
 
     val iconData = when (transaction.category.uppercase()) {
         "UTILITY", "BILLS" -> Pair(Icons.Default.Bolt, Blue500)

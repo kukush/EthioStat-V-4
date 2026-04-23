@@ -39,7 +39,6 @@ import com.ethiobalance.app.ui.components.SummaryCard
 import com.ethiobalance.app.ui.components.TransactionItem
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
@@ -73,9 +72,8 @@ fun TransactionScreen(
         maximumFractionDigits = 2
     }
 
-    val dateFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.US)
     val lastActivity = if (transactions.isNotEmpty()) {
-        try { dateFormat.format(Date(transactions.first().timestamp)) } catch (e: Exception) { "N/A" }
+        try { Translations.formatDate(language, transactions.first().timestamp, "MMM d, yyyy HH:mm") } catch (e: Exception) { "N/A" }
     } else { "N/A" }
 
     Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {

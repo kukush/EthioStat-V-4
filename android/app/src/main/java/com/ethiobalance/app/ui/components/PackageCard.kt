@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.ui.theme.*
 import com.ethiobalance.app.ui.Translations
-import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
@@ -59,8 +58,7 @@ fun PackageCard(
         else -> theme.barFg           // 🟢 Healthy
     }
 
-    val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.US)
-    val expiryDateStr = if (expiryMs > 0) dateFormat.format(Date(expiryMs)) else "N/A"
+    val expiryDateStr = if (expiryMs > 0) Translations.formatDate(language, expiryMs, "MMM d, yyyy") else "N/A"
     
     val translatedType = Translations.t(language, type.lowercase())
 

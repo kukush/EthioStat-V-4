@@ -96,8 +96,11 @@ object Translations {
         // TelecomAssetCard summary labels
         "data_label" to "DATA", "audio_label" to "AUDIO", "sms_label" to "SMS",
         "gb_unit" to "GB", "min_unit" to "Min",
-        // Accessibility warning
-        "enableAccessibility" to "Enable Accessibility Service for *804# sync"
+        // Ethiopian calendar month names (English transliterations)
+        "meskerem" to "Meskerem", "tikimt" to "Tikimt", "hidar" to "Hidar",
+        "tahsas" to "Tahsas", "tir" to "Tir", "yekatit" to "Yekatit",
+        "megabit" to "Megabit", "miazia" to "Miazia", "ginbot" to "Ginbot",
+        "sene" to "Sene", "hamle" to "Hamle", "nehase" to "Nehase", "pagume" to "Pagume"
     )
 
     private val am = mapOf(
@@ -198,8 +201,11 @@ object Translations {
         // TelecomAssetCard summary labels
         "data_label" to "ዳታ", "audio_label" to "ድምፅ", "sms_label" to "ኤስኤምኤስ",
         "gb_unit" to "ጊባ", "min_unit" to "ደቂቃ",
-        // Accessibility warning
-        "enableAccessibility" to "የ*804# ሲንክ ፈቃድ ለማግኘት Accessibility Service ያንቁ"
+        // Ethiopian calendar month names (Amharic)
+        "meskerem" to "መስከረም", "tikimt" to "ጥቅምት", "hidar" to "ኅዳር",
+        "tahsas" to "ታኅሣሥ", "tir" to "ጥር", "yekatit" to "የካቲት",
+        "megabit" to "መጋቢት", "miazia" to "ሚያዝያ", "ginbot" to "ግንቦት",
+        "sene" to "ሰኔ", "hamle" to "ሐምሌ", "nehase" to "ነሐሴ", "pagume" to "ጳጉሜ"
     )
 
     private val om = mapOf(
@@ -305,13 +311,72 @@ object Translations {
         // TelecomAssetCard summary labels
         "data_label" to "DAATAA", "audio_label" to "SAGALEE", "sms_label" to "SMS",
         "gb_unit" to "GB", "min_unit" to "Daqiiqaa",
-        // Accessibility warning
-        "enableAccessibility" to "Tajaajila *804# sync godhuf Accessibility Service Banaa"
+        // Ethiopian calendar month names (Afaan Oromo)
+        "meskerem" to "Fuulbana", "tikimt" to "Onkololeessa", "hidar" to "Sadaasa",
+        "tahsas" to "Muddee", "tir" to "Amajjii", "yekatit" to "Guraandhala",
+        "megabit" to "Bitooteessa", "miazia" to "Elba", "ginbot" to "Caamsa",
+        "sene" to "Waxabajjii", "hamle" to "Adooleessa", "nehase" to "Hagayya", "pagume" to "Qaammee"
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)
 
     fun t(lang: String, key: String): String {
         return maps[lang]?.get(key) ?: maps["en"]?.get(key) ?: key
+    }
+
+    // Ethiopian month names — fallback if ICU locale data is incomplete
+    private val ethMonthsAm = listOf(
+        "መስከ", "ጥቅም", "ኅዳር", "ታኅሣ", "ጥር", "የካቲ",
+        "መጋቢ", "ሚያዝ", "ግንቦ", "ሰኔ", "ሐምሌ", "ነሐሴ", "ጳጉሜ"
+    )
+    private val ethMonthsOm = listOf(
+        "Mes", "Xiq", "Hid", "Tah", "Xir", "Yak",
+        "Meg", "Miy", "Gin", "Sen", "Ham", "Neh", "Pag"
+    )
+
+    /**
+     * Format a timestamp as a localized date string.
+     * For am/om: converts to Ethiopian calendar via [android.icu.util.EthiopicCalendar]
+     * and renders Ethiopian month names. For en: uses Gregorian calendar with Locale.US.
+     * @param lang Language code ("en", "am", "om")
+     * @param timestamp Epoch millis
+     * @param pattern Output pattern — default: "MMM dd, HH:mm"
+     */
+    fun formatDate(lang: String, timestamp: Long, pattern: String = "MMM dd, HH:mm"): String {
+        val normalizedLang = lang.lowercase().trim().take(2)
+        if (normalizedLang == "en") {
+            return java.text.SimpleDateFormat(pattern, java.util.Locale.US)
+                .format(java.util.Date(timestamp))
+        }
+        return try {
+            val ethCal = android.icu.util.EthiopicCalendar()
+            ethCal.timeInMillis = timestamp
+            val ethMonth = ethCal.get(android.icu.util.Calendar.MONTH) // 0-based
+            val ethDay = ethCal.get(android.icu.util.Calendar.DAY_OF_MONTH)
+            val ethYear = ethCal.get(android.icu.util.Calendar.YEAR)
+            val ethHour = ethCal.get(android.icu.util.Calendar.HOUR_OF_DAY)
+            val ethMin = ethCal.get(android.icu.util.Calendar.MINUTE)
+            val monthNames = if (normalizedLang == "am") ethMonthsAm else ethMonthsOm
+            val monthName = if (ethMonth in monthNames.indices) monthNames[ethMonth] else "?"
+            // Build output by replacing pattern tokens with Ethiopian calendar values
+            // Use placeholders to avoid double-replacement (e.g. "d" matching inside "dd" result)
+            pattern
+                .replace("yyyy", "\u0000Y")
+                .replace("MMM", "\u0000M")
+                .replace("dd", "\u0000D")
+                .replace("d", "\u0000d")
+                .replace("HH", "\u0000H")
+                .replace("mm", "\u0000m")
+                .replace("\u0000Y", ethYear.toString())
+                .replace("\u0000M", monthName)
+                .replace("\u0000D", ethDay.toString().padStart(2, '0'))
+                .replace("\u0000d", ethDay.toString())
+                .replace("\u0000H", ethHour.toString().padStart(2, '0'))
+                .replace("\u0000m", ethMin.toString().padStart(2, '0'))
+        } catch (_: Exception) {
+            // Ultimate fallback: Gregorian with Locale.US
+            java.text.SimpleDateFormat(pattern, java.util.Locale.US)
+                .format(java.util.Date(timestamp))
+        }
     }
 }
