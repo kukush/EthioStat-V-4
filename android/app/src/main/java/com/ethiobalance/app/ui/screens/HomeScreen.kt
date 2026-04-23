@@ -39,7 +39,6 @@ fun HomeScreen(
     language: String,
     totalIncome: Double,
     totalExpense: Double,
-    telecomBalance: Double,
     packages: List<com.ethiobalance.app.data.BalancePackageEntity>,
     transactions: List<TransactionEntity>,
     bankBalances: Map<String, Double> = emptyMap(),
@@ -141,7 +140,6 @@ fun HomeScreen(
         // Telecom Assets Card
         TelecomAssetCard(
             language = language,
-            telecomBalance = telecomBalance,
             dataVol = dataVol,
             voiceVol = voiceVol,
             smsVol = smsVol

@@ -94,8 +94,6 @@ info "App is installed."
 #     e.g. 967.1 MB shown as 967.1 GB instead of 0.9 GB.
 #     Fix: divide by 1024 when unit != GB (same as HomeScreen).
 #
-#  2. UssdAccessibilityServiceTest — covers USSD text capture + dismissal logic.
-#     NOTE: CALL_PHONE permission is NOT declared. Dialing uses ACTION_DIAL only.
 # =============================================================================
 
 section "AppConstants Unit Tests (JVM)"
@@ -125,22 +123,6 @@ if [[ -f "$ANDROID_DIR/gradlew" ]]; then
     pass "TelecomDataVolConversionTest — all unit tests passed"
   else
     fail "TelecomDataVolConversionTest — one or more unit tests failed"
-  fi
-else
-  info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
-fi
-
-section "USSD Unit Tests (JVM)"
-
-if [[ -f "$ANDROID_DIR/gradlew" ]]; then
-  info "Running UssdAccessibilityServiceTest..."
-  if "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" \
-      :app:testDebugUnitTest \
-      --tests "com.ethiobalance.app.services.UssdAccessibilityServiceTest" \
-      --quiet 2>&1 | tail -5; then
-    pass "UssdAccessibilityServiceTest — all unit tests passed"
-  else
-    fail "UssdAccessibilityServiceTest — one or more unit tests failed"
   fi
 else
   info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
@@ -226,26 +208,6 @@ if [[ -f "$ANDROID_DIR/gradlew" ]]; then
   fi
 else
   info "gradlew not found at $ANDROID_DIR/gradlew — skipping JVM tests"
-fi
-
-# ─── Accessibility Service Bound Check ───────────────────────────────────────
-
-section "Accessibility Service Check"
-
-BOUND=$(adb shell dumpsys accessibility 2>/dev/null \
-  | grep -c "UssdAccessibilityService" || true)
-if [[ "$BOUND" -ge 1 ]]; then
-  pass "UssdAccessibilityService is registered in accessibility dump"
-else
-  fail "UssdAccessibilityService NOT found — go to Settings → Accessibility and enable it"
-fi
-
-CRASHED=$(adb shell dumpsys accessibility 2>/dev/null \
-  | grep "Crashed services" | grep -c "UssdAccessibilityService" || true)
-if [[ "$CRASHED" -eq 0 ]]; then
-  pass "UssdAccessibilityService has not crashed"
-else
-  fail "UssdAccessibilityService appears in Crashed services"
 fi
 
 # ─── Helper: query Room DB via adb ───────────────────────────────────────────
@@ -476,19 +438,6 @@ inject_sms "127" \
   "You have sent 450.50 ETB to 0911223344. Transaction ID: TX016. Fee: 2.50 ETB." \
   "$T16_TS"
 
-# ── USSD: Airtime balance (simulates AccessibilityService broadcast) ─────────
-# Sends the ACTION_USSD_RESPONSE broadcast directly, bypassing the dialer flow.
-# This verifies that TelecomViewModel receives the broadcast and persists the
-# airtime value via ReconciliationEngine.processSms("804", ...).
-# (No CALL_PHONE permission needed — broadcast is sent via adb am broadcast)
-T17_TS=$((NOW_MS - 40000))
-info "Simulating USSD balance broadcast (ACTION_USSD_RESPONSE)..."
-adb shell "am broadcast \
-  -a com.ethiobalance.app.ACTION_USSD_RESPONSE \
-  -p $APP_PACKAGE \
-  --es ussd_text 'Dear customer, Your account balance is 12.50 Birr . With this balance your account will expire on 15/04/2027. ethio telecom'" \
-  2>/dev/null || true
-
 echo ""
 info "Waiting 12 seconds for processing pipeline to complete..."
 sleep 12
@@ -530,23 +479,6 @@ assert_tx 14d "Dashen credit 2,011.50 ETB"                "INCOME"  "2011.5"    
 assert_tx 15 "Telebirr airtime received 25 ETB"           "INCOME"  "25.0"      "TELEBIRR"
 assert_tx 16 "Telebirr package purchase 100 ETB"          "EXPENSE" "100.0"     "TELEBIRR"
 assert_tx 17 "Telebirr transfer 450.50 ETB"               "EXPENSE" "450.5"     "TELEBIRR"
-
-# ── USSD Airtime Balance Tests ──────────────────────────────────────────────
-section "Asserting USSD Airtime Balance"
-
-USSD_BALANCE=$(db_query "SELECT amount FROM balance_packages WHERE type='airtime' ORDER BY timestamp DESC LIMIT 1;")
-if [[ "$USSD_BALANCE" == "12.5" || "$USSD_BALANCE" == "12.50" ]]; then
-  pass "Test 18: USSD airtime balance 12.50 Birr persisted to balance_packages"
-else
-  fail "Test 18: USSD airtime balance not found (got: '${USSD_BALANCE}', expected 12.5)"
-fi
-
-USSD_COUNT=$(db_query "SELECT COUNT(*) FROM ussd_events;")
-if [[ "$USSD_COUNT" -ge 1 ]]; then
-  pass "Test 19: USSD event persisted to ussd_events table"
-else
-  fail "Test 19: No USSD events in ussd_events table"
-fi
 
 # =============================================================================
 #  TELECOM PACKAGE INTEGRATION TESTS
@@ -699,9 +631,9 @@ section "DB Balance Packages Dump"
 echo ""
 db_query "SELECT id, type, subType, remainingAmount, unit FROM balance_packages ORDER BY type, id;"
 
-section "Logcat (ReconciliationEngine + UssdAccessibility)"
+section "Logcat (ReconciliationEngine)"
 echo ""
-adb logcat -d -s "ReconciliationEngine:D" -s "UssdAccessibility:D" 2>/dev/null | tail -60 || true
+adb logcat -d -s "ReconciliationEngine:D" 2>/dev/null | tail -60 || true
 
 # =============================================================================
 #  SUMMARY

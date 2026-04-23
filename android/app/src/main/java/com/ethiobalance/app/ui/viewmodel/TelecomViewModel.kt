@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import androidx.lifecycle.viewModelScope
@@ -44,11 +47,6 @@ class TelecomViewModel @Inject constructor(
     val language: StateFlow<String> = settingsRepo.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
 
-    val telecomBalance: StateFlow<Double> = packages.map { list ->
-        list.filter { it.type.equals("airtime", ignoreCase = true) }
-            .sumOf { it.remainingAmount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
@@ -59,8 +57,15 @@ class TelecomViewModel @Inject constructor(
     val syncWarning: StateFlow<String?> = _syncWarning.asStateFlow()
 
     /**
-     * Sync balance: opens dialer with *804# pre-filled, waits for USSD response via broadcast.
-     * User presses call button, AccessibilityService captures popup, app auto-returns.
+     * Sync telecom packages:
+     * 1. Open dialer with *804# pre-filled (user presses Call manually)
+     * 2. Wait for user to dismiss USSD popup and return to the app
+     * 3. Read latest 994 SMS to refresh package data
+     *
+     * Handles two edge cases after user clicks OK on USSD popup:
+     * - USSD failed (connection problem / invalid MMI) → no SMS arrives → show warning
+     * - USSD succeeded but SMS arrived while still in dialer → SmsReceiver already
+     *   processed it, UI auto-updated via Room Flow; best-effort re-read on return
      */
     fun handleSync() {
         viewModelScope.launch {
@@ -68,44 +73,94 @@ class TelecomViewModel @Inject constructor(
             _syncError.value = null
             _syncWarning.value = null
 
-            val done = CompletableDeferred<Unit>()
-
-            val receiver = object : BroadcastReceiver() {
-                override fun onReceive(ctx: Context, intent: Intent) {
-                    // USSD response captured — refresh telecom from latest 10 SMS (deeper scan to find multi-segment)
-                    viewModelScope.launch {
-                        smsRepo.refreshTelecomFromLatestSms(limit = 10)
-                        _isSyncing.value = false
-                        done.complete(Unit)
-                    }
-                }
-            }
-
-            ContextCompat.registerReceiver(
-                context,
-                receiver,
-                IntentFilter(AppConstants.ACTION_USSD_RESPONSE),
-                ContextCompat.RECEIVER_NOT_EXPORTED
-            )
+            // Snapshot packages before sync to detect if SmsReceiver updated data
+            // while the user was in the dialer
+            val packagesBefore = packages.value
 
             try {
                 // Open dialer with *804#, user presses Call
                 smsRepo.dialUssd(AppConstants.USSD_BALANCE_CHECK)
 
-                // Wait up to 120s for user to dial, read popup, and close it
-                withTimeoutOrNull(120_000) { done.await() } ?: run {
-                    // Timeout — still refresh from latest 10 SMS so data is up-to-date
-                    smsRepo.refreshTelecomFromLatestSms(limit = 10)
+                // Wait for user to return to the app after dismissing the USSD popup.
+                // Flow: app → dialer (ON_STOP) → user dials → popup → OK/Cancel → Back → app (ON_START)
+                val returned = CompletableDeferred<Unit>()
+                var wentToBackground = false
+
+                val observer = LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_STOP -> {
+                            wentToBackground = true
+                            Log.d("TelecomVM", "App went to background (dialer opened)")
+                        }
+                        Lifecycle.Event.ON_START -> {
+                            if (wentToBackground) {
+                                Log.d("TelecomVM", "App returned to foreground")
+                                returned.complete(Unit)
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+
+                // Also listen for 994 SMS arrival broadcast — completes sync early
+                // and brings app to foreground automatically
+                val smsReceiver = object : BroadcastReceiver() {
+                    override fun onReceive(ctx: Context, intent: Intent) {
+                        Log.d("TelecomVM", "Telecom SMS arrived — completing sync early")
+                        returned.complete(Unit)
+                    }
+                }
+                ContextCompat.registerReceiver(
+                    context,
+                    smsReceiver,
+                    IntentFilter(AppConstants.ACTION_TELECOM_SMS_ARRIVED),
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                )
+
+                // Attach lifecycle observer — ON_STOP will fire when dialer takes focus
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
+                }
+
+                // Wait up to 120s — completed by EITHER:
+                // 1. 994 SMS broadcast (auto-return, best case)
+                // 2. User manually presses Back (ON_START fires)
+                // 3. Timeout (USSD failed, no SMS, user didn't return)
+                withTimeoutOrNull(120_000) { returned.await() } ?: run {
                     _syncWarning.value = "Sync timed out — showing latest available data"
-                    _isSyncing.value = false
+                }
+
+                // Clean up observer and receiver
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
+                }
+                runCatching { context.unregisterReceiver(smsReceiver) }
+
+                // Small delay to let any in-flight 994 SMS arrive
+                kotlinx.coroutines.delay(3_000)
+
+                // Best-effort re-read of latest 994 SMS
+                val refreshed = smsRepo.refreshTelecomFromLatestSms(limit = 10)
+                Log.d("TelecomVM", "Refreshed $refreshed telecom packages from 994 SMS")
+
+                // Check if data changed: either from this re-read or from SmsReceiver
+                // processing while user was in the dialer
+                val packagesAfter = packages.value
+                val dataChanged = refreshed > 0 || packagesAfter != packagesBefore
+
+                if (!dataChanged) {
+                    _syncWarning.value = "No new data received — USSD may have failed. " +
+                        "If SMS arrives later, data will update automatically."
+                    // Auto-dismiss warning after 5 seconds
+                    kotlinx.coroutines.delay(5_000)
+                    _syncWarning.value = null
                 }
             } catch (e: Exception) {
                 // On error, still try to refresh from latest SMS
                 smsRepo.refreshTelecomFromLatestSms(limit = 10)
                 _syncError.value = e.message ?: "Sync failed"
-                _isSyncing.value = false
             } finally {
-                runCatching { context.unregisterReceiver(receiver) }
+                _isSyncing.value = false
             }
         }
     }

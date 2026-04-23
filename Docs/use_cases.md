@@ -142,7 +142,7 @@ EthioStat uses a multi-layered approach to ensure reliability and testability:
 - **Domain Layer**: Contains pure Kotlin Use Cases like `ParseSmsUseCase` and `SyncAirtimeUseCase`. This is where all the "Dual-Tracking" logic lives, independent of the Android framework.
 - **Data Layer**: Room DAOs and Entities (now 100% Kotlin) provide reactive `Flow` streams to the UI.
 - **Presentation Layer**: Hilt-injected ViewModels coordinate state and delegate actions to Use Cases.
-- **Service Layer**: Background services like `SmsForegroundService` and `UssdAccessibilityService` leverage the same injected `ReconciliationEngine` to ensure consistent processing of real-time events.
+- **Service Layer**: Background services like `SmsForegroundService` leverage the same injected `ReconciliationEngine` to ensure consistent processing of real-time events.
 
 ---
 *For live testing, execute `sh scripts/test-workflow.sh` with an Android device connected.*

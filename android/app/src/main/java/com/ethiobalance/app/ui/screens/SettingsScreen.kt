@@ -24,11 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Context
-import android.provider.Settings
-import android.text.TextUtils
 import androidx.compose.ui.platform.LocalContext
 import com.ethiobalance.app.data.TransactionSourceEntity
-import com.ethiobalance.app.services.UssdAccessibilityService
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.*
 import com.ethiobalance.app.constants.Avatars
@@ -221,13 +218,6 @@ fun SettingsScreen(
                 }
             }
         }
-
-        Spacer(Modifier.height(32.dp))
-
-        // Accessibility Options — dynamic badge
-        SectionHeader("Accessibility Options", Icons.Default.Accessibility)
-        Spacer(Modifier.height(16.dp))
-        UssdAccessibilityCard(context = context)
 
         Spacer(Modifier.height(32.dp))
 
@@ -657,101 +647,4 @@ private fun AddSourceSheet(
     }
 }
 
-// ── Accessibility Service Status Card ────────────────────────────────────────
-
-/**
- * Shows whether [UssdAccessibilityService] is enabled.
- * - GREEN card  → service active, USSD popups will be captured automatically.
- * - AMBER card  → service not enabled; provides a one-tap deep-link to Settings.
- *
- * Re-evaluates on every recomposition (e.g. when user returns from Settings).
- */
-@Composable
-private fun UssdAccessibilityCard(context: Context) {
-    val isEnabled = remember {
-        derivedStateOf { isAccessibilityServiceEnabled(context) }
-    }
-
-    val cardColor   = if (isEnabled.value) Emerald50  else Amber50
-    val borderColor = if (isEnabled.value) Emerald200 else Amber200
-    val iconBg      = if (isEnabled.value) Emerald100 else Amber100
-    val iconTint    = if (isEnabled.value) Emerald600 else Amber500
-    val icon        = if (isEnabled.value) Icons.Default.CheckCircle else Icons.Default.WarningAmber
-
-    Surface(
-        shape = RoundedCornerShape(40.dp),
-        color = cardColor,
-        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
-        shadowElevation = 1.dp
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(iconBg),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, null, tint = iconTint, modifier = Modifier.size(24.dp))
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Read USSD Popups",
-                        fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900
-                    )
-                    Text(
-                        if (isEnabled.value)
-                            "Active — *804# balance captured automatically"
-                        else
-                            "Required to capture balance from *804#",
-                        fontSize = 12.sp,
-                        color = if (isEnabled.value) Emerald600 else Amber500,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-
-            if (!isEnabled.value) {
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = { context.startActivity(UssdAccessibilityService.buildSettingsIntent()) },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Slate900)
-                ) {
-                    Icon(Icons.Default.Settings, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Open Accessibility Settings", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Steps: Settings → Accessibility → Installed Services → EthioStat → Turn On",
-                    fontSize = 10.sp,
-                    color = Amber500,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    }
-}
-
-/** Returns true if our UssdAccessibilityService is enabled by the user. */
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val expectedId = "${context.packageName}/${UssdAccessibilityService::class.java.name}"
-    return try {
-        val enabled = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        val colonSplitter = TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabled)
-        colonSplitter.any { it.equals(expectedId, ignoreCase = true) }
-    } catch (e: Exception) {
-        false
-    }
-}
 

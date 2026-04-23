@@ -68,11 +68,6 @@ class HomeViewModel @Inject constructor(
     val totalExpense: StateFlow<Double> = financialSummary.map { it.totalExpense }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val telecomBalance: StateFlow<Double> = packages.map { list ->
-        list.filter { it.type.equals("airtime", ignoreCase = true) }
-            .sumOf { it.remainingAmount }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
     // Bank/wallet balances keyed by resolved source name (e.g. "TeleBirr" → 7.96)
     // Only shows balances for sources configured in Settings
     val bankBalances: StateFlow<Map<String, Double>> = combine(

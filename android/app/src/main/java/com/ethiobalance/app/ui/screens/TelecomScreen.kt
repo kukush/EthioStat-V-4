@@ -1,10 +1,6 @@
 package com.ethiobalance.app.ui.screens
 
-import android.content.Context
-import android.provider.Settings
-import android.text.TextUtils
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,14 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.data.BalancePackageEntity
-import com.ethiobalance.app.services.UssdAccessibilityService
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.components.PackageCard
 import com.ethiobalance.app.ui.components.TelecomAssetCard
@@ -38,7 +32,6 @@ import java.util.Locale
 fun TelecomScreen(
     language: String,
     packages: List<BalancePackageEntity>,
-    telecomBalance: Double,
     isSyncing: Boolean,
     syncError: String?,
     syncWarning: String?,
@@ -52,12 +45,6 @@ fun TelecomScreen(
 
     var showRechargeSheet by remember { mutableStateOf(false) }
     var showTransferSheet by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
-    // Check if accessibility service is enabled
-    val isAccessibilityEnabled by remember {
-        mutableStateOf(isAccessibilityServiceEnabled(context))
-    }
 
     Column(
         modifier = Modifier
@@ -88,7 +75,6 @@ fun TelecomScreen(
 
         TelecomAssetCard(
             language = language,
-            telecomBalance = telecomBalance,
             dataVol = dataVol,
             voiceVol = voiceVol,
             smsVol = smsVol
@@ -101,41 +87,13 @@ fun TelecomScreen(
             ActionButton(
                 label = Translations.t(language, "sync"),
                 icon = Icons.Default.Refresh,
-                color = if (isAccessibilityEnabled) Blue600 else Slate400,
+                color = Blue600,
                 isLoading = isSyncing,
-                enabled = isAccessibilityEnabled,
-                onClick = { if (isAccessibilityEnabled) onSync() }
+                enabled = !isSyncing,
+                onClick = { onSync() }
             )
             ActionButton(Translations.t(language, "recharge"), Icons.Default.Add, Emerald600) { showRechargeSheet = true }
             ActionButton(Translations.t(language, "transfer"), Icons.Default.SwapHoriz, Amber500) { showTransferSheet = true }
-        }
-
-        // Accessibility warning
-        if (!isAccessibilityEnabled) {
-            Spacer(Modifier.height(12.dp))
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Rose50,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Rose600.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth().clickable {
-                    context.startActivity(UssdAccessibilityService.buildSettingsIntent())
-                }
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Settings, null, tint = Rose600, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        Translations.t(language, "enableAccessibility"),
-                        fontSize = 13.sp,
-                        color = Rose600,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(Icons.Default.ChevronRight, null, tint = Rose600, modifier = Modifier.size(16.dp))
-                }
-            }
         }
 
         Spacer(Modifier.height(24.dp))
@@ -466,18 +424,3 @@ private fun TransferSheet(
     }
 }
 
-/** Returns true if our UssdAccessibilityService is enabled by the user. */
-private fun isAccessibilityServiceEnabled(context: Context): Boolean {
-    val expectedId = "${context.packageName}/${UssdAccessibilityService::class.java.name}"
-    return try {
-        val enabled = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        val colonSplitter = TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabled)
-        colonSplitter.any { it.equals(expectedId, ignoreCase = true) }
-    } catch (e: Exception) {
-        false
-    }
-}

@@ -57,7 +57,7 @@ All persistence is local-first via Room using Kotlin coroutines (`Flow` and `sus
 | `TransactionEntity` | `transactions` | Financial income/expense events. `source` field holds the resolved sender label (e.g., `"TELEBIRR"`, `"CBE"`). |
 | `SmsLogEntity` | `sms_log` | Audit log of every raw SMS processed. Used for dedup (hash-based) and replayability. |
 | `TransactionSourceEntity` | `transaction_sources` | User-configured financial sender profiles (name, abbreviation, USSD code, senderId). |
-| `UssdEntity` | `ussd_log` | Raw USSD popup text captured by the Accessibility Service. |
+| `UssdEntity` | `ussd_log` | Historical USSD event log (legacy; retained for DB compatibility). |
 | `SimCardEntity` | `sim_cards` | Detected SIM card slots with phone numbers. |
 
 ---
@@ -112,19 +112,14 @@ Scans the Android SMS Inbox (`content://sms/inbox`) for all known senders.
 - **Exact address matching** instead of `LIKE '%127%'` — uses `address = "127" OR address = "+251127" OR address = "251127" OR address = "0127"` to avoid false positives.
 - **Wider-window honoring** — `cutoffTime = min(lastTimestamp, windowStart)` ensures that even if a previous scan ran, re-widening the window recovers missed messages.
 
-#### `SmsForegroundService.kt` — Real-time Monitor
+#### `SmsForegroundService.kt` — Real-time Monitor & Sync Auto-Return
 
 Persistent foreground service that listens for incoming SMS via `SmsReceiver` and immediately routes them through `ReconciliationEngine`.
 
-#### `UssdAccessibilityService.kt` — USSD Popup Reader
-
-Captures *804# balance response popups from the phone dialer. Updated April 2026:
-
-- **Removed deprecated `recycle()`** calls (framework handles this on Android 9+)
-- **Dual-path text capture**: fast `event.text` path first, then recursive node-tree walk as fallback (supports Android 5.0+)
-- **Multi-manufacturer dialer support**: `ussd_accessibility_config.xml` now covers `com.android.phone`, `com.google.android.dialer`, `com.samsung.android.dialer`, `com.huawei.phone`
-- Broadcasts result to UI via explicit-package `ACTION_USSD_RESPONSE` intent
-- `buildSettingsIntent()` companion method opens system Accessibility Settings directly
+When processing a telecom sender (994), the service also:
+- Sends `ACTION_TELECOM_SMS_ARRIVED` broadcast to complete the sync early
+- Shows a high-priority heads-up notification ("Telecom data updated — tap to return") so the user can return from the dialer
+- Uses a dedicated `SyncNotificationChannel` (IMPORTANCE_HIGH) for heads-up visibility
 
 ---
 
@@ -140,8 +135,8 @@ Single source of truth for all sender IDs, source labels, USSD codes, and broadc
 
 #### `AndroidManifest.xml`
 
-- `UssdAccessibilityService` declared with `BIND_ACCESSIBILITY_SERVICE` guard and `@xml/ussd_accessibility_config` metadata
-- Scoped permissions: `READ_SMS`, `RECEIVE_SMS`, `CALL_PHONE`, `READ_PHONE_STATE`, `FOREGROUND_SERVICE`
+- Scoped permissions: `READ_SMS`, `RECEIVE_SMS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`
+- No accessibility service — USSD sync uses `ACTION_DIAL` (no `CALL_PHONE` needed) and reads 994 SMS responses
 
 ---
 
@@ -177,13 +172,19 @@ User taps ↻ (or app first launch)
 ```
 User taps Sync in TelecomScreen
   → TelecomViewModel.handleSync()
-  → SmsRepository.dialUssd("*804#")
-  → Android dialer opens USSD session
-  → USSD popup appears
-  → UssdAccessibilityService.onAccessibilityEvent()
-      → harvest text (event.text → node tree fallback)
-      → ReconciliationEngine.processSms("804", response, ...)
-      → sendBroadcast(ACTION_USSD_RESPONSE) for live UI update
+  → snapshot current packages (for change detection)
+  → SmsRepository.dialUssd("*804#") — opens dialer with ACTION_DIAL
+  → User presses Call → USSD popup → OK
+  → Ethio Telecom sends 994 SMS with balance data
+  → SmsReceiver → SmsForegroundService → ReconciliationEngine
+      → processSms("994", body, timestamp)
+      → sendBroadcast(ACTION_TELECOM_SMS_ARRIVED)
+      → heads-up notification ("tap to return")
+  → TelecomViewModel receives broadcast OR user presses Back
+      → CompletableDeferred completes
+      → refreshTelecomFromLatestSms(limit=10) best-effort re-read
+      → compare packages: if no change → show 5s warning
+  → StateFlow updated → Compose UI recomposed
 ```
 
 ---
@@ -229,4 +230,4 @@ Shell script that injects mock SMS via `adb shell am broadcast` and reads result
 | Canonical package IDs (`airtime-sim1`) | Upsert-safe; historical rescans don't duplicate |
 | 90-day scan window | Covers typical billing cycles and new-install onboarding |
 | `resolveSource()` at read time, not write time | Old DB rows (e.g., source=`"127"`) are transparently remapped without a DB migration |
-| Accessibility Service, not `telephonyManager.sendUssdRequest` | Works across all Android versions and OEM dialers; no elevated permissions required |
+| SMS-based USSD sync (no Accessibility Service) | Uses `ACTION_DIAL` + 994 SMS reading; no special permissions; works across all OEM dialers |

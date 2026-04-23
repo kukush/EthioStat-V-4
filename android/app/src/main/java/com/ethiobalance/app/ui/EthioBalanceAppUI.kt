@@ -41,7 +41,6 @@ fun EthioBalanceAppUI() {
                         val userPhone by homeVM.userPhone.collectAsStateWithLifecycle()
                         val totalIncome by homeVM.totalIncome.collectAsStateWithLifecycle()
                         val totalExpense by homeVM.totalExpense.collectAsStateWithLifecycle()
-                        val telecomBalance by homeVM.telecomBalance.collectAsStateWithLifecycle()
                         val packages by homeVM.packages.collectAsStateWithLifecycle()
                         val transactions by homeVM.transactions.collectAsStateWithLifecycle()
                         val bankBalances by homeVM.bankBalances.collectAsStateWithLifecycle()
@@ -52,7 +51,6 @@ fun EthioBalanceAppUI() {
                             language = language,
                             totalIncome = totalIncome,
                             totalExpense = totalExpense,
-                            telecomBalance = telecomBalance,
                             packages = packages,
                             transactions = transactions,
                             bankBalances = bankBalances,
@@ -62,7 +60,6 @@ fun EthioBalanceAppUI() {
 
                     "telecom" -> {
                         val packages by telecomVM.packages.collectAsStateWithLifecycle()
-                        val telecomBalance by telecomVM.telecomBalance.collectAsStateWithLifecycle()
                         val isSyncing by telecomVM.isSyncing.collectAsStateWithLifecycle()
                         val syncError by telecomVM.syncError.collectAsStateWithLifecycle()
                         val syncWarning by telecomVM.syncWarning.collectAsStateWithLifecycle()
@@ -70,7 +67,6 @@ fun EthioBalanceAppUI() {
                         TelecomScreen(
                             language = language,
                             packages = packages,
-                            telecomBalance = telecomBalance,
                             isSyncing = isSyncing,
                             syncError = syncError,
                             syncWarning = syncWarning,

@@ -4,6 +4,4 @@
     <string name="title_activity_main">EthioBalance</string>
     <string name="package_name">com.ethiobalance.app</string>
     <string name="custom_url_scheme">com.ethiobalance.app</string>
-    <string name="accessibility_service_label">EthioStat USSD Capture</string>
-    <string name="accessibility_service_description">Used to capture USSD response popups for balance tracking.</string>
 </resources>

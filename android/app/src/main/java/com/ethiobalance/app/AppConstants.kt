@@ -27,10 +27,9 @@ object AppConstants {
     //   994   → Customer Service Hotline
     //   8994  → SMS-based Inquiry and Support
     //   *999# → Main Menu (Voice/Data/SMS packages) — USSD dial code only,
-    //           NOT an SMS sender; handled by AccessibilityService
+    //           NOT an SMS sender.
     //
-    // NOTE: "USSD" is intentionally excluded — USSD responses arrive via
-    // AccessibilityService text harvest, not as an SMS sender number.
+    // NOTE: "USSD" is intentionally excluded — USSD responses are not SMS senders.
     // -------------------------------------------------------------------------
     // Core whitelist: numeric short-codes + known multi-word / compound alpha senders.
     // SOURCE_DISPLAY_NAMES values (e.g. "Awash", "Dashen", "Coopbank") are merged in below
@@ -47,7 +46,7 @@ object AppConstants {
         "805",           // Airtime Recharge
 
         // NOTE: *999# (Voice/Data/SMS package menu) is a USSD *dial* code,
-        // not an SMS sender — it is handled by UssdAccessibilityService.
+        // not an SMS sender.
 
         // ── Telebirr (EthioTelecom Mobile Money) — *127# ─────────────────────
         "127",
@@ -346,8 +345,8 @@ object AppConstants {
     // -------------------------------------------------------------------------
     // Broadcast Actions
     // -------------------------------------------------------------------------
-    const val ACTION_USSD_RESPONSE = "com.ethiobalance.app.ACTION_USSD_RESPONSE"
     const val ACTION_TRIGGER_REFRESH = "com.ethiobalance.app.ACTION_TRIGGER_REFRESH"
+    const val ACTION_TELECOM_SMS_ARRIVED = "com.ethiobalance.app.ACTION_TELECOM_SMS_ARRIVED"
 
     // -------------------------------------------------------------------------
     // Notification Channel
@@ -362,17 +361,6 @@ object AppConstants {
     // Slot 1 = first physical SIM in a dual-SIM device.
     // -------------------------------------------------------------------------
     const val DEFAULT_SIM_SLOT = 1
-
-    // -------------------------------------------------------------------------
-    // USSD Harvesting
-    // Package name of the Android phone/dialer app whose windows carry USSD popups.
-    // -------------------------------------------------------------------------
-    val PHONE_APP_PACKAGE: String get() = BuildConfig.PHONE_APP_PACKAGE
-
-    // -------------------------------------------------------------------------
-    // USSD Response DB label
-    // -------------------------------------------------------------------------
-    const val USSD_REQUEST_LABEL = "Last USSD Request"
 
     // -------------------------------------------------------------------------
     // SharedPreferences

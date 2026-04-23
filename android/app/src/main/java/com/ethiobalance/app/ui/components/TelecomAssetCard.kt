@@ -26,7 +26,6 @@ import java.util.Locale
 @Composable
 fun TelecomAssetCard(
     language: String,
-    telecomBalance: Double,
     dataVol: Double,
     voiceVol: Double,
     smsVol: Double,
@@ -95,60 +94,31 @@ fun TelecomAssetCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Row(modifier = Modifier.fillMaxWidth()) {
-                // Left Column: Airtime
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        Translations.t(language, "availableAirtime").takeIf { it.isNotEmpty() }?.uppercase()
-                            ?: "AVAILABLE AIRTIME",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.6f),
-                        letterSpacing = 2.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            "ETB",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            fmt.format(telecomBalance),
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            letterSpacing = (-1).sp
-                        )
-                    }
-                }
-
-                // Right Column: Package Summaries
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PackageItem(
-                        Translations.t(language, "data_label").uppercase(),
-                        "%.1f".format(Locale.US, dataVol),
-                        " ${Translations.t(language, "gb_unit")}",
-                        Blue500
-                    )
-                    PackageItem(
-                        Translations.t(language, "audio_label").uppercase(),
-                        fmt.format(voiceVol),
-                        " ${Translations.t(language, "min_unit")}",
-                        Emerald500
-                    )
-                    PackageItem(
-                        Translations.t(language, "sms_label").uppercase(),
-                        fmt.format(smsVol),
-                        " ${Translations.t(language, "sms_unit")}",
-                        Purple500
-                    )
-                }
+            // Package Summaries
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                PackageItem(
+                    Translations.t(language, "data_label").uppercase(),
+                    "%.1f".format(Locale.US, dataVol),
+                    " ${Translations.t(language, "gb_unit")}",
+                    Blue500
+                )
+                PackageItem(
+                    Translations.t(language, "audio_label").uppercase(),
+                    fmt.format(voiceVol),
+                    " ${Translations.t(language, "min_unit")}",
+                    Emerald500
+                )
+                PackageItem(
+                    Translations.t(language, "sms_label").uppercase(),
+                    fmt.format(smsVol),
+                    " ${Translations.t(language, "sms_unit")}",
+                    Purple500
+                )
             }
         }
     }
