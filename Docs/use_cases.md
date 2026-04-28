@@ -7,11 +7,11 @@ EthioStat functions strictly as an offline-first analytical tool, enforcing accu
 ## 1. Standard Self-Purchase (Telebirr / Airtime)
 **Trigger**: User buys a 1GB Data package for themselves.
 **Sequence**:
-- SMS 1 (Telebirr 830): *"You paid 19 ETB for 1GB..."*
+- SMS 1 (Telebirr 127): *"You paid 19 ETB for 1GB..."*
 - SMS 2 (Ethio 251994): *"You purchased 1GB..."*
 
 **Dual-Tracking Execution**:
-- **Financial Update**: The 830 message triggers an **EXPENSE** of 19 ETB (category: `PURCHASE`), lowering the dashboard Net Balance.
+- **Financial Update**: The 127 message triggers an **EXPENSE** of 19 ETB (category: `PURCHASE`), lowering the dashboard Net Balance.
 - **Asset Update**: The 251994 message triggers an **ASSET GAIN**, appending a new 1GB `BalancePackageEntity` to the database. The engine explicitly ignores adding a duplicate 19 ETB expense here.
 
 ## 2. Telebirr Transfer (ETB Sent to Another Person)

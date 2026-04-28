@@ -43,12 +43,14 @@ fun SettingsScreen(
     userPhone: String,
     userAvatar: String,
     transactionSources: List<TransactionSourceEntity>,
+    smsPermissionGranted: Boolean = true,
     onLanguageChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
     onProfileUpdate: (String, String, String) -> Unit,
     onAddSource: (TransactionSourceEntity) -> Unit,
     onRemoveSource: (String) -> Unit,
-    onClearData: () -> Unit
+    onClearData: () -> Unit,
+    onRequestPermissions: () -> Unit = {}
 ) {
     var showEditProfile by remember { mutableStateOf(false) }
     var showAddSource by remember { mutableStateOf(false) }
@@ -197,8 +199,86 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(32.dp))
 
+        // Permission Warning Card
+        if (!smsPermissionGranted) {
+            Surface(
+                shape = RoundedCornerShape(32.dp),
+                color = Color(0xFFFEF2F2),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFEE2E2)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Warning, null, tint = Color(0xFFDC2626), modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                Translations.t(language, "permissionRequired").takeIf { it.isNotEmpty() } ?: "Permission Required",
+                                fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFFDC2626)
+                            )
+                            Text(
+                                Translations.t(language, "permissionMainMessage").takeIf { it.isNotEmpty() }
+                                    ?: "To track balance, data, and expenses. Recharge easily.",
+                                fontSize = 12.sp, color = Slate600, modifier = Modifier.padding(top = 4.dp), lineHeight = 18.sp
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    // Explanation bullets
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PermissionBullet(
+                            icon = Icons.Default.CreditCard,
+                            text = Translations.t(language, "permissionBankInfo").takeIf { it.isNotEmpty() }
+                                ?: "Only chosen banks or wallets from Settings are used to track your transactions"
+                        )
+                        PermissionBullet(
+                            icon = Icons.Default.CardGiftcard,
+                            text = Translations.t(language, "permissionTelecomInfo").takeIf { it.isNotEmpty() }
+                                ?: "For telecom packages: reads messages from 994"
+                        )
+                        PermissionBullet(
+                            icon = Icons.Default.Phone,
+                            text = Translations.t(language, "permissionUssdInfo").takeIf { it.isNotEmpty() }
+                                ?: "For balance checks (*804#, *805#) via USSD dial"
+                        )
+                        PermissionBullet(
+                            icon = Icons.Default.Info,
+                            text = Translations.t(language, "permissionNoSend").takeIf { it.isNotEmpty() }
+                                ?: "EthioStat never sends SMS. Android shows \"send\" in the dialog, but only read access is used."
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = onRequestPermissions,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Slate900)
+                    ) {
+                        Icon(Icons.Default.Lock, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            (Translations.t(language, "grantPermission").takeIf { it.isNotEmpty() } ?: "Grant Permission").uppercase(),
+                            fontWeight = FontWeight.Black, letterSpacing = 1.sp
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(32.dp))
+        }
+
         // Transaction Sources
-        SectionHeader(Translations.t(language, "transactionSources").takeIf{it.isNotEmpty()}?:"TRANSACTION SOURCES", Icons.Default.CreditCard, "Add New", { showAddSource = true })
+        SectionHeader(
+            Translations.t(language, "transactionSources").takeIf{it.isNotEmpty()}?:"TRANSACTION SOURCES",
+            Icons.Default.CreditCard,
+            if (smsPermissionGranted) "Add New" else null,
+            if (smsPermissionGranted) ({ showAddSource = true }) else null
+        )
         Spacer(Modifier.height(16.dp))
         Surface(
             shape = RoundedCornerShape(40.dp),
@@ -296,8 +376,8 @@ fun SettingsScreen(
         )
     }
 
-    // Add Source Modal
-    if (showAddSource) {
+    // Add Source Modal (only when permission granted)
+    if (showAddSource && smsPermissionGranted) {
         val configuredAbbreviations = transactionSources.map { it.abbreviation }
         AddSourceSheet(
             _language = language,
@@ -647,4 +727,16 @@ private fun AddSourceSheet(
     }
 }
 
-
+@Composable
+private fun PermissionBullet(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Box(
+            modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(Slate100),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = Slate600, modifier = Modifier.size(14.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(text, fontSize = 12.sp, color = Slate600, lineHeight = 18.sp, modifier = Modifier.weight(1f))
+    }
+}

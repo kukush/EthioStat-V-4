@@ -14,10 +14,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BalancePackageEntity::class,
         TransactionEntity::class,
         SmsLogEntity::class,
-        SimCardEntity::class,
         TransactionSourceEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,7 +25,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun balancePackageDao(): BalancePackageDao
     abstract fun transactionDao(): TransactionDao
     abstract fun smsLogDao(): SmsLogDao
-    abstract fun simCardDao(): SimCardDao
     abstract fun transactionSourceDao(): TransactionSourceDao
 
     companion object {

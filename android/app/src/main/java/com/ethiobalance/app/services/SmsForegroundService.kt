@@ -49,7 +49,7 @@ class SmsForegroundService : Service() {
 
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startForeground(AppConstants.NOTIFICATION_ID_SMS, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                    startForeground(AppConstants.NOTIFICATION_ID_SMS, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
                 } else {
                     startForeground(AppConstants.NOTIFICATION_ID_SMS, notification)
                 }
@@ -107,6 +107,11 @@ class SmsForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
+    }
+
+    override fun onTimeout(startId: Int) {
+        Log.w(TAG, "shortService timeout reached — stopping service")
+        stopSelf(startId)
     }
 
     override fun onDestroy() {

@@ -54,6 +54,8 @@ class SettingsViewModel @Inject constructor(
     fun addTransactionSource(source: TransactionSourceEntity) {
         viewModelScope.launch {
             settingsRepo.addTransactionSource(source)
+            // Only scan SMS if permission is granted — otherwise just insert the source
+            if (!settingsRepo.hasSmsPermission()) return@launch
             // Scan ALL whitelist senders that resolve to the same bank abbreviation.
             // This is critical because many banks use alpha senders (e.g. "CBEBirr", "AwashBank")
             // in addition to numeric short codes (e.g. "847", "901").
@@ -70,6 +72,17 @@ class SettingsViewModel @Inject constructor(
 
     fun removeTransactionSource(abbreviation: String) {
         viewModelScope.launch { settingsRepo.removeTransactionSource(abbreviation) }
+    }
+
+    fun onPermissionGranted() {
+        viewModelScope.launch {
+            settingsRepo.seedDefaultSourcesIfEmpty()
+            if (settingsRepo.hasSmsPermission()) {
+                transactionRepo.smsRepo.refreshTelecomSmart()
+                transactionRepo.smsRepo.scanAllTransactionSources(days = 90)
+                settingsRepo.pruneEmptyDefaultSources()
+            }
+        }
     }
 
     fun clearAllData() {

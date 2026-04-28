@@ -53,7 +53,9 @@ class TelecomViewModelTest {
         settingsRepo = mockk {
             every { language } returns flowOf("en")
         }
-        smsRepo = mockk(relaxed = true)
+        smsRepo = mockk(relaxed = true) {
+            every { hasSmsPermission() } returns true
+        }
         syncAirtimeUseCase = mockk(relaxed = true)
         context = mockk(relaxed = true)
     }

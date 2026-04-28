@@ -15,6 +15,8 @@ import kotlinx.coroutines.withContext
 
 import com.ethiobalance.app.data.SmsLogDao
 import com.ethiobalance.app.data.TransactionSourceDao
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -24,6 +26,12 @@ class SmsRepository @Inject constructor(
     private val transactionSourceDao: TransactionSourceDao,
     private val reconciliationEngine: ReconciliationEngine
 ) {
+
+    /**
+     * Check if READ_SMS permission is granted.
+     */
+    fun hasSmsPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
 
     /**
      * Scan the SMS Inbox for a given sender address.
@@ -38,6 +46,10 @@ class SmsRepository @Inject constructor(
      * so that "+251127", "251127", "0127", and "127" are all matched.
      */
     suspend fun scanHistory(senderId: String, days: Int = 90, forceReparse: Boolean = false): Int = withContext(Dispatchers.IO) {
+        if (!hasSmsPermission()) {
+            Log.w("SmsRepository", "scanHistory: READ_SMS not granted, skipping")
+            return@withContext 0
+        }
         val normalized = reconciliationEngine.normalizeSender(senderId)
         val lastTimestamp = smsLogDao.getLastTimestampForSender(normalized)
 
@@ -81,27 +93,32 @@ class SmsRepository @Inject constructor(
             selectionArgs = arrayOf(senderId, senderId, cutoffTime.toString())
         }
 
-        val cursor = context.contentResolver.query(
-            uri, projection, selection, selectionArgs, "date ASC"
-        )
-
         var matchCount = 0
-        cursor?.use {
-            val addressIdx = it.getColumnIndex("address")
-            val bodyIdx    = it.getColumnIndex("body")
-            val dateIdx    = it.getColumnIndex("date")
+        try {
+            val cursor = context.contentResolver.query(
+                uri, projection, selection, selectionArgs, "date ASC"
+            )
 
-            while (it.moveToNext()) {
-                val sender    = it.getString(addressIdx) ?: continue
-                val body      = it.getString(bodyIdx)    ?: continue
-                val timestamp = it.getLong(dateIdx)
-                try {
-                    reconciliationEngine.processSms(sender, body, timestamp, forceReparse)
-                    matchCount++
-                } catch (e: Exception) {
-                    Log.e("SmsRepository", "Failed to process SMS from $sender: ${e.message}")
+            cursor?.use {
+                val addressIdx = it.getColumnIndex("address")
+                val bodyIdx    = it.getColumnIndex("body")
+                val dateIdx    = it.getColumnIndex("date")
+
+                while (it.moveToNext()) {
+                    val sender    = it.getString(addressIdx) ?: continue
+                    val body      = it.getString(bodyIdx)    ?: continue
+                    val timestamp = it.getLong(dateIdx)
+                    try {
+                        reconciliationEngine.processSms(sender, body, timestamp, forceReparse)
+                        matchCount++
+                    } catch (e: Exception) {
+                        Log.e("SmsRepository", "Failed to process SMS from $sender: ${e.message}")
+                    }
                 }
             }
+        } catch (e: SecurityException) {
+            Log.w("SmsRepository", "scanHistory: SecurityException — permission revoked?", e)
+            return@withContext 0
         }
 
         Log.d("SmsRepository", "Scanned sender=$senderId (cutoff=$cutoffTime): $matchCount messages")
@@ -181,12 +198,17 @@ class SmsRepository @Inject constructor(
      *   - No 994 SMS at all                     → no-op.
      */
     suspend fun refreshTelecomSmart(scanDepth: Int = 5): Int = withContext(Dispatchers.IO) {
+        if (!hasSmsPermission()) {
+            Log.w("SmsRepository", "refreshTelecomSmart: READ_SMS not granted, skipping")
+            return@withContext 0
+        }
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
         val selection = AppConstants.TELECOM_SENDERS.joinToString(" OR ") { "address = ?" }.let { "($it)" }
         val selectionArgs = AppConstants.TELECOM_SENDERS.toTypedArray()
 
         val rows = mutableListOf<SmsRow>()
+        try {
         context.contentResolver.query(
             uri, projection, selection, selectionArgs, "date DESC LIMIT $scanDepth"
         )?.use { c ->
@@ -198,6 +220,10 @@ class SmsRepository @Inject constructor(
                 val b = c.getString(bi) ?: continue
                 rows += SmsRow(a, b, c.getLong(di))
             }
+        }
+        } catch (e: SecurityException) {
+            Log.w("SmsRepository", "refreshTelecomSmart: SecurityException", e)
+            return@withContext 0
         }
 
         val targets = pickRefreshTargets(rows)

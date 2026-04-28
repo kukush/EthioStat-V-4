@@ -43,6 +43,28 @@ private fun translateCategory(lang: String, category: String?): String {
     return translated.takeIf { it != key } ?: category.replaceFirstChar { it.uppercase() }
 }
 
+// Split partyName into (displayName, identifier) so IDs/phones move to row 2
+private fun splitPartyName(partyName: String): Pair<String, String?> {
+    // "743236 - Andualem Meketa Mekonen" → name="Andualem Meketa Mekonen", id="743236"
+    val merchantMatch = Regex("^(\\d+)\\s*-\\s*(.+)$").find(partyName)
+    if (merchantMatch != null) {
+        return Pair(merchantMatch.groupValues[2].trim(), merchantMatch.groupValues[1].trim())
+    }
+    // "SELAMAWIT ALEMU(2519****0146)" or "Shemsu Ertiban (2519****7573)" → name, phone
+    val namePhoneMatch = Regex("^(.+?)\\s*\\(([^)]+)\\)$").find(partyName)
+    if (namePhoneMatch != null) {
+        val part1 = namePhoneMatch.groupValues[1].trim()
+        val part2 = namePhoneMatch.groupValues[2].trim()
+        // If part1 is digits-only (phone), swap: "0911XX (Name)" → display=Name, id=phone
+        return if (part1.all { it.isDigit() || it == '*' }) {
+            Pair(part2, part1)
+        } else {
+            Pair(part1, part2)
+        }
+    }
+    return Pair(partyName, null)
+}
+
 @Composable
 fun TransactionItem(
     transaction: TransactionEntity,
@@ -144,12 +166,17 @@ fun TransactionItem(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Column {
+                        // Split party name into display name + optional identifier (phone/ID)
+                        val (displayName, identifier) = if (transaction.partyName != null)
+                            splitPartyName(transaction.partyName)
+                        else Pair(null, null)
+
                         // Show party name with From:/To: prefix, or date if no party
                         val displayText = when {
-                            transaction.partyName != null && transaction.category.uppercase() in listOf("INTERNET", "VOICE", "SMS", "TELECOM") ->
-                                transaction.partyName
-                            transaction.partyName != null && isIncome -> "${Translations.t(language, "from")}: ${transaction.partyName}"
-                            transaction.partyName != null -> "${Translations.t(language, "to")}: ${transaction.partyName}"
+                            displayName != null && transaction.category.uppercase() in listOf("INTERNET", "VOICE", "SMS", "TELECOM") ->
+                                displayName
+                            displayName != null && isIncome -> "${Translations.t(language, "from")}: $displayName"
+                            displayName != null -> "${Translations.t(language, "to")}: $displayName"
                             else -> formattedDate
                         }
                         Text(
@@ -162,10 +189,11 @@ fun TransactionItem(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 2.dp)
                         )
-                        // Show date below party name
+                        // Show identifier + date on second row, or just date
                         if (transaction.partyName != null) {
+                            val secondRow = if (identifier != null) "$identifier \u00B7 $formattedDate" else formattedDate
                             Text(
-                                text = formattedDate,
+                                text = secondRow,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),

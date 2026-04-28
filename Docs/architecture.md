@@ -45,7 +45,6 @@ All persistence is local-first via Room using Kotlin coroutines (`Flow` and `sus
 #### Repositories
 - `TransactionRepository`: Manages financial transactions and SMS scanning.
 - `BalanceRepository`: Manages telecom packages and balances.
-- `SimRepository`: Manages SIM card detection and metadata.
 - `SettingsRepository`: Manages user preferences via DataStore.
 - `SmsRepository`: Low-level SMS inbox access and USSD dialing.
 
@@ -58,7 +57,6 @@ All persistence is local-first via Room using Kotlin coroutines (`Flow` and `sus
 | `SmsLogEntity` | `sms_log` | Audit log of every raw SMS processed. Used for dedup (hash-based) and replayability. |
 | `TransactionSourceEntity` | `transaction_sources` | User-configured financial sender profiles (name, abbreviation, USSD code, senderId). |
 | `UssdEntity` | `ussd_log` | Historical USSD event log (legacy; retained for DB compatibility). |
-| `SimCardEntity` | `sim_cards` | Detected SIM card slots with phone numbers. |
 
 ---
 
@@ -135,8 +133,106 @@ Single source of truth for all sender IDs, source labels, USSD codes, and broadc
 
 #### `AndroidManifest.xml`
 
-- Scoped permissions: `READ_SMS`, `RECEIVE_SMS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`
+- Scoped permissions: `READ_SMS`, `RECEIVE_SMS`, `FOREGROUND_SERVICE`, `POST_NOTIFICATIONS`
 - No accessibility service — USSD sync uses `ACTION_DIAL` (no `CALL_PHONE` needed) and reads 994 SMS responses
+
+---
+
+## Permission Handling
+
+EthioStat requires **READ_SMS** and **RECEIVE_SMS** to function. The app **never crashes** if permissions are denied — it gracefully degrades and guides the user to grant permissions from Settings.
+
+### Required Permissions
+
+| Permission | Purpose |
+|---|---|
+| `READ_SMS` | Read SMS inbox for transactions, telecom packages, balance queries |
+| `RECEIVE_SMS` | Real-time incoming SMS via `SmsReceiver` broadcast |
+| `POST_NOTIFICATIONS` | Foreground service notification |
+
+### Crash Prevention (Defensive Guards)
+
+All SMS content provider queries are guarded at two levels:
+
+1. **Early return** — `SmsRepository.hasSmsPermission()` at the top of `scanHistory()`, `refreshTelecomSmart()`, `scanAllTransactionSources()`. Returns 0 immediately if `READ_SMS` is not granted.
+2. **SecurityException catch** — All `contentResolver.query()` calls wrapped in `try/catch(SecurityException)` as a fallback if permission is revoked mid-operation.
+3. **ViewModel guards** — `TelecomViewModel.handleSync()` checks permission before dialing USSD; sets user-friendly `syncError` instead of crashing. `SettingsViewModel.addTransactionSource()` skips SMS scan when permission denied.
+
+### Feature Disabling (Permission Denied State)
+
+When `READ_SMS` or `RECEIVE_SMS` is not granted:
+
+| Screen | Disabled Feature | Behavior |
+|---|---|---|
+| **Telecom** | Sync, Recharge, Transfer buttons | Grayed out (`enabled = false`); amber warning banner shown |
+| **Settings** | "Add New" source action | Hidden from `SectionHeader`; `AddSourceSheet` blocked |
+| **Settings** | Default source seeding | `seedDefaultSourcesIfEmpty()` returns empty list — no CBE/Telebirr seeded |
+| **BottomNavBar** | Settings tab | Red badge dot (10dp) on Settings icon to draw user attention |
+
+### Warning & Grant Flow
+
+When permissions are missing, `SettingsScreen` displays a prominent **Permission Warning Card** (red surface, `RoundedCornerShape(32.dp)`) containing:
+
+- **Header**: "Permission Required" with warning icon
+- **Main message**: "To track balance, data, and expenses. Recharge easily. Permission is needed."
+- **Explanation bullets** (3 items with icons):
+  - Only chosen banks/wallets from Settings track transactions
+  - Telecom packages: reads messages from 251994, 994
+  - Balance checks (*804#, *805#) via USSD dial
+- **"Grant Permission" button** — triggers `ActivityResultContracts.RequestMultiplePermissions` for `READ_SMS` + `RECEIVE_SMS`
+
+Permission state is checked in `EthioBalanceAppUI` using `ContextCompat.checkSelfPermission()` and **re-checked on every `ON_RESUME`** lifecycle event (handles grant from system settings or dialog).
+
+Translations provided in **en**, **am** (Amharic), **om** (Afaan Oromo) for all permission strings.
+
+### Post-Grant Recovery
+
+When permissions are granted (from Settings card or initial prompt):
+
+```
+permissionLauncher callback (all granted)
+  → SettingsViewModel.onPermissionGranted()
+    → settingsRepo.seedDefaultSourcesIfEmpty()     // Seeds CBE, Telebirr
+    → smsRepo.refreshTelecomSmart()                 // Reads 994 SMS
+    → smsRepo.scanAllTransactionSources(days = 90)  // 90-day history scan
+    → settingsRepo.pruneEmptyDefaultSources()        // Remove sources with 0 transactions
+  → smsPermissionGranted = true
+  → UI recomposes: badge removed, buttons enabled, AddSource available
+```
+
+### Permission State Flow
+
+```
+App Launch (MainActivity)
+  → checkSelfPermission(READ_SMS, RECEIVE_SMS, POST_NOTIFICATIONS)
+  → All granted? → runStartupSeedAndScan(smsGranted=true)
+  → Any denied?  → requestPermissionLauncher.launch(permissions)
+    → Granted in dialog → runStartupSeedAndScan(smsGranted=true)
+    → Denied in dialog  → runStartupSeedAndScan(smsGranted=false)
+                            → seedDefaultSourcesIfEmpty() inserts nothing
+                            → SMS scans skipped
+                            → UI shows: badge on Settings, disabled features, permission card
+
+Settings Screen (later)
+  → User taps "Grant Permission"
+  → permissionLauncher.launch([READ_SMS, RECEIVE_SMS])
+  → Granted → onPermissionGranted() → full seed + scan
+  → Denied  → no change, card remains visible
+```
+
+### Files Modified for Permission Handling
+
+| File | Changes |
+|---|---|
+| `SmsRepository.kt` | `hasSmsPermission()` public method, guards + try-catch on all SMS queries |
+| `SettingsRepository.kt` | `hasSmsPermission()`, `hasReceiveSmsPermission()`, `areAllPermissionsGranted()` public; skip seeding when denied |
+| `EthioBalanceAppUI.kt` | Permission state with `ON_RESUME` re-check, `permissionLauncher`, passes state to all screens |
+| `BottomNavBar.kt` | `hasPermissionWarning` param, red badge on Settings tab |
+| `SettingsScreen.kt` | `smsPermissionGranted` + `onRequestPermissions` params, permission card, disabled AddSource |
+| `TelecomScreen.kt` | `smsPermissionGranted` param, disabled buttons, amber warning banner |
+| `SettingsViewModel.kt` | Permission guard in `addTransactionSource()`, `onPermissionGranted()` method |
+| `TelecomViewModel.kt` | Permission guard in `handleSync()` |
+| `Translations.kt` | 7 new keys (en/am/om): `permissionRequired`, `permissionMainMessage`, `permissionBankInfo`, `permissionTelecomInfo`, `permissionUssdInfo`, `grantPermission`, `smsPermissionNeeded` |
 
 ---
 
@@ -216,6 +312,22 @@ Covers (40+ cases):
 - Loan taken, gift sent, income, service fee
 - Dedup via `existsByHash`
 
+### Permission Guard Tests (`PermissionGuardTest.kt`)
+Located at `android/app/src/test/java/com/ethiobalance/app/ui/viewmodel/`.
+
+Covers (9 cases):
+- **Permission-denied contracts**: `scanHistory`, `refreshTelecomSmart`, `scanAllTransactionSources` return 0; `seedDefaultSourcesIfEmpty` inserts nothing; `addTransactionSource` skips scan; `handleSync` sets error message
+- **Permission-granted contracts**: default sources are seeded, known banks resolve correctly for scanning, telecom senders defined for refresh
+
+### TelecomViewModelTest (`TelecomViewModelTest.kt`)
+Located at `android/app/src/test/java/com/ethiobalance/app/ui/viewmodel/`.
+
+Covers (16 cases):
+- Initial state, package filtering, data normalization
+- `handleSync` state transitions (with `hasSmsPermission()` mocked `true`)
+- Data change detection logic
+- `rechargeViaUssd` and `transferAirtime` delegation
+
 ### Integration Testing (`scripts/test-workflow.sh` + `scripts/mock-data.json`)
 Shell script that injects mock SMS via `adb shell am broadcast` and reads results from Room via `adb shell content query`. Covers all dual-impact scenarios.
 
@@ -231,3 +343,6 @@ Shell script that injects mock SMS via `adb shell am broadcast` and reads result
 | 90-day scan window | Covers typical billing cycles and new-install onboarding |
 | `resolveSource()` at read time, not write time | Old DB rows (e.g., source=`"127"`) are transparently remapped without a DB migration |
 | SMS-based USSD sync (no Accessibility Service) | Uses `ACTION_DIAL` + 994 SMS reading; no special permissions; works across all OEM dialers |
+| Graceful degradation on permission denial | No crash path exists; all SMS queries guarded with early-return + SecurityException catch; UI disables features and shows grant card |
+| Permission re-check on ON_RESUME | Covers both in-app dialog grant and manual grant from Android system settings |
+| Post-grant full recovery | `onPermissionGranted()` re-seeds defaults + scans 90-day history so user loses no data |

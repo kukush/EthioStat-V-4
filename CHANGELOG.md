@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🔥 Removed
+- **SimRepository and SIM card detection**: Removed `SimRepository`, `SimCardEntity`, `SimCardDao`, and all SIM card detection functionality. The app no longer attempts to detect SIM cards or requires `READ_PHONE_STATE` permission.
+
 ## [2.0.0] - 2026-04-01
 
 ### 🚀 Major Release: Native Kotlin/Jetpack Compose Rewrite
@@ -24,7 +29,7 @@ All notable changes to this project will be documented in this file.
 ### 🛠️ Technical Changes
 - **Removed Capacitor**: Deleted all web assets, Cordova plugins, and Capacitor config.
 - **Room Database**: Bumped to version 4 for new `SmsLogEntity.bodyHash` column.
-- **Repositories**: Created `SmsRepository`, `SimRepository`, `TransactionRepository`, `BalanceRepository`, `SettingsRepository`.
+- **Repositories**: Created `SmsRepository`, `TransactionRepository`, `BalanceRepository`, `SettingsRepository`.
 - **ViewModels**: Implemented reactive UI state with Kotlin Flows.
 - **Compose Components**: Built reusable components (BottomNavBar, PackageCard, TransactionItem, SummaryCard).
 - **Navigation**: Simple tab-based navigation without external routing.

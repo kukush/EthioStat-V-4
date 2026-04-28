@@ -44,6 +44,7 @@ fun HomeScreen(
     bankBalances: Map<String, Double> = emptyMap(),
     onViewAllTransactions: () -> Unit
 ) {
+    var showAmounts by remember { mutableStateOf(true) }
     val netBalance = totalIncome - totalExpense
     val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
         minimumFractionDigits = 2
@@ -132,7 +133,9 @@ fun HomeScreen(
             language = language,
             netBalance = netBalance,
             totalIncome = totalIncome,
-            totalExpense = totalExpense
+            totalExpense = totalExpense,
+            showAmounts = showAmounts,
+            onToggleAmounts = { showAmounts = !showAmounts }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -178,14 +181,15 @@ fun HomeScreen(
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            if (srcTxs.isNotEmpty()) {
-                                Text(fmt.format(srcNet), fontSize = 14.sp, fontWeight = FontWeight.Black, color = if(srcNet >= 0) Emerald600 else Rose600)
-                                Text("NET FLOW", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
-                            }
                             val bal = bankBalances[src]
                             if (bal != null) {
-                                Text(fmt.format(bal), fontSize = 14.sp, fontWeight = FontWeight.Black, color = Blue600)
-                                Text("BALANCE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                                Text(fmt.format(bal), fontSize = 16.sp, fontWeight = FontWeight.Black, color = Blue600)
+                                Text("BALANCE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Blue600.copy(alpha = 0.7f), letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                            }
+                            if (srcTxs.isNotEmpty()) {
+                                if (bal != null) Spacer(Modifier.height(6.dp))
+                                Text(fmt.format(srcNet), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if(srcNet >= 0) Emerald600 else Rose600)
+                                Text("NET FLOW", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
                             }
                         }
                     }

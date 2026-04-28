@@ -100,7 +100,7 @@ class TransactionViewModel @Inject constructor(
         if (transactions.isEmpty()) return
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)
-        val fileName = "ethiobalance_export_${dateFormat.format(Date())}.csv"
+        val fileName = "ethiostat_export_${dateFormat.format(Date())}.csv"
         val file = File(context.cacheDir, fileName)
 
         file.bufferedWriter().use { writer ->

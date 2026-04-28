@@ -1,11 +1,18 @@
 package com.ethiobalance.app.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ethiobalance.app.ui.components.BottomNavBar
 import com.ethiobalance.app.ui.screens.*
@@ -24,13 +31,40 @@ fun EthioBalanceAppUI() {
 
     var currentRoute by remember { mutableStateOf("home") }
 
+    // ── Permission state ──────────────────────────────────────────────────
+    val context = LocalContext.current
+    fun checkPermissions(): Boolean {
+        val read = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+        val receive = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        return read && receive
+    }
+
+    var smsPermissionGranted by remember { mutableStateOf(checkPermissions()) }
+
+    // Re-check on every resume (handles grant from system settings or dialog)
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        smsPermissionGranted = checkPermissions()
+    }
+
+    // Permission request launcher (used from Settings screen)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val allGranted = results.values.all { it }
+        smsPermissionGranted = allGranted
+        if (allGranted) {
+            settingsVM.onPermissionGranted()
+        }
+    }
+
     EthioBalanceTheme(themeId = theme) {
         Scaffold(
             bottomBar = {
                 BottomNavBar(
                     currentRoute = currentRoute,
                     language = language,
-                    onTabSelected = { currentRoute = it }
+                    onTabSelected = { currentRoute = it },
+                    hasPermissionWarning = !smsPermissionGranted
                 )
             }
         ) { innerPadding ->
@@ -70,6 +104,7 @@ fun EthioBalanceAppUI() {
                             isSyncing = isSyncing,
                             syncError = syncError,
                             syncWarning = syncWarning,
+                            smsPermissionGranted = smsPermissionGranted,
                             onSync = { telecomVM.handleSync() },
                             onRecharge = { telecomVM.rechargeViaUssd(it) },
                             onTransfer = { r, a -> telecomVM.transferAirtime(r, a) }
@@ -118,12 +153,21 @@ fun EthioBalanceAppUI() {
                             userPhone = userPhone,
                             userAvatar = userAvatar,
                             transactionSources = transactionSources,
+                            smsPermissionGranted = smsPermissionGranted,
                             onLanguageChange = { settingsVM.setLanguage(it) },
                             onThemeChange = { settingsVM.setTheme(it) },
                             onProfileUpdate = { n, p, a -> settingsVM.setUserProfile(n, p, a) },
                             onAddSource = { settingsVM.addTransactionSource(it) },
                             onRemoveSource = { settingsVM.removeTransactionSource(it) },
-                            onClearData = { settingsVM.clearAllData() }
+                            onClearData = { settingsVM.clearAllData() },
+                            onRequestPermissions = {
+                                permissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.READ_SMS,
+                                        Manifest.permission.RECEIVE_SMS
+                                    )
+                                )
+                            }
                         )
                     }
                 }

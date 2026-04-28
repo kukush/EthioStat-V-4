@@ -606,6 +606,85 @@ class ParseSmsUseCaseTest {
         // No party information in this SMS — partyName might be null or generic
     }
 
+    // ── Telebirr: transfer with service fee "transferred ETB X to [Name (phone)]" ──
+    @Test
+    fun testTelebirr_transferWithServiceFee_amount() {
+        val body = "Dear Tesfaye \nYou have transferred ETB 200.00 to Abdulazi Kibru (2519****6643) on 27/04/2026 18:27:17. Your transaction number is DDR09Y6KHE. The service fee is  ETB 1.74 and  15% VAT on the service fee is ETB 0.26. Your current E-Money Account  balance is ETB 7,956.19. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DDR09Y6KHE.\nChange the App name from EthiBalance to EthioStat"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.EXPENSE, result.scenario)
+        assertEquals(200.0, result.deductedAmount!!, 0.01)
+        assertTrue("confidence should be >= 0.95, got: ${result.confidence}", result.confidence >= 0.95f)
+        assertEquals("Transfer", result.transactionSubType)
+        assertEquals("TRANSFER", result.transactionCategory)
+    }
+
+    @Test
+    fun testTelebirr_transferWithServiceFee_partyName() {
+        val body = "Dear Tesfaye \nYou have transferred ETB 200.00 to Abdulazi Kibru (2519****6643) on 27/04/2026 18:27:17. Your transaction number is DDR09Y6KHE. The service fee is  ETB 1.74 and  15% VAT on the service fee is ETB 0.26. Your current E-Money Account  balance is ETB 7,956.19. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DDR09Y6KHE."
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertNotNull("partyName should be extracted", result.partyName)
+        assertTrue(
+            "partyName should contain 'Abdulazi Kibru', got: '${result.partyName}'",
+            result.partyName!!.contains("Abdulazi Kibru")
+        )
+    }
+
+    @Test
+    fun testTelebirr_transferWithServiceFee_balance() {
+        val body = "Dear Tesfaye \nYou have transferred ETB 200.00 to Abdulazi Kibru (2519****6643) on 27/04/2026 18:27:17. Your transaction number is DDR09Y6KHE. The service fee is  ETB 1.74 and  15% VAT on the service fee is ETB 0.26. Your current E-Money Account  balance is ETB 7,956.19. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DDR09Y6KHE."
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        val balancePkg = result.packages.firstOrNull { it.type == "bank_balance" }
+        assertNotNull("balance package should be extracted", balancePkg)
+        assertEquals(7956.19, balancePkg!!.remainingAmount, 0.01)
+    }
+
+    // ── Telebirr: merchant payment "paid ETB X for goods purchased from [ID - Name]" ──
+    @Test
+    fun testTelebirr_merchantPayment_amount() {
+        val body = "Dear Tesfaye\nYou have paid ETB 220.00 for goods purchased from 743236 - Andualem Meketa Mekonen on 27/04/2026 18:13:35. Your transaction number is  DDR19XHSE5. Your current balance is ETB 8,158.19. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DDR19XHSE5\nThank you for using telebirr\nEthio telecom"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertEquals(SmsScenario.SELF_PURCHASE, result.scenario)
+        assertEquals(220.0, result.deductedAmount!!, 0.01)
+        assertTrue("confidence should be >= 0.95, got: ${result.confidence}", result.confidence >= 0.95f)
+        assertEquals("Payment", result.transactionSubType)
+        assertEquals("PURCHASE", result.transactionCategory)
+    }
+
+    @Test
+    fun testTelebirr_merchantPayment_partyName() {
+        val body = "Dear Tesfaye\nYou have paid ETB 220.00 for goods purchased from 743236 - Andualem Meketa Mekonen on 27/04/2026 18:13:35. Your transaction number is  DDR19XHSE5. Your current balance is ETB 8,158.19. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DDR19XHSE5\nThank you for using telebirr\nEthio telecom"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertNotNull("partyName should be extracted from merchant payment SMS", result.partyName)
+        assertTrue(
+            "partyName should contain '743236 - Andualem Meketa Mekonen', got: '${result.partyName}'",
+            result.partyName!!.contains("743236 - Andualem Meketa Mekonen")
+        )
+    }
+
+    @Test
+    fun testTelebirr_merchantPayment_reference() {
+        val body = "Dear Tesfaye\nYou have paid ETB 220.00 for goods purchased from 743236 - Andualem Meketa Mekonen on 27/04/2026 18:13:35. Your transaction number is  DDR19XHSE5. Your current balance is ETB 8,158.19. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DDR19XHSE5\nThank you for using telebirr\nEthio telecom"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        assertNotNull("reference should be extracted from merchant payment SMS", result.reference)
+        assertEquals("DDR19XHSE5", result.reference)
+    }
+
+    @Test
+    fun testTelebirr_merchantPayment_balance() {
+        val body = "Dear Tesfaye\nYou have paid ETB 220.00 for goods purchased from 743236 - Andualem Meketa Mekonen on 27/04/2026 18:13:35. Your transaction number is  DDR19XHSE5. Your current balance is ETB 8,158.19. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/DDR19XHSE5\nThank you for using telebirr\nEthio telecom"
+        val result = parseSmsUseCase("127", body, System.currentTimeMillis())
+
+        val balancePkg = result.packages.firstOrNull { it.type == "bank_balance" }
+        assertNotNull("balance package should be extracted", balancePkg)
+        assertEquals(8158.19, balancePkg!!.remainingAmount, 0.01)
+    }
+
     // ── Translations: "from" and "to" keys exist ─────────────────────────
     @Test
     fun testTranslations_fromToKeys_exist() {

@@ -35,6 +35,7 @@ fun TelecomScreen(
     isSyncing: Boolean,
     syncError: String?,
     syncWarning: String?,
+    smsPermissionGranted: Boolean = true,
     onSync: () -> Unit,
     onRecharge: (String) -> Unit,
     onTransfer: (String, String) -> Unit
@@ -82,6 +83,30 @@ fun TelecomScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Permission warning banner
+        if (!smsPermissionGranted) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Amber50,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Amber700.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Lock, null, tint = Amber700, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        Translations.t(language, "smsPermissionNeeded").takeIf { it.isNotEmpty() }
+                            ?: "SMS permission required for sync & recharge. Go to Settings to grant.",
+                        fontSize = 13.sp, color = Amber700, modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
         // Action buttons row
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionButton(
@@ -89,11 +114,12 @@ fun TelecomScreen(
                 icon = Icons.Default.Refresh,
                 color = Blue600,
                 isLoading = isSyncing,
-                enabled = !isSyncing,
+                enabled = smsPermissionGranted && !isSyncing,
                 onClick = { onSync() }
             )
-            ActionButton(Translations.t(language, "recharge"), Icons.Default.Add, Emerald600) { showRechargeSheet = true }
-            ActionButton(Translations.t(language, "transfer"), Icons.Default.SwapHoriz, Amber500) { showTransferSheet = true }
+            ActionButton(Translations.t(language, "recharge"), Icons.Default.Add, Emerald600, enabled = smsPermissionGranted) { showRechargeSheet = true }
+            // transfer temporarily disabled , next Feature 
+            /*ActionButton(Translations.t(language, "transfer"), Icons.Default.SwapHoriz, Amber500, enabled = smsPermissionGranted) { showTransferSheet = true }*/
         }
 
         Spacer(Modifier.height(24.dp))

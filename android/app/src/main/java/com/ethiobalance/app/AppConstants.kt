@@ -22,7 +22,6 @@ object AppConstants {
     //         Hijra, Zad, Ahadu, Shabelle, ACSI
     //
     // EthioTelecom Code Reference:
-    //   830   → CRBT (Caller Ring Back Tone) subscription / management
     //   806   → Airtime / Credit Transfer between subscribers
     //   994   → Customer Service Hotline
     //   8994  → SMS-based Inquiry and Support
@@ -41,7 +40,6 @@ object AppConstants {
         "251994",        // Full international-format sender
         "804",           // *804# balance / data query responses
         "810",           // *810# (shared with ACSI)
-        "830",           // CRBT — Caller Ring Back Tone subscription / management
         "806",           // Airtime / Credit Transfer between subscribers
         "805",           // Airtime Recharge
 
@@ -172,10 +170,10 @@ object AppConstants {
 
     /**
      * Resolves a human-readable source label from a raw SMS sender number.
-     * Telebirr senders: 127, 830, 806 or any sender whose number contains "TELEBIRR".
+     * Telebirr senders: 127 or any sender whose number contains "TELEBIRR".
      */
     // Telebirr is identified by sender "127" or an alpha-sender containing "TELEBIRR".
-    // 830 (CRBT) and 806 (Airtime Transfer) are EthioTelecom service codes, not Telebirr.
+    // 806 (Airtime Transfer) is an EthioTelecom service code, not Telebirr.
     val TELEBIRR_SENDERS: Set<String> = setOf("127")
 
     /**
@@ -273,7 +271,7 @@ object AppConstants {
         if (upper.contains("ACSI")) return "ACSI"
         
         // EthioTelecom (Airtime / Telecom Assets) — must be after banks to avoid false matches
-        val ethioTelecomSenders = setOf("804", "805", "806", "810", "830", "994", "251994", "8994")
+        val ethioTelecomSenders = setOf("804", "805", "806", "810", "994", "251994", "8994")
         if (ethioTelecomSenders.contains(upper) || upper.contains("ETHIOTELECOM") || upper.contains("ETHIO TELECOM")) return SOURCE_AIRTIME
 
         // Fallback: return the uppercased sender so comparisons remain case-insensitive

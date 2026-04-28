@@ -42,8 +42,5 @@ object AppModule {
     fun provideSmsLogDao(db: AppDatabase): SmsLogDao = db.smsLogDao()
 
     @Provides
-    fun provideSimCardDao(db: AppDatabase): SimCardDao = db.simCardDao()
-
-    @Provides
     fun provideTransactionSourceDao(db: AppDatabase): TransactionSourceDao = db.transactionSourceDao()
 }

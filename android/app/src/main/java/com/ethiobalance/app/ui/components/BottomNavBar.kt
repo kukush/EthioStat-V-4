@@ -2,8 +2,10 @@ package com.ethiobalance.app.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -47,7 +49,8 @@ fun BottomNavBar(
     currentRoute: String,
     language: String,
     onTabSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hasPermissionWarning: Boolean = false
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -89,7 +92,7 @@ fun BottomNavBar(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        // Icon with background pill
+                        // Icon with background pill + optional warning badge
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
@@ -103,6 +106,17 @@ fun BottomNavBar(
                                 tint = if (isActive) tab.activeColor else Slate400,
                                 modifier = Modifier.size(22.dp)
                             )
+                            if (tab.route == "settings" && hasPermissionWarning) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 4.dp, y = (-4).dp)
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFEF4444))
+                                        .border(1.5.dp, Color.White, CircleShape)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(2.dp))

@@ -117,7 +117,7 @@ class SettingsRepository @Inject constructor(
     /**
      * Check if SMS read permission is granted.
      */
-    private fun hasSmsPermission(): Boolean {
+    fun hasSmsPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             ContextCompat.checkSelfPermission(
                 context,
@@ -127,6 +127,25 @@ class SettingsRepository @Inject constructor(
             true // Permission granted at install time on older Android
         }
     }
+
+    /**
+     * Check if RECEIVE_SMS permission is granted.
+     */
+    fun hasReceiveSmsPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.RECEIVE_SMS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
+    /**
+     * Check if all required permissions (READ_SMS + RECEIVE_SMS) are granted.
+     */
+    fun areAllPermissionsGranted(): Boolean = hasSmsPermission() && hasReceiveSmsPermission()
 
     /**
      * Check if there are any SMS messages from any of the given sender IDs in the last N days.
@@ -235,20 +254,12 @@ class SettingsRepository @Inject constructor(
                 }
             }
         } else {
-            // Without permission: add all default sources so user can see them in Settings
-            // SMS scanning will happen after user grants permission in MainActivity
-            AppConstants.DEFAULT_TRANSACTION_SOURCES.mapNotNull { abbrev ->
-                val bankInfo = AppConstants.KNOWN_BANKS.find { it.abbreviation == abbrev }
-                bankInfo?.let {
-                    TransactionSourceEntity(
-                        abbreviation = it.abbreviation,
-                        name = it.fullName,
-                        ussd = "",
-                        senderId = getAllSenderIdsForBank(it.abbreviation),
-                        isEnabled = true
-                    )
-                }
-            }
+            // Without permission: do NOT seed defaults (user must grant permission first).
+            android.util.Log.d(
+                "SettingsRepository",
+                "seedDefaultSourcesIfEmpty: no SMS permission — skipping default sources"
+            )
+            emptyList()
         }
 
         android.util.Log.d(

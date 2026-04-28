@@ -45,7 +45,6 @@ class MainActivity : ComponentActivity() {
         val permissions = arrayOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.POST_NOTIFICATIONS
         )
 

@@ -69,6 +69,10 @@ class TelecomViewModel @Inject constructor(
      */
     fun handleSync() {
         viewModelScope.launch {
+            if (!smsRepo.hasSmsPermission()) {
+                _syncError.value = "SMS permission required. Go to Settings to grant."
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             _syncWarning.value = null

@@ -3,6 +3,7 @@ package com.ethiobalance.app.domain.usecase
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.data.TransactionSourceEntity
+import java.util.Calendar
 import javax.inject.Inject
 
 class FormatTransactionUseCase @Inject constructor() {
@@ -23,11 +24,31 @@ class FormatTransactionUseCase @Inject constructor() {
             resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledResolved.contains(resolved)
         }
 
-        val now = System.currentTimeMillis()
+        val cal = Calendar.getInstance()
+        val startOfToday = cal.apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val startOfWeek = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val startOfMonth = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
         filtered = when (timeFilter) {
-            "today" -> filtered.filter { now - it.timestamp < 24L * 60 * 60 * 1000 }
-            "thisWeek" -> filtered.filter { now - it.timestamp < 7L * 24 * 60 * 60 * 1000 }
-            "thisMonth" -> filtered.filter { now - it.timestamp < 30L * 24 * 60 * 60 * 1000 }
+            "today"     -> filtered.filter { it.timestamp >= startOfToday }
+            "thisWeek"  -> filtered.filter { it.timestamp >= startOfWeek }
+            "thisMonth" -> filtered.filter { it.timestamp >= startOfMonth }
             else -> filtered
         }
 

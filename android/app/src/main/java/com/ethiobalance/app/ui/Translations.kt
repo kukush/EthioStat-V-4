@@ -55,7 +55,7 @@ object Translations {
         "invalidVoucher" to "Voucher must be between 13 and 15 digits",
         "voucherNumber" to "Voucher Number",
         "ussdRechargeInfo" to "The app will dial *805*VOUCHER# and wait for the confirmation SMS.",
-        "telebirrRechargeInfo" to "You will be redirected to Telebirr. The app will detect the confirmation SMS from 830.",
+        "telebirrRechargeInfo" to "You will be redirected to Telebirr. The app will detect the confirmation SMS.",
         "rechargeViaUSSD" to "Recharge via USSD", "openTelebirr" to "Open Telebirr",
         "syncBalance" to "Sync Balance", "ussdDefault" to "USSD (Default)",
         "smsOption" to "SMS Option",
@@ -101,7 +101,16 @@ object Translations {
         "meskerem" to "Meskerem", "tikimt" to "Tikimt", "hidar" to "Hidar",
         "tahsas" to "Tahsas", "tir" to "Tir", "yekatit" to "Yekatit",
         "megabit" to "Megabit", "miazia" to "Miazia", "ginbot" to "Ginbot",
-        "sene" to "Sene", "hamle" to "Hamle", "nehase" to "Nehase", "pagume" to "Pagume"
+        "sene" to "Sene", "hamle" to "Hamle", "nehase" to "Nehase", "pagume" to "Pagume",
+        // Permission-related strings
+        "permissionRequired" to "Permission Required",
+        "permissionMainMessage" to "To track balance, data, and expenses. Recharge easily. Permission is needed.",
+        "permissionBankInfo" to "Only chosen banks or wallets from Settings are used to track your transactions.",
+        "permissionTelecomInfo" to "For telecom packages: reads messages from 251994, 994.",
+        "permissionUssdInfo" to "For balance checks (*804#, *805#) via USSD dial.",
+        "permissionNoSend" to "EthioStat never sends SMS. Android shows \"send\" in the dialog, but only read access is used.",
+        "grantPermission" to "Grant Permission",
+        "smsPermissionNeeded" to "SMS permission required for sync & recharge. Go to Settings to grant."
     )
 
     private val am = mapOf(
@@ -161,7 +170,7 @@ object Translations {
         "invalidVoucher" to "ቫውቸሩ ቢያንስ 13 አሃዝ መሆን አለበት",
         "voucherNumber" to "የቫውቸር ቁጥር",
         "ussdRechargeInfo" to "መተግበሪያው *805*ቫውቸር# ይደውላል እና የማረጋገጫ ኤስኤምኤስ ይጠብቃል።",
-        "telebirrRechargeInfo" to "ወደ ቴሌብር ይመራሉ። መተግበሪያው ከ830 የሚመጣውን ኤስኤምኤስ ያውቃል።",
+        "telebirrRechargeInfo" to "ወደ ቴሌብር ይመራሉ። መተግበሪያው የማረጋገጫ ኤስኤምኤስ ያውቃል።",
         "rechargeViaUSSD" to "በUSSD ይሙሉ", "openTelebirr" to "ቴሌብርን ክፈት",
         "syncBalance" to "ሂሳብ አመሳስል", "ussdDefault" to "USSD (መደበኛ)",
         "smsOption" to "የኤስኤምኤስ አማራጭ",
@@ -207,7 +216,16 @@ object Translations {
         "meskerem" to "መስከረም", "tikimt" to "ጥቅምት", "hidar" to "ኅዳር",
         "tahsas" to "ታኅሣሥ", "tir" to "ጥር", "yekatit" to "የካቲት",
         "megabit" to "መጋቢት", "miazia" to "ሚያዝያ", "ginbot" to "ግንቦት",
-        "sene" to "ሰኔ", "hamle" to "ሐምሌ", "nehase" to "ነሐሴ", "pagume" to "ጳጉሜ"
+        "sene" to "ሰኔ", "hamle" to "ሐምሌ", "nehase" to "ነሐሴ", "pagume" to "ጳጉሜ",
+        // Permission-related strings
+        "permissionRequired" to "ፍቃድ ያስፈልጋል",
+        "permissionMainMessage" to "ቀሪ ሂሳብን፣ ዳታን እና ወጪዎችን ለመከታተል እና በቀላሉ ለመሙላት ፍቃድ ያስፈልጋል።",
+        "permissionBankInfo" to "ከቅንብሮች የተመረጡ ባንኮች ወይም ቦርሳዎች ብቻ ግብይትዎን ለመከታተል ይጠቀማሉ።",
+        "permissionTelecomInfo" to "ለቴሌኮም ፓኬጆች: ከ251994፣ 994 የሚመጡ መልዕክቶችን ያነባል።",
+        "permissionUssdInfo" to "ለሂሳብ ማረጋገጥ (*804#, *805#) በUSSD ይደውላል።",
+        "permissionNoSend" to "EthioStat ኤስኤምኤስ አይልክም። Android \"ልክ\" ይላል ነገር ግን ማንበብ ብቻ ነው የሚጠቀመው።",
+        "grantPermission" to "ፍቃድ ስጥ",
+        "smsPermissionNeeded" to "ለአመሳሰል እና ለመሙላት የSMS ፍቃድ ያስፈልጋል። ወደ ቅንብሮች ይሂዱ።"
     )
 
     private val om = mapOf(
@@ -272,7 +290,7 @@ object Translations {
         "invalidVoucher" to "Voucharichi yoo xiqqaate dijiitii 13 ta'uu qaba",
         "voucherNumber" to "Lakkoofsa Voucharaa",
         "ussdRechargeInfo" to "Appichi *805*VOUCHARA# bilbila, SMS mirkaneessaa eega.",
-        "telebirrRechargeInfo" to "Gara Telebirr qajeelfamta. Appichi SMS mirkaneessaa 830 irraa dhufu ni beeka.",
+        "telebirrRechargeInfo" to "Gara Telebirr qajeelfamta. Appichi SMS mirkaneessaa ni beeka.",
         "rechargeViaUSSD" to "USSD dhaan guuti", "openTelebirr" to "Telebirr Bani",
         "syncBalance" to "Haftee Sync godhi", "ussdDefault" to "USSD (Idilee)",
         "smsOption" to "Filannoo SMS",
@@ -318,7 +336,16 @@ object Translations {
         "meskerem" to "Fuulbana", "tikimt" to "Onkololeessa", "hidar" to "Sadaasa",
         "tahsas" to "Muddee", "tir" to "Amajjii", "yekatit" to "Guraandhala",
         "megabit" to "Bitooteessa", "miazia" to "Elba", "ginbot" to "Caamsa",
-        "sene" to "Waxabajjii", "hamle" to "Adooleessa", "nehase" to "Hagayya", "pagume" to "Qaammee"
+        "sene" to "Waxabajjii", "hamle" to "Adooleessa", "nehase" to "Hagayya", "pagume" to "Qaammee",
+        // Permission-related strings
+        "permissionRequired" to "Hayyamni Barbaachisaa",
+        "permissionMainMessage" to "Haftee, daataa fi baasii hordofuuf. Salphatti guutuuf hayyamni barbaachisaadha.",
+        "permissionBankInfo" to "Baankiiwwan ykn wallet Qindaa'ina keessaa filataman qofa daldalakee hordofuuf fayyadama.",
+        "permissionTelecomInfo" to "Paakeejii telekoomiitiif: ergaa 251994, 994 irraa dubbisa.",
+        "permissionUssdInfo" to "Haftee mirkaneessuuf (*804#, *805#) USSD bilbila.",
+        "permissionNoSend" to "EthioStat SMS hin ergu. Android \"ergi\" jedha, garuu dubbisuu qofa fayyadama.",
+        "grantPermission" to "Hayyama Kenni",
+        "smsPermissionNeeded" to "Walsimsuuf fi guutuuf hayyamni SMS barbaachisaa. Gara Qindaa'inaatti deemi."
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)
