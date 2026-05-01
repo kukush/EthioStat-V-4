@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
-import android.util.Log
 
 @HiltViewModel
 class TelecomViewModel @Inject constructor(
@@ -92,15 +91,9 @@ class TelecomViewModel @Inject constructor(
 
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
-                        Lifecycle.Event.ON_STOP -> {
-                            wentToBackground = true
-                            Log.d("TelecomVM", "App went to background (dialer opened)")
-                        }
+                        Lifecycle.Event.ON_STOP -> { wentToBackground = true }
                         Lifecycle.Event.ON_START -> {
-                            if (wentToBackground) {
-                                Log.d("TelecomVM", "App returned to foreground")
-                                returned.complete(Unit)
-                            }
+                            if (wentToBackground) returned.complete(Unit)
                         }
                         else -> {}
                     }
@@ -110,7 +103,6 @@ class TelecomViewModel @Inject constructor(
                 // and brings app to foreground automatically
                 val smsReceiver = object : BroadcastReceiver() {
                     override fun onReceive(ctx: Context, intent: Intent) {
-                        Log.d("TelecomVM", "Telecom SMS arrived — completing sync early")
                         returned.complete(Unit)
                     }
                 }
@@ -144,13 +136,12 @@ class TelecomViewModel @Inject constructor(
                 kotlinx.coroutines.delay(3_000)
 
                 // Best-effort re-read of latest 994 SMS
-                val refreshed = smsRepo.refreshTelecomFromLatestSms(limit = 10)
-                Log.d("TelecomVM", "Refreshed $refreshed telecom packages from 994 SMS")
+                val refreshedCount = smsRepo.refreshTelecomFromLatestSms(limit = 10)
 
                 // Check if data changed: either from this re-read or from SmsReceiver
                 // processing while user was in the dialer
                 val packagesAfter = packages.value
-                val dataChanged = refreshed > 0 || packagesAfter != packagesBefore
+                val dataChanged = refreshedCount > 0 || packagesAfter != packagesBefore
 
                 if (!dataChanged) {
                     _syncWarning.value = "No new data received — USSD may have failed. " +

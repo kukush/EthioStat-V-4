@@ -6,7 +6,6 @@ import android.provider.Telephony
 import android.telephony.TelephonyManager
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.AppDatabase
 import com.ethiobalance.app.services.ReconciliationEngine
@@ -46,10 +45,7 @@ class SmsRepository @Inject constructor(
      * so that "+251127", "251127", "0127", and "127" are all matched.
      */
     suspend fun scanHistory(senderId: String, days: Int = 90, forceReparse: Boolean = false): Int = withContext(Dispatchers.IO) {
-        if (!hasSmsPermission()) {
-            Log.w("SmsRepository", "scanHistory: READ_SMS not granted, skipping")
-            return@withContext 0
-        }
+        if (!hasSmsPermission()) return@withContext 0
         val normalized = reconciliationEngine.normalizeSender(senderId)
         val lastTimestamp = smsLogDao.getLastTimestampForSender(normalized)
 
@@ -63,8 +59,6 @@ class SmsRepository @Inject constructor(
             // This ensures if the window is widened to 90 days, we don't skip old messages.
             minOf(lastTimestamp, windowStart)
         }
-
-        Log.d("SmsRepository", "Scanning sender=$senderId (normalized=$normalized) cutoff=${java.util.Date(cutoffTime)}")
 
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
@@ -111,17 +105,13 @@ class SmsRepository @Inject constructor(
                     try {
                         reconciliationEngine.processSms(sender, body, timestamp, forceReparse)
                         matchCount++
-                    } catch (e: Exception) {
-                        Log.e("SmsRepository", "Failed to process SMS from $sender: ${e.message}")
-                    }
+                    } catch (_: Exception) { }
                 }
             }
-        } catch (e: SecurityException) {
-            Log.w("SmsRepository", "scanHistory: SecurityException — permission revoked?", e)
+        } catch (_: SecurityException) {
             return@withContext 0
         }
 
-        Log.d("SmsRepository", "Scanned sender=$senderId (cutoff=$cutoffTime): $matchCount messages")
         matchCount
     }
 
@@ -143,7 +133,6 @@ class SmsRepository @Inject constructor(
         for (senderId in allSenders) {
             totalScanned += scanHistory(senderId, days = days)
         }
-        Log.d("SmsRepository", "scanAllTransactionSources done: $totalScanned total (sources: ${allSenders.size})")
         totalScanned
     }
 
@@ -198,10 +187,7 @@ class SmsRepository @Inject constructor(
      *   - No 994 SMS at all                     → no-op.
      */
     suspend fun refreshTelecomSmart(scanDepth: Int = 5): Int = withContext(Dispatchers.IO) {
-        if (!hasSmsPermission()) {
-            Log.w("SmsRepository", "refreshTelecomSmart: READ_SMS not granted, skipping")
-            return@withContext 0
-        }
+        if (!hasSmsPermission()) return@withContext 0
         val uri = Telephony.Sms.Inbox.CONTENT_URI
         val projection = arrayOf("address", "body", "date")
         val selection = AppConstants.TELECOM_SENDERS.joinToString(" OR ") { "address = ?" }.let { "($it)" }
@@ -221,19 +207,14 @@ class SmsRepository @Inject constructor(
                 rows += SmsRow(a, b, c.getLong(di))
             }
         }
-        } catch (e: SecurityException) {
-            Log.w("SmsRepository", "refreshTelecomSmart: SecurityException", e)
+        } catch (_: SecurityException) {
             return@withContext 0
         }
 
         val targets = pickRefreshTargets(rows)
-        if (targets.isEmpty()) {
-            Log.d("SmsRepository", "refreshTelecomSmart: no 994 SMS to process")
-            return@withContext 0
-        }
+        if (targets.isEmpty()) return@withContext 0
         targets.forEach { r ->
             reconciliationEngine.processSms(r.sender, r.body, r.ts, forceReparse = true)
-            Log.d("SmsRepository", "refreshTelecomSmart: processed SMS ts=${r.ts} multi=${isMultiSegmentBalance(r.body)}")
         }
         targets.size
     }

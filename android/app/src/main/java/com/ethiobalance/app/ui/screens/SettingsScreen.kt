@@ -46,12 +46,10 @@ fun SettingsScreen(
     userAvatar: String,
     transactionSources: List<TransactionSourceEntity>,
     smsPermissionGranted: Boolean = true,
-    onLanguageChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
     onProfileUpdate: (String, String, String) -> Unit,
     onAddSource: (TransactionSourceEntity) -> Unit,
     onRemoveSource: (String) -> Unit,
-    onClearData: () -> Unit,
     onRequestPermissions: () -> Unit = {}
 ) {
     var showEditProfile by remember { mutableStateOf(false) }
@@ -88,7 +86,7 @@ fun SettingsScreen(
                 IconButton(
                     onClick = { showEditProfile = true },
                     modifier = Modifier.size(28.dp).offset(x = (-4).dp, y = (-4).dp)
-                        .background(Blue600, CircleShape)
+                        .background(MaterialTheme.colorScheme.outline, CircleShape)
                         .border(2.dp, Color.White, CircleShape)
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = Color.White, modifier = Modifier.size(14.dp))
@@ -123,8 +121,8 @@ fun SettingsScreen(
                                 .fillMaxWidth()
                                 .clickable { onThemeChange(id) },
                             shape = RoundedCornerShape(24.dp),
-                            color = if (isActive) Slate900 else Color.White,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, if (isActive) Slate900 else Slate100),
+                            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                             shadowElevation = if (isActive) 8.dp else 0.dp
                         ) {
                             Row(
@@ -133,59 +131,22 @@ fun SettingsScreen(
                             ) {
                                 Box(
                                     modifier = Modifier.size(32.dp).clip(RoundedCornerShape(12.dp))
-                                        .background(if (isActive) Color.White.copy(alpha=0.2f) else Slate100),
+                                        .background(if (isActive) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(icon, null, tint = if (isActive) Color.White else Slate600, modifier = Modifier.size(16.dp))
+                                    Icon(icon, null, tint = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     label,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isActive) Color.White else Slate600,
+                                    color = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.weight(1f)
                                 )
                                 if (isActive) {
-                                    Icon(Icons.Default.Check, null, tint = Blue400, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        // Language Section
-        SectionHeader(Translations.t(language, "language").takeIf{it.isNotEmpty()}?:"LANGUAGE", Icons.Default.Language)
-        Spacer(Modifier.height(16.dp))
-        Surface(
-            shape = RoundedCornerShape(40.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
-            shadowElevation = 1.dp
-        ) {
-            Column {
-                Languages.SUPPORTED.forEachIndexed { idx, lang ->
-                    val code = lang.code
-                    val label = lang.displayName
-                    val isActive = language == code
-                    if (idx > 0) HorizontalDivider(color = Slate50)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(if (isActive) Blue50.copy(alpha=0.5f) else Color.Transparent)
-                            .clickable { onLanguageChange(code) }
-                            .padding(horizontal = 24.dp, vertical = 20.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                                color = if (isActive) Blue600 else Slate600,
-                                modifier = Modifier.weight(1f))
-                            if (isActive) {
-                                Icon(Icons.Default.Check, null, tint = Blue600, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -199,24 +160,24 @@ fun SettingsScreen(
         if (!smsPermissionGranted) {
             Surface(
                 shape = RoundedCornerShape(32.dp),
-                color = Color(0xFFFEF2F2),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                color = MaterialTheme.colorScheme.errorContainer,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                 shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFEE2E2)),
+                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Warning, null, tint = Color(0xFFDC2626), modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(24.dp))
                         }
                         Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 Translations.t(language, "permissionRequired").takeIf { it.isNotEmpty() } ?: "Permission Required",
-                                fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFFDC2626)
+                                fontSize = 16.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.error
                             )
                             Text(
                                 Translations.t(language, "permissionMainMessage").takeIf { it.isNotEmpty() }
@@ -278,8 +239,8 @@ fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
         Surface(
             shape = RoundedCornerShape(40.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             shadowElevation = 1.dp
         ) {
             Column {
@@ -302,8 +263,8 @@ fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
         Surface(
             shape = RoundedCornerShape(40.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             shadowElevation = 1.dp
         ) {
             Row(modifier = Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -318,39 +279,6 @@ fun SettingsScreen(
                     Text("Offline-First Privacy", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
                     Text("All your SMS data is processed locally on your device. No data ever leaves your phone.", fontSize = 12.sp, color = Slate400, modifier = Modifier.padding(top=4.dp), lineHeight = 18.sp)
                 }
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        // Developer Tools
-        SectionHeader("Developer Tools", Icons.Default.Code)
-        Spacer(Modifier.height(16.dp))
-        Surface(
-            shape = RoundedCornerShape(40.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
-            shadowElevation = 1.dp
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Button(
-                    onClick = onClearData,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Rose50, contentColor = Rose600)
-                ) {
-                    Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Clear All App Data", fontWeight = FontWeight.Black, fontSize = 14.sp)
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Warning: This will permanently purge your local persistence storage.",
-                    fontSize = 10.sp,
-                    color = Slate400,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         }
 
@@ -593,8 +521,7 @@ private fun AddSourceSheet(
     onDismiss: () -> Unit,
     onAdd: (TransactionSourceEntity) -> Unit
 ) {
-    var newSource by remember { mutableStateOf("") }
-    var searchQuery by remember { mutableStateOf("") }
+        var searchQuery by remember { mutableStateOf("") }
 
     // Filter out already-configured sources so users can't add duplicates
     val availableBanks = AppConstants.KNOWN_BANKS.filter {
@@ -637,60 +564,30 @@ private fun AddSourceSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 48.dp, topEnd = 48.dp),
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = null
     ) {
         Column(modifier = Modifier.padding(24.dp).heightIn(max = 700.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Add Bank Source", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Slate900)
-                    Text("Select a bank or enter a custom ID", fontSize = 14.sp, color = Slate400, modifier = Modifier.padding(top=4.dp))
+                    Text("Add Bank Source", fontSize = 24.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Select a bank from the list below", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top=4.dp))
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.background(Slate50, CircleShape)) {
-                    Icon(Icons.Default.Close, null, tint = Slate900, modifier = Modifier.size(20.dp))
-                }
-            }
-            Spacer(Modifier.height(32.dp))
-
-            Text("CUSTOM SENDER ID", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = newSource, onValueChange = { newSource = it },
-                    placeholder = { Text("e.g. CBE, Telebirr") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(20.dp), singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Slate50, focusedContainerColor = Slate50,
-                        unfocusedBorderColor = Color.Transparent, focusedBorderColor = Blue500
-                    )
-                )
-                Spacer(Modifier.width(16.dp))
-                Button(
-                    onClick = { 
-                        onAdd(TransactionSourceEntity(newSource, newSource, "", newSource, true)) 
-                        onDismiss()
-                    },
-                    modifier = Modifier.height(56.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Slate900),
-                    enabled = newSource.isNotBlank()
-                ) {
-                    Text("ADD", fontWeight = FontWeight.Black)
+                IconButton(onClick = onDismiss, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                    Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
                 }
             }
-            
             Spacer(Modifier.height(24.dp))
 
             OutlinedTextField(
                 value = searchQuery, onValueChange = { searchQuery = it },
                 placeholder = { Text("Search Ethiopian Banks...") },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = Slate400) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp), singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = Slate50, focusedContainerColor = Slate50,
-                    unfocusedBorderColor = Color.Transparent, focusedBorderColor = Blue500
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedBorderColor = Color.Transparent, focusedBorderColor = MaterialTheme.colorScheme.primary
                 )
             )
             Spacer(Modifier.height(16.dp))
@@ -716,24 +613,24 @@ private fun AddSourceSheet(
                                 onDismiss()
                             },
                         shape = RoundedCornerShape(24.dp),
-                        color = Slate50
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Row(
                             modifier = Modifier.padding(20.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
-                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color.White),
+                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.AccountBalance, null, tint = Slate400, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
                             }
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(bank.fullName, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
-                                Text("${bank.abbreviation} • ${bank.senderId}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp, modifier = Modifier.padding(top=4.dp))
+                                Text(bank.fullName, fontSize = 14.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                                Text("${bank.abbreviation} • ${bank.senderId}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp, modifier = Modifier.padding(top=4.dp))
                             }
-                            Icon(Icons.Default.Add, null, tint = Slate400)
+                            Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -747,12 +644,12 @@ private fun AddSourceSheet(
 private fun PermissionBullet(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.Top) {
         Box(
-            modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(Slate100),
+            modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.outline),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = Slate600, modifier = Modifier.size(14.dp))
+            Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         }
         Spacer(Modifier.width(12.dp))
-        Text(text, fontSize = 12.sp, color = Slate600, lineHeight = 18.sp, modifier = Modifier.weight(1f))
+        Text(text, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp, modifier = Modifier.weight(1f))
     }
 }

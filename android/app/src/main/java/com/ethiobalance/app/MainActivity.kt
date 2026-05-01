@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -77,22 +79,14 @@ class MainActivity : ComponentActivity() {
         if (isStartupRun) return
         isStartupRun = true
         lifecycleScope.launch {
-            Log.d("MainActivity", "Seeding default transaction sources...")
+        
             settingsRepo.seedDefaultSourcesIfEmpty()
 
             if (!smsGranted) {
-                Log.d("MainActivity", "SMS permission denied — skipping history + telecom scan")
+            
                 return@launch
             }
-
-            Log.d("MainActivity", "Smart telecom refresh on startup...")
-            val telecomCount = smsRepo.refreshTelecomSmart()
-            Log.d("MainActivity", "Telecom refresh complete. Messages processed: $telecomCount")
-
-            Log.d("MainActivity", "Scanning 90-day SMS history for configured sources...")
-            val txCount = smsRepo.scanAllTransactionSources(days = 90)
-            Log.d("MainActivity", "Transaction history scan complete. SMS scanned: $txCount")
-
+        
             // Drop any default source that ended up with 0 parsed transactions
             // (e.g. device has CBE promo SMS but no actual transactions in 90d).
             settingsRepo.pruneEmptyDefaultSources()

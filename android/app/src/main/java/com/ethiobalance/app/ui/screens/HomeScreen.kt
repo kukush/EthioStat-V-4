@@ -96,25 +96,6 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 2.sp
             )
-            if (userPhone.isNotEmpty() && userPhone != "Unknown") {
-                Text(
-                    text = userPhone,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Blue500,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            } else {
-                Text(
-                    text = "PRIMARY SIM ACTIVE",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.6f),
-                    letterSpacing = 2.sp,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

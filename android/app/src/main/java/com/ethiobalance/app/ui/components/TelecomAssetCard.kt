@@ -37,19 +37,22 @@ fun TelecomAssetCard(
         maximumFractionDigits = 2
     }
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(40.dp))
-            .background(Slate900)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .drawBehind {
                 drawCircle(
-                    brush = Brush.radialGradient(listOf(Blue600.copy(alpha = 0.3f), Color.Transparent)),
+                    brush = Brush.radialGradient(listOf(primaryColor.copy(alpha = 0.3f), Color.Transparent)),
                     radius = size.width * 0.4f,
                     center = androidx.compose.ui.geometry.Offset(size.width * 0.9f, size.height * 0.1f)
                 )
                 drawCircle(
-                    brush = Brush.radialGradient(listOf(Purple600.copy(alpha = 0.3f), Color.Transparent)),
+                    brush = Brush.radialGradient(listOf(secondaryColor.copy(alpha = 0.3f), Color.Transparent)),
                     radius = size.width * 0.4f,
                     center = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.9f)
                 )
@@ -66,10 +69,10 @@ fun TelecomAssetCard(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.1f)),
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Bolt, null, tint = Blue400, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Bolt, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -77,19 +80,19 @@ fun TelecomAssetCard(
                             ?: "TELECOM ASSETS",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 2.sp
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Language, null, tint = Blue400, modifier = Modifier.size(12.dp))
+                    Icon(Icons.Default.Language, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
                     Spacer(Modifier.width(4.dp))
                     val ethioTelecom = Translations.t(language, "ethio_telecom").takeIf { it.isNotBlank() } ?: "ETHIO TELECOM"
                     Text(
                         ethioTelecom.uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Blue400,
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 2.sp
                     )
                 }
@@ -106,19 +109,19 @@ fun TelecomAssetCard(
                     Translations.t(language, "data_label").uppercase(),
                     "%.1f".format(Locale.US, dataVol),
                     " ${Translations.t(language, "gb_unit")}",
-                    Blue500
+                    MaterialTheme.colorScheme.primary
                 )
                 PackageItem(
                     Translations.t(language, "audio_label").uppercase(),
                     fmt.format(voiceVol),
                     " ${Translations.t(language, "min_unit")}",
-                    Emerald500
+                    MaterialTheme.colorScheme.tertiary
                 )
                 PackageItem(
                     Translations.t(language, "sms_label").uppercase(),
                     fmt.format(smsVol),
                     " ${Translations.t(language, "sms_unit")}",
-                    Purple500
+                    MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -141,12 +144,12 @@ private fun PackageItem(label: String, value: String, unit: String, color: Color
                 label,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 2.sp
             )
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White)
-                Text(unit, fontSize = 8.sp, color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 1.dp))
+                Text(value, fontSize = 16.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                Text(unit, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 1.dp))
             }
         }
     }

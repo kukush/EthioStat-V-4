@@ -182,24 +182,9 @@ class SettingsRepository @Inject constructor(
                 selectionArgs.toTypedArray(),
                 "date DESC LIMIT 1"
             )?.use { cursor ->
-                val found = cursor.moveToFirst()
-                if (found) {
-                    val addr = cursor.getString(cursor.getColumnIndexOrThrow("address"))
-                    val ts = cursor.getLong(cursor.getColumnIndexOrThrow("date"))
-                    android.util.Log.d(
-                        "SettingsRepository",
-                        "hasSmsFromSenders: match senders=$senderIds addr=$addr ts=$ts"
-                    )
-                } else {
-                    android.util.Log.d(
-                        "SettingsRepository",
-                        "hasSmsFromSenders: NO match senders=$senderIds windowDays=$days"
-                    )
-                }
-                found
+                cursor.moveToFirst()
             } ?: false
-        } catch (e: SecurityException) {
-            android.util.Log.w("SettingsRepository", "hasSmsFromSenders: SecurityException", e)
+        } catch (_: SecurityException) {
             false
         }
     }
@@ -215,19 +200,9 @@ class SettingsRepository @Inject constructor(
      */
     suspend fun seedDefaultSourcesIfEmpty() = withContext(Dispatchers.IO) {
         val currentSources = transactionSourceDao.getAllSources().first()
-        if (currentSources.isNotEmpty()) {
-            android.util.Log.d(
-                "SettingsRepository",
-                "seedDefaultSourcesIfEmpty: already seeded (${currentSources.size} rows), skip"
-            )
-            return@withContext
-        }
+        if (currentSources.isNotEmpty()) return@withContext
 
         val hasPermission = hasSmsPermission()
-        android.util.Log.d(
-            "SettingsRepository",
-            "seedDefaultSourcesIfEmpty: starting, hasSmsPermission=$hasPermission"
-        )
 
         val sourcesToAdd = if (hasPermission) {
             // With permission: only add sources that have actual SMS transactions
@@ -255,18 +230,9 @@ class SettingsRepository @Inject constructor(
             }
         } else {
             // Without permission: do NOT seed defaults (user must grant permission first).
-            android.util.Log.d(
-                "SettingsRepository",
-                "seedDefaultSourcesIfEmpty: no SMS permission — skipping default sources"
-            )
             emptyList()
         }
 
-        android.util.Log.d(
-            "SettingsRepository",
-            "seedDefaultSourcesIfEmpty: inserting ${sourcesToAdd.size} sources: " +
-                sourcesToAdd.joinToString { it.abbreviation }
-        )
         if (sourcesToAdd.isNotEmpty()) {
             transactionSourceDao.insertAll(sourcesToAdd)
             updateSmsWhitelist()
@@ -289,19 +255,9 @@ class SettingsRepository @Inject constructor(
             .filter { it.abbreviation in defaults }
             .filter { transactionDao.countBySource(it.abbreviation) == 0 }
 
-        if (toRemove.isEmpty()) {
-            android.util.Log.d(
-                "SettingsRepository",
-                "pruneEmptyDefaultSources: nothing to prune"
-            )
-            return@withContext
-        }
+        if (toRemove.isEmpty()) return@withContext
 
         toRemove.forEach { src ->
-            android.util.Log.d(
-                "SettingsRepository",
-                "pruneEmptyDefaultSources: removing ${src.abbreviation} (0 transactions after scan)"
-            )
             transactionSourceDao.deleteByAbbreviation(src.abbreviation)
         }
         updateSmsWhitelist()

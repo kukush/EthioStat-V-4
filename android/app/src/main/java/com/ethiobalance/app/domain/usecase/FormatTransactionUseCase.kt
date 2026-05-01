@@ -24,21 +24,32 @@ class FormatTransactionUseCase @Inject constructor() {
             resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledResolved.contains(resolved)
         }
 
+        val now = System.currentTimeMillis()
         val cal = Calendar.getInstance()
-        val startOfToday = cal.apply {
+        val startOfToday = Calendar.getInstance().apply {
+            timeInMillis = now
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
         val startOfWeek = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+            timeInMillis = now
+            val currentDay = get(Calendar.DAY_OF_WEEK)
+            val daysToSubtract = if (firstDayOfWeek == Calendar.SUNDAY) {
+                currentDay - Calendar.SUNDAY
+            } else {
+                // For Monday as first day of week
+                if (currentDay == Calendar.SUNDAY) 6 else currentDay - Calendar.MONDAY
+            }
+            add(Calendar.DAY_OF_MONTH, -daysToSubtract)
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
         val startOfMonth = Calendar.getInstance().apply {
+            timeInMillis = now
             set(Calendar.DAY_OF_MONTH, 1)
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)

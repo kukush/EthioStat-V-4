@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
-import android.util.Log
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.repository.SmsRepository
 import dagger.hilt.android.AndroidEntryPoint
@@ -17,10 +16,6 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class SmsReceiver : BroadcastReceiver() {
-    companion object {
-        private const val TAG = "SmsReceiver"
-    }
-
     @Inject
     lateinit var smsRepository: SmsRepository
 
@@ -65,10 +60,7 @@ class SmsReceiver : BroadcastReceiver() {
                 val isInUserWhitelist = userWhitelist.any { it.equals(sender, ignoreCase = true) }
                 val isWhitelisted = sender.isNotEmpty() && (isInUserWhitelist || isTelecomSender)
 
-                Log.d(TAG, "Checking sender: $sender, isWhitelisted: $isWhitelisted, telecom: $isTelecomSender, userList: $isInUserWhitelist, segments: ${messages.count { (it.displayOriginatingAddress ?: "") == sender }}")
-
                 if (isWhitelisted) {
-                    Log.d(TAG, "Triggering foreground service for $sender")
                     val serviceIntent = Intent(context, SmsForegroundService::class.java).apply {
                         putExtra("sender", sender)
                         putExtra("body", body)
@@ -79,21 +71,13 @@ class SmsReceiver : BroadcastReceiver() {
                     } else {
                         context.startService(serviceIntent)
                     }
-                } else {
-                    Log.d(TAG, "Sender $sender is NOT whitelisted. Ignoring message.")
                 }
             }
             }
             AppConstants.ACTION_TRIGGER_REFRESH -> {
                 val scanDepth = intent.getIntExtra("scan_depth", 5)
-                Log.d(TAG, "Received TRIGGER_REFRESH broadcast, scanDepth=$scanDepth")
                 if (::smsRepository.isInitialized) {
-                    scope.launch {
-                        val count = smsRepository.refreshTelecomSmart(scanDepth)
-                        Log.d(TAG, "TRIGGER_REFRESH completed, processed $count SMS")
-                    }
-                } else {
-                    Log.w(TAG, "smsRepository not initialized, cannot refresh")
+                    scope.launch { smsRepository.refreshTelecomSmart(scanDepth) }
                 }
             }
         }

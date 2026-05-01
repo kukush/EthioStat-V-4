@@ -138,8 +138,8 @@ fun TransactionScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) Slate900 else Color.White)
-                                    .border(1.dp, if (isSelected) Slate900 else Slate100, RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                                     .clickable { onTimeFilterChange(filterVal) }
                                     .padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
@@ -148,7 +148,7 @@ fun TransactionScreen(
                                         .takeIf { it.isNotEmpty() } ?: translationKey.uppercase(),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = if (isSelected) Color.White else Slate400,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     letterSpacing = 2.sp
                                 )
                             }
@@ -333,10 +333,10 @@ private fun SourceChip(label: String, abbreviation: String = label, isSelected: 
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(if (isSelected) Slate900 else Color.White)
+                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
                 .border(
                     if (isSelected) 3.dp else 1.dp,
-                    if (isSelected) Slate700 else Slate100,
+                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                     CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -349,14 +349,14 @@ private fun SourceChip(label: String, abbreviation: String = label, isSelected: 
                     else -> 10.sp
                 },
                 fontWeight = FontWeight.Black,
-                color = if (isSelected) Color.White else Slate400
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(Modifier.height(6.dp))
         Text(
             text = label.uppercase(),
             fontSize = 9.sp, fontWeight = FontWeight.Bold,
-            color = if (isSelected) Slate900 else Slate400,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             letterSpacing = 1.sp,
             textAlign = TextAlign.Center,
             maxLines = 1,

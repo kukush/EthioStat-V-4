@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionSourceEntity
-import com.ethiobalance.app.repository.BalanceRepository
 import com.ethiobalance.app.repository.SettingsRepository
 import com.ethiobalance.app.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,8 +14,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
-    private val transactionRepo: TransactionRepository,
-    private val balanceRepo: BalanceRepository
+    private val transactionRepo: TransactionRepository
 ) : ViewModel() {
 
     val language: StateFlow<String> = settingsRepo.language
@@ -82,13 +80,6 @@ class SettingsViewModel @Inject constructor(
                 transactionRepo.smsRepo.scanAllTransactionSources(days = 90)
                 settingsRepo.pruneEmptyDefaultSources()
             }
-        }
-    }
-
-    fun clearAllData() {
-        viewModelScope.launch {
-            transactionRepo.deleteAll()
-            balanceRepo.deleteAll()
         }
     }
 }

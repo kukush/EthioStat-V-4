@@ -46,8 +46,8 @@ fun SummaryCard(
 
     Surface(
         shape = RoundedCornerShape(40.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Slate100),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         shadowElevation = 2.dp,
         modifier = modifier.fillMaxWidth().animateContentSize()
     ) {

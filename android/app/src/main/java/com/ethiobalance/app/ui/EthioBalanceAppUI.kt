@@ -15,7 +15,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
+import com.ethiobalance.app.constants.Languages
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -69,7 +78,7 @@ fun EthioBalanceAppUI() {
         Scaffold(
             topBar = {
                 Surface(
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     shadowElevation = 1.dp,
                     modifier = Modifier.statusBarsPadding()
                 ) {
@@ -79,7 +88,55 @@ fun EthioBalanceAppUI() {
                             .padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = stringResource(R.string.app_name), fontSize = 18.sp, fontWeight = FontWeight.Black, color = Slate900, letterSpacing = (-0.5).sp)
+                        Image(
+                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                            contentDescription = stringResource(R.string.app_name),
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.app_name), fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface, letterSpacing = (-0.5).sp)
+                        Spacer(modifier = Modifier.weight(1f))
+                        // Language dropdown
+                        var langMenuExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { langMenuExpanded = true }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Language, contentDescription = "Language", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = when (language) { "am" -> "አማ"; "om" -> "OR"; else -> "EN" },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                            }
+                            DropdownMenu(
+                                expanded = langMenuExpanded,
+                                onDismissRequest = { langMenuExpanded = false }
+                            ) {
+                                Languages.SUPPORTED.forEach { lang ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                lang.displayName,
+                                                fontWeight = if (language == lang.code) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (language == lang.code) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            settingsVM.setLanguage(lang.code)
+                                            langMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -178,12 +235,10 @@ fun EthioBalanceAppUI() {
                             userAvatar = userAvatar,
                             transactionSources = transactionSources,
                             smsPermissionGranted = smsPermissionGranted,
-                            onLanguageChange = { settingsVM.setLanguage(it) },
                             onThemeChange = { settingsVM.setTheme(it) },
                             onProfileUpdate = { n, p, a -> settingsVM.setUserProfile(n, p, a) },
                             onAddSource = { settingsVM.addTransactionSource(it) },
                             onRemoveSource = { settingsVM.removeTransactionSource(it) },
-                            onClearData = { settingsVM.clearAllData() },
                             onRequestPermissions = {
                                 permissionLauncher.launch(
                                     arrayOf(

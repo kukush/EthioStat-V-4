@@ -37,11 +37,12 @@ data class NavTab(
     val activeBg: Color
 )
 
+// Colors will be determined dynamically based on theme
 val navTabs = listOf(
-    NavTab("home", "home", Icons.Default.Home, Slate900, Slate100),
-    NavTab("telecom", "telecom", Icons.Default.CardGiftcard, Blue600, Blue50),
-    NavTab("transactions", "transactions", Icons.Default.SwapHoriz, Green600, Green50),
-    NavTab("settings", "settings", Icons.Default.Settings, Slate900, Slate100),
+    NavTab("home", "home", Icons.Default.Home, Color.Unspecified, Color.Unspecified),
+    NavTab("telecom", "telecom", Icons.Default.CardGiftcard, Color.Unspecified, Color.Unspecified),
+    NavTab("transactions", "transactions", Icons.Default.SwapHoriz, Color.Unspecified, Color.Unspecified),
+    NavTab("settings", "settings", Icons.Default.Settings, Color.Unspecified, Color.Unspecified),
 )
 
 @Composable
@@ -54,12 +55,12 @@ fun BottomNavBar(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Color.White.copy(alpha = 0.95f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         tonalElevation = 0.dp,
         shadowElevation = 8.dp
     ) {
         Column {
-            HorizontalDivider(color = Slate100, thickness = 1.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,7 +86,7 @@ fun BottomNavBar(
                                 modifier = Modifier
                                     .size(4.dp)
                                     .clip(RoundedCornerShape(2.dp))
-                                    .background(tab.activeColor)
+                                    .background(MaterialTheme.colorScheme.primary)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                         } else {
@@ -96,14 +97,14 @@ fun BottomNavBar(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (isActive) tab.activeBg else Color.Transparent)
+                                .background(if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = tab.icon,
                                 contentDescription = tab.labelKey,
-                                tint = if (isActive) tab.activeColor else Slate400,
+                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(22.dp)
                             )
                             if (tab.route == "settings" && hasPermissionWarning) {
@@ -113,8 +114,8 @@ fun BottomNavBar(
                                         .offset(x = 4.dp, y = (-4).dp)
                                         .size(10.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFFEF4444))
-                                        .border(1.5.dp, Color.White, CircleShape)
+                                        .background(MaterialTheme.colorScheme.error)
+                                        .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
                                 )
                             }
                         }
@@ -125,7 +126,7 @@ fun BottomNavBar(
                             text = Translations.t(language, tab.labelKey),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isActive) tab.activeColor else Slate400,
+                            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             letterSpacing = 1.sp
                         )

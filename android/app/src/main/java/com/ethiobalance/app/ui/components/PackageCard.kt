@@ -3,7 +3,7 @@ package com.ethiobalance.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,13 +33,53 @@ fun PackageCard(
     language: String,
     modifier: Modifier = Modifier
 ) {
-    // Determine Theme based on type
+    // Determine Theme based on type using Material 3 colors
     val theme = when (type.lowercase()) {
-        "internet", "data" -> PackageTheme(Blue600, Color.White, Blue400.copy(alpha=0.3f), Color.White, Blue100, Blue400.copy(alpha=0.3f), Color.White)
-        "voice" -> PackageTheme(Green600, Color.White, Green400.copy(alpha=0.3f), Color.White, Green100, Green400.copy(alpha=0.3f), Color.White)
-        "sms" -> PackageTheme(Purple600, Color.White, Purple400.copy(alpha=0.3f), Color.White, Purple100, Purple400.copy(alpha=0.3f), Color.White)
-        "bonus" -> PackageTheme(Amber500, Color.White, Amber300.copy(alpha=0.3f), Color.White, Amber50, Amber300.copy(alpha=0.3f), Color.White)
-        else -> PackageTheme(Blue600, Color.White, Blue400.copy(alpha=0.3f), Color.White, Blue100, Blue400.copy(alpha=0.3f), Color.White)
+        "internet", "data" -> PackageTheme(
+            bg = MaterialTheme.colorScheme.primaryContainer,
+            text = MaterialTheme.colorScheme.onPrimaryContainer,
+            progressBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            progressFg = MaterialTheme.colorScheme.onPrimaryContainer,
+            accent = MaterialTheme.colorScheme.primary,
+            barBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            barFg = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        "voice" -> PackageTheme(
+            bg = MaterialTheme.colorScheme.tertiaryContainer,
+            text = MaterialTheme.colorScheme.onTertiaryContainer,
+            progressBg = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+            progressFg = MaterialTheme.colorScheme.onTertiaryContainer,
+            accent = MaterialTheme.colorScheme.tertiary,
+            barBg = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+            barFg = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+        "sms" -> PackageTheme(
+            bg = MaterialTheme.colorScheme.secondaryContainer,
+            text = MaterialTheme.colorScheme.onSecondaryContainer,
+            progressBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+            progressFg = MaterialTheme.colorScheme.onSecondaryContainer,
+            accent = MaterialTheme.colorScheme.secondary,
+            barBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+            barFg = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        "bonus" -> PackageTheme(
+            bg = MaterialTheme.colorScheme.surfaceVariant,
+            text = MaterialTheme.colorScheme.onSurfaceVariant,
+            progressBg = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+            progressFg = MaterialTheme.colorScheme.onSurfaceVariant,
+            accent = MaterialTheme.colorScheme.primary,
+            barBg = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+            barFg = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        else -> PackageTheme(
+            bg = MaterialTheme.colorScheme.primaryContainer,
+            text = MaterialTheme.colorScheme.onPrimaryContainer,
+            progressBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            progressFg = MaterialTheme.colorScheme.onPrimaryContainer,
+            accent = MaterialTheme.colorScheme.primary,
+            barBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            barFg = MaterialTheme.colorScheme.onPrimaryContainer
+        )
     }
 
     val percentage = if (total > 0) Math.min(100.0, (value / total) * 100) else 0.0
@@ -47,15 +87,15 @@ fun PackageCard(
 
     // Urgency colors for circular bar (usage remaining)
     val circularColor = when {
-        percentage < 5  -> Rose500    // 🔴 Critical: <5% remaining
-        percentage < 20 -> Amber500   // 🟠 Warning: <20% remaining (>80% used)
+        percentage < 5  -> MaterialTheme.colorScheme.error    // 🔴 Critical: <5% remaining
+        percentage < 20 -> MaterialTheme.colorScheme.tertiary   // 🟠 Warning: <20% remaining (>80% used)
         else -> theme.progressFg      // 🟢 Healthy
     }
 
     // Urgency colors for linear bar (expiry)
     val expiryBarColor = when {
-        daysLeft < 3 -> Rose500       // 🔴 Critical: <3 days left
-        daysLeft < 7 -> Amber500      // 🟠 Warning: 3-6 days left
+        daysLeft < 3 -> MaterialTheme.colorScheme.error       // 🔴 Critical: <3 days left
+        daysLeft < 7 -> MaterialTheme.colorScheme.tertiary      // 🟠 Warning: 3-6 days left
         else -> theme.barFg           // 🟢 Healthy
     }
 
