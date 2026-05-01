@@ -84,20 +84,11 @@ fun HomeScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .statusBarsPadding()
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Header
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = Translations.t(language, "dashboard").takeIf { it.isNotEmpty() } ?: "Dashboard",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onBackground,
-                letterSpacing = (-1).sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "${Translations.t(language, "welcome").takeIf { it.isNotEmpty() } ?: "WELCOME"}, ${userName.ifEmpty { "USER" }}".uppercase(),
                 fontSize = 10.sp,
@@ -126,7 +117,7 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Financial Summary Card
         SummaryCard(
@@ -138,7 +129,7 @@ fun HomeScreen(
             onToggleAmounts = { showAmounts = !showAmounts }
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Telecom Assets Card
         TelecomAssetCard(
@@ -148,7 +139,7 @@ fun HomeScreen(
             smsVol = smsVol
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Source Summaries
         if (uniqueSources.isNotEmpty()) {
@@ -195,7 +186,7 @@ fun HomeScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         // Recent Activity

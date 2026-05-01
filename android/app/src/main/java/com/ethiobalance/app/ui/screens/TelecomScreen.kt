@@ -52,19 +52,8 @@ fun TelecomScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .statusBarsPadding()
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Title
-        Text(
-            text = Translations.t(language, "telecom"),
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Black,
-            color = Slate900
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Telecom Assets Card (reusable component)
         val dataVol = packages.filter { it.type.uppercase().contains("DATA") || it.type.uppercase().contains("INTERNET") }
@@ -122,7 +111,7 @@ fun TelecomScreen(
             /*ActionButton(Translations.t(language, "transfer"), Icons.Default.SwapHoriz, Amber500, enabled = smsPermissionGranted) { showTransferSheet = true }*/
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Sync Error Display
         syncError?.let { error ->
@@ -235,7 +224,7 @@ fun TelecomScreen(
         }
 
 
-        Spacer(Modifier.height(100.dp))
+        Spacer(Modifier.height(80.dp))
     }
 
     // Recharge Bottom Sheet

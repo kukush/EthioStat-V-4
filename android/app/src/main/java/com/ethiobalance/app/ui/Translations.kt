@@ -110,7 +110,9 @@ object Translations {
         "permissionUssdInfo" to "For balance checks (*804#, *805#) via USSD dial.",
         "permissionNoSend" to "EthioStat never sends SMS. Android shows \"send\" in the dialog, but only read access is used.",
         "grantPermission" to "Grant Permission",
-        "smsPermissionNeeded" to "SMS permission required for sync & recharge. Go to Settings to grant."
+        "smsPermissionNeeded" to "SMS permission required for sync & recharge. Go to Settings to grant.",
+        "phoneValidationError" to "Phone number must start with 7 or 9 and be 9 digits",
+        "phoneErrorPrefix" to "Please enter phone number without country code or leading zero"
     )
 
     private val am = mapOf(
@@ -222,10 +224,12 @@ object Translations {
         "permissionMainMessage" to "ቀሪ ሂሳብን፣ ዳታን እና ወጪዎችን ለመከታተል እና በቀላሉ ለመሙላት ፍቃድ ያስፈልጋል።",
         "permissionBankInfo" to "ከቅንብሮች የተመረጡ ባንኮች ወይም ቦርሳዎች ብቻ ግብይትዎን ለመከታተል ይጠቀማሉ።",
         "permissionTelecomInfo" to "ለቴሌኮም ፓኬጆች: ከ251994፣ 994 የሚመጡ መልዕክቶችን ያነባል።",
-        "permissionUssdInfo" to "ለሂሳብ ማረጋገጥ (*804#, *805#) በUSSD ይደውላል።",
+        "permissionUssdInfo" to "ለሂሳብ ማረጋገጫ (*804#, *805#) በUSSD ይደውላል።",
         "permissionNoSend" to "EthioStat ኤስኤምኤስ አይልክም። Android \"ልክ\" ይላል ነገር ግን ማንበብ ብቻ ነው የሚጠቀመው።",
         "grantPermission" to "ፍቃድ ስጥ",
-        "smsPermissionNeeded" to "ለአመሳሰል እና ለመሙላት የSMS ፍቃድ ያስፈልጋል። ወደ ቅንብሮች ይሂዱ።"
+        "smsPermissionNeeded" to "ለአመሳሰል እና ለመሙላት የSMS ፍቃድ ያስፈልጋል። ወደ ቅንብሮች ይሂዱ።",
+        "phoneValidationError" to "ስልክ ቁጥር መጀመሪያ በ7 ወይም 9 መጀመር አለበት እና 9 አሃዝ መሆን አለበት",
+        "phoneErrorPrefix" to "እባክዎ ስልክ ቁጥር ያስገቡ ያለ የአገር ኮድ ወይም የመጀመሪያ ዜሮ"
     )
 
     private val om = mapOf(
@@ -345,7 +349,9 @@ object Translations {
         "permissionUssdInfo" to "Haftee mirkaneessuuf (*804#, *805#) USSD bilbila.",
         "permissionNoSend" to "EthioStat SMS hin ergu. Android \"ergi\" jedha, garuu dubbisuu qofa fayyadama.",
         "grantPermission" to "Hayyama Kenni",
-        "smsPermissionNeeded" to "Walsimsuuf fi guutuuf hayyamni SMS barbaachisaa. Gara Qindaa'inaatti deemi."
+        "smsPermissionNeeded" to "Walsimsuuf fi guutuuf hayyamni SMS barbaachisaa. Gara Qindaa'inaatti deemi.",
+        "phoneValidationError" to "Lakkoofsa bilbilaa jalqaba 7 ykn 9 ta'uu fi dijiitii 9 ta'uu qaba",
+        "phoneErrorPrefix" to "Lakkoofsa bilbilaa galchuu maaloo daangessa biyyaa ykn jalqaba zero ilaalutti"
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)

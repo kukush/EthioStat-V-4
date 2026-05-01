@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,18 +63,12 @@ fun SettingsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .statusBarsPadding()
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            Translations.t(language, "settings").takeIf { it.isNotEmpty() } ?: "Settings",
-            fontSize = 30.sp, fontWeight = FontWeight.Black, color = Slate900, letterSpacing = (-1).sp
-        )
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Profile Area
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -160,7 +156,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
 
         // Language Section
         SectionHeader(Translations.t(language, "language").takeIf{it.isNotEmpty()}?:"LANGUAGE", Icons.Default.Language)
@@ -197,7 +193,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
 
         // Permission Warning Card
         if (!smsPermissionGranted) {
@@ -269,7 +265,7 @@ fun SettingsScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(20.dp))
         }
 
         // Transaction Sources
@@ -299,7 +295,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
 
         // Privacy Section
         SectionHeader("Privacy", Icons.Default.Shield)
@@ -325,7 +321,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
 
         // Developer Tools
         SectionHeader("Developer Tools", Icons.Default.Code)
@@ -358,7 +354,7 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(100.dp))
+        Spacer(Modifier.height(80.dp))
     }
 
     // Edit Profile Modal
@@ -448,8 +444,9 @@ private fun EditProfileSheet(
     onSave: (String, String, String) -> Unit
 ) {
     var name by remember { mutableStateOf(currentName) }
-    var phone by remember { mutableStateOf(currentPhone) }
+    var phone by remember { mutableStateOf(currentPhone.removePrefix(PhoneConstants.COUNTRY_CODE)) }
     var avatar by remember { mutableStateOf(currentAvatar) }
+    var phoneError by remember { mutableStateOf("") }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -487,12 +484,22 @@ private fun EditProfileSheet(
             Text("PHONE NUMBER", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
-                value = phone, 
+                value = phone,
                 onValueChange = {
-                    if (it.length <= PhoneConstants.MAX_FULL_LENGTH) phone = it
+                    if (it.length <= PhoneConstants.MAX_LOCAL_LENGTH) {
+                        phone = it
+                        // Validate phone number
+                        phoneError = when {
+                            it.startsWith("0") -> Translations.t(language, "phoneErrorPrefix")
+                            it.isNotEmpty() && !it.first().let { c -> c == '7' || c == '9' } -> Translations.t(language, "phoneValidationError")
+                            it.length == PhoneConstants.MAX_LOCAL_LENGTH && !PhoneConstants.isValidEthiopianPhone(it) -> Translations.t(language, "phoneValidationError")
+                            else -> ""
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = LocalTextStyle.current.copy(color = Slate900),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 leadingIcon = {
                     Row(
                         modifier = Modifier.padding(start = 16.dp),
@@ -514,8 +521,18 @@ private fun EditProfileSheet(
                     focusedBorderColor = Blue500,
                     unfocusedTextColor = Slate900,
                     focusedTextColor = Slate900
-                )
+                ),
+                isError = phoneError.isNotEmpty()
             )
+
+            if (phoneError.isNotEmpty()) {
+                Text(
+                    phoneError,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
 
             Spacer(Modifier.height(24.dp))
             Text("CHOOSE AVATAR", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
@@ -551,13 +568,12 @@ private fun EditProfileSheet(
             Spacer(Modifier.height(32.dp))
             Button(
                 onClick = {
-                    val validatedPhone = if (phone.startsWith(PhoneConstants.LOCAL_PREFIX)) phone.substring(1) else phone
-                    if (name.isNotBlank() && validatedPhone.length >= PhoneConstants.MAX_LOCAL_LENGTH) {
-                        onSave(name, "${PhoneConstants.COUNTRY_CODE}$validatedPhone", avatar)
+                    if (name.isNotBlank() && PhoneConstants.isValidEthiopianPhone(phone)) {
+                        onSave(name, "${PhoneConstants.COUNTRY_CODE}$phone", avatar.ifEmpty { Avatars.DEFAULT })
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(60.dp),
-                enabled = name.isNotBlank() && (phone.startsWith(PhoneConstants.LOCAL_PREFIX) && phone.length == 10 || !phone.startsWith(PhoneConstants.LOCAL_PREFIX) && phone.length == PhoneConstants.MAX_LOCAL_LENGTH),
+                enabled = name.isNotBlank() && PhoneConstants.isValidEthiopianPhone(phone) && phoneError.isEmpty(),
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Slate900)
             ) {

@@ -63,7 +63,11 @@ class FormatTransactionUseCase @Inject constructor() {
             filtered = filtered.filter {
                 it.source.lowercase().contains(q) ||
                 it.category.lowercase().contains(q) ||
-                it.id.lowercase().contains(q)
+                it.type.lowercase().contains(q) ||
+                it.partyName?.lowercase()?.contains(q) == true ||
+                it.reference?.lowercase()?.contains(q) == true ||
+                it.transactionSubType?.lowercase()?.contains(q) == true ||
+                it.amount.toString().contains(q)
             }
         }
 

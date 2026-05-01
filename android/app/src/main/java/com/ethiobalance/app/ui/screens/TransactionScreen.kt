@@ -76,7 +76,7 @@ fun TransactionScreen(
         try { Translations.formatDate(language, transactions.first().timestamp, "MMM d, yyyy HH:mm") } catch (e: Exception) { "N/A" }
     } else { "N/A" }
 
-    Box(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+    Box(modifier = Modifier.fillMaxSize()) {
 
         // ── Main Scrollable List ──────────────────────────────────────────────
         LazyColumn(
@@ -87,25 +87,7 @@ fun TransactionScreen(
             // ── HEADER ITEM (scrolls away) ────────────────────────────────────
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Page title + scan button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = Translations.t(language, "transactions")
-                                .takeIf { it.isNotEmpty() } ?: "Transactions",
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Slate900,
-                            letterSpacing = (-1).sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Search bar
                     OutlinedTextField(

@@ -7,15 +7,23 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ethiobalance.app.R
 import com.ethiobalance.app.ui.components.BottomNavBar
 import com.ethiobalance.app.ui.screens.*
+import com.ethiobalance.app.ui.theme.*
 import com.ethiobalance.app.ui.theme.EthioBalanceTheme
 import com.ethiobalance.app.ui.viewmodel.*
 
@@ -59,6 +67,22 @@ fun EthioBalanceAppUI() {
 
     EthioBalanceTheme(themeId = theme) {
         Scaffold(
+            topBar = {
+                Surface(
+                    color = Color.White,
+                    shadowElevation = 1.dp,
+                    modifier = Modifier.statusBarsPadding()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = stringResource(R.string.app_name), fontSize = 18.sp, fontWeight = FontWeight.Black, color = Slate900, letterSpacing = (-0.5).sp)
+                    }
+                }
+            },
             bottomBar = {
                 BottomNavBar(
                     currentRoute = currentRoute,
