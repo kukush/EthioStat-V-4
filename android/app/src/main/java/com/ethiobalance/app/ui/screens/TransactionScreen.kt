@@ -131,9 +131,14 @@ fun TransactionScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Time Period Filters
+                    val filterScrollState = rememberScrollState()
+                    LaunchedEffect(timeFilter) {
+                        if (timeFilter == "custom") filterScrollState.animateScrollTo(filterScrollState.maxValue)
+                        else filterScrollState.animateScrollTo(0)
+                    }
                     Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.horizontalScroll(filterScrollState),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         listOf(
                             "allTime" to "allTime",
@@ -148,28 +153,28 @@ fun TransactionScreen(
                                     .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
                                     .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                                     .clickable { onTimeFilterChange(filterVal) }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .padding(horizontal = 10.dp, vertical = 8.dp)
                             ) {
                                 Text(
                                     text = Translations.t(language, translationKey)
                                         .takeIf { it.isNotEmpty() } ?: translationKey.uppercase(),
-                                    fontSize = 14.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Black,
                                     color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    letterSpacing = 2.sp
+                                    letterSpacing = 0.5.sp,
+                                    maxLines = 1
                                 )
                             }
                         }
 
                         // Custom date range pill
                         val isCustomSelected = timeFilter == "custom"
-                        val customLabel = if (isCustomSelected && customStartMs != null && customEndMs != null) {
+                        val customPillText = if (isCustomSelected && customStartMs != null && customEndMs != null) {
                             val df = SimpleDateFormat("MMM d", Locale.US)
-                            // Subtract the end-of-day offset (24h - 1ms) for display to show the actual selected date
                             val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
-                            "${df.format(Date(customStartMs))} – ${df.format(Date(displayEndMs))}"
+                            "${df.format(Date(customStartMs))}–${df.format(Date(displayEndMs))}".uppercase()
                         } else {
-                            Translations.t(language, "custom").takeIf { it.isNotEmpty() } ?: "CUSTOM"
+                            "▼"
                         }
                         Box(
                             modifier = Modifier
@@ -177,9 +182,9 @@ fun TransactionScreen(
                                 .background(if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
                                 .border(1.dp, if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                                 .clickable { showDateRangePicker = true }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Icon(
                                     Icons.Default.DateRange,
                                     contentDescription = null,
@@ -187,11 +192,12 @@ fun TransactionScreen(
                                     tint = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = customLabel.uppercase(),
-                                    fontSize = 14.sp,
+                                    text = customPillText,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Black,
                                     color = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    letterSpacing = 2.sp
+                                    letterSpacing = 0.5.sp,
+                                    maxLines = 1
                                 )
                             }
                         }

@@ -82,10 +82,10 @@ class AppConstantsTest {
         assertEquals("ZEMEN", AppConstants.resolveSource("Zemen"))
 
     @Test fun resolveSource_numericCoopbank() =
-        assertEquals("COOPBANK", AppConstants.resolveSource("841"))
+        assertEquals("COOP", AppConstants.resolveSource("841"))
 
     @Test fun resolveSource_alphaCoopbank() =
-        assertEquals("COOPBANK", AppConstants.resolveSource("Coopbank"))
+        assertEquals("COOP", AppConstants.resolveSource("Coopbank"))
 
     @Test fun resolveSource_airtime994() =
         assertEquals("AIRTIME", AppConstants.resolveSource("994"))
@@ -139,7 +139,7 @@ class AppConstantsTest {
         assertEquals("Dashen", AppConstants.displaySource("DASHEN"))
 
     @Test fun displaySource_coopbank() =
-        assertEquals("Coopbank", AppConstants.displaySource("COOPBANK"))
+        assertEquals("COOP", AppConstants.displaySource("COOP"))
 
     @Test fun displaySource_hibret() =
         assertEquals("Hibret", AppConstants.displaySource("HIBRET"))

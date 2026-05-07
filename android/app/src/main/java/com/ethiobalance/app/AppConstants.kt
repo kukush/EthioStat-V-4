@@ -68,7 +68,7 @@ object AppConstants {
 
         // ── Cooperative Bank of Oromia (Coopbank) — *841#, *896# ─────────────
         "841", "896",
-        "Coopbank", "Cooperative Bank of Oromia",
+        "Coop", "Coopbank", "Cooperative Bank of Oromia",
 
         // ── Oromia Bank — *840# ───────────────────────────────────────────────
         "840",
@@ -202,7 +202,7 @@ object AppConstants {
         if (upper in setOf("996", "675") || upper.contains("DASHEN")) return "DASHEN"
         
         // Cooperative Bank of Oromia (Coopbank) — 841, 896
-        if (upper in setOf("841", "896") || upper.contains("COOP")) return "COOPBANK"
+        if (upper in setOf("841", "896") || upper.contains("COOP")|| upper.contains("COOPBANK")) return "COOP"
         
         // Oromia Bank — 840
         if (upper == "840" || upper.contains("OROMIA")) return "OROMIA"
@@ -293,7 +293,7 @@ object AppConstants {
         "AWASH"    to "Awash",
         "DASHEN"   to "Dashen",
         "BOA"      to "BOA",
-        "COOPBANK" to "Coopbank",
+        "COOP"      to "COOP",
         "HIBRET"   to "Hibret",
         "WEGAGEN"  to "Wegagen",
         "ABAY"     to "Abay",
@@ -383,7 +383,7 @@ object AppConstants {
         BankInfo("AWASH",    "Awash Bank",                     "901"),
         BankInfo("DASHEN",   "Dashen Bank",                    "996"),
         BankInfo("BOA",      "Bank of Abyssinia",              "815"),
-        BankInfo("COOPBANK", "Cooperative Bank of Oromia",     "841"),
+        BankInfo("COOP", "Cooperative Bank of Oromia",     "841"),
         BankInfo("HIBRET",   "Hibret Bank",                    "811"),
         BankInfo("WEGAGEN",  "Wegagen Bank",                   "866"),
         BankInfo("ABAY",     "Abay Bank",                      "812"),

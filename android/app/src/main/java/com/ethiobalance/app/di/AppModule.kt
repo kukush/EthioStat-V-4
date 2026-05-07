@@ -23,6 +23,7 @@ object AppModule {
             "ethio_balance_db"
         )
         .addMigrations(AppDatabase.MIGRATION_6_7)
+        .fallbackToDestructiveMigration()
         .build()
     }
 
