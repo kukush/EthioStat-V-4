@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionEntity
+import com.ethiobalance.app.data.TransactionSourceEntity
 import com.ethiobalance.app.domain.usecase.FormatTransactionUseCase
 import com.ethiobalance.app.domain.usecase.GetFinancialSummaryUseCase
 import com.ethiobalance.app.repository.SettingsRepository
@@ -47,10 +48,32 @@ class TransactionViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _customStartMs = MutableStateFlow<Long?>(null)
+    val customStartMs: StateFlow<Long?> = _customStartMs.asStateFlow()
+
+    private val _customEndMs = MutableStateFlow<Long?>(null)
+    val customEndMs: StateFlow<Long?> = _customEndMs.asStateFlow()
+
+    private val _customRangeTrigger: StateFlow<Pair<Long?, Long?>> = combine(
+        _customStartMs, _customEndMs
+    ) { start, end -> start to end }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null to null)
+
     val filteredTransactions: StateFlow<List<TransactionEntity>> = combine(
         allTransactions, _timeFilter, _sourceFilter, _searchQuery, settingsRepo.getTransactionSources()
     ) { transactions, time, source, query, configuredSources ->
-        formatTransactionUseCase(transactions, time, source, query, configuredSources)
+        arrayOf(transactions, time, source, query, configuredSources)
+    }.combine(_customRangeTrigger) { arr, range ->
+        @Suppress("UNCHECKED_CAST")
+        formatTransactionUseCase(
+            arr[0] as List<TransactionEntity>,
+            arr[1] as String,
+            arr[2] as String?,
+            arr[3] as String,
+            arr[4] as List<TransactionSourceEntity>,
+            range.first,
+            range.second
+        )
     }.distinctUntilChanged()
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -75,6 +98,11 @@ class TransactionViewModel @Inject constructor(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setTimeFilter(filter: String) { _timeFilter.value = filter }
+    fun setCustomRange(start: Long?, end: Long?) {
+        _customStartMs.value = start
+        _customEndMs.value = end
+        _timeFilter.value = "custom"
+    }
     fun setSourceFilter(source: String?) { _sourceFilter.value = source }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 

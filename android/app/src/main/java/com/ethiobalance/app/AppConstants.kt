@@ -417,4 +417,11 @@ object AppConstants {
     // Time Constants
     // -------------------------------------------------------------------------
     const val MILLISECONDS_PER_DAY = 24L * 60L * 60L * 1000L
+
+    // -------------------------------------------------------------------------
+    // Ethiopia Time Zone (UTC+3)
+    // All date/time calculations should use this timezone for consistency
+    // -------------------------------------------------------------------------
+    val ETHIOPIA_TIMEZONE: java.util.TimeZone = java.util.TimeZone.getTimeZone("Africa/Addis_Ababa")
+    const val ETHIOPIA_UTC_OFFSET_HOURS = 3
 }

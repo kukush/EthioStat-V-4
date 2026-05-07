@@ -33,14 +33,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.components.SummaryCard
 import com.ethiobalance.app.ui.components.TransactionItem
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionScreen(
     language: String,
@@ -52,13 +55,17 @@ fun TransactionScreen(
     sourceFilter: String?,
     searchQuery: String,
     _isScanningHistory: Boolean = false,
+    customStartMs: Long? = null,
+    customEndMs: Long? = null,
     onTimeFilterChange: (String) -> Unit,
     onSourceFilterChange: (String?) -> Unit,
     onSearchChange: (String) -> Unit,
+    onCustomRangeChange: (Long?, Long?) -> Unit = { _, _ -> },
     onExportCsv: () -> Unit,
     _onScanAll: () -> Unit
 ) {
     var showAmounts by remember { mutableStateOf(true) }
+    var showDateRangePicker by remember { mutableStateOf(false) }
     val netBalance = totalIncome - totalExpense
     val listState = rememberLazyListState()
 
@@ -153,6 +160,99 @@ fun TransactionScreen(
                                 )
                             }
                         }
+
+                        // Custom date range pill
+                        val isCustomSelected = timeFilter == "custom"
+                        val customLabel = if (isCustomSelected && customStartMs != null && customEndMs != null) {
+                            val df = SimpleDateFormat("MMM d", Locale.US)
+                            // Subtract the end-of-day offset (24h - 1ms) for display to show the actual selected date
+                            val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
+                            "${df.format(Date(customStartMs))} – ${df.format(Date(displayEndMs))}"
+                        } else {
+                            Translations.t(language, "custom").takeIf { it.isNotEmpty() } ?: "CUSTOM"
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
+                                .border(1.dp, if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                                .clickable { showDateRangePicker = true }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(
+                                    Icons.Default.DateRange,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = customLabel.uppercase(),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    letterSpacing = 2.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // DateRangePicker Dialog
+                    if (showDateRangePicker) {
+                        // Get today in Ethiopia timezone and convert to UTC midnight for comparison
+                        val todayEthiopia = Calendar.getInstance(AppConstants.ETHIOPIA_TIMEZONE)
+                        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                        utcCalendar.timeInMillis = todayEthiopia.timeInMillis
+                        // Set to end of today in UTC (which corresponds to end of today in Ethiopia)
+                        utcCalendar.set(Calendar.HOUR_OF_DAY, 23)
+                        utcCalendar.set(Calendar.MINUTE, 59)
+                        utcCalendar.set(Calendar.SECOND, 59)
+                        utcCalendar.set(Calendar.MILLISECOND, 999)
+                        val endOfTodayUtc = utcCalendar.timeInMillis
+                        val dateRangePickerState = rememberDateRangePickerState(
+                            selectableDates = object : SelectableDates {
+                                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                                    return utcTimeMillis <= endOfTodayUtc
+                                }
+                            }
+                        )
+                        DatePickerDialog(
+                            onDismissRequest = { showDateRangePicker = false },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        val startMs = dateRangePickerState.selectedStartDateMillis
+                                        val endMs = dateRangePickerState.selectedEndDateMillis
+                                        if (startMs != null && endMs != null) {
+                                            // Set end to end of day (23:59:59.999)
+                                            val endOfDay = endMs + (24 * 60 * 60 * 1000L - 1)
+                                            onCustomRangeChange(startMs, endOfDay)
+                                        }
+                                        showDateRangePicker = false
+                                    },
+                                    enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
+                                ) {
+                                    Text(Translations.t(language, "done").takeIf { it.isNotEmpty() } ?: "DONE")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDateRangePicker = false }) {
+                                    Text(Translations.t(language, "cancel").takeIf { it.isNotEmpty() } ?: "CANCEL")
+                                }
+                            }
+                        ) {
+                            DateRangePicker(
+                                state = dateRangePickerState,
+                                title = {
+                                    Text(
+                                        text = Translations.t(language, "selectDateRange").takeIf { it.isNotEmpty() } ?: "SELECT DATE RANGE",
+                                        modifier = Modifier.padding(start = 24.dp, top = 16.dp),
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                },
+                                modifier = Modifier.heightIn(max = 500.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -182,13 +282,21 @@ fun TransactionScreen(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     // Summary Card
+                    val displayTimeFilter = if (timeFilter == "custom" && customStartMs != null && customEndMs != null) {
+                        val df = SimpleDateFormat("MMM d", Locale.US)
+                        // Subtract the end-of-day offset (24h - 1ms) for display to show the actual selected date
+                        val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
+                        "${df.format(Date(customStartMs))} – ${df.format(Date(displayEndMs))}".uppercase()
+                    } else {
+                        timeFilter
+                    }
                     SummaryCard(
                         language = language,
                         netBalance = netBalance,
                         totalIncome = totalIncome,
                         totalExpense = totalExpense,
                         transactionCount = transactions.size,
-                        timeFilter = timeFilter,
+                        timeFilter = displayTimeFilter,
                         sourceFilter = sourceFilter,
                         lastActivity = lastActivity,
                         showAmounts = showAmounts,
@@ -290,14 +398,44 @@ fun TransactionScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSel) Slate900 else Slate50)
+                                    .background(if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                                     .clickable { onTimeFilterChange(val_) }
                                     .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
                                     Translations.t(language, key).takeIf { it.isNotEmpty() } ?: key.uppercase(),
                                     fontSize = 7.sp, fontWeight = FontWeight.Black,
-                                    color = if (isSel) Color.White else Slate400,
+                                    color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                        // Compact custom pill
+                        val isCompactCustom = timeFilter == "custom"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isCompactCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { showDateRangePicker = true }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Icon(
+                                    Icons.Default.DateRange, null,
+                                    modifier = Modifier.size(8.dp),
+                                    tint = if (isCompactCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    if (isCompactCustom && customStartMs != null && customEndMs != null) {
+                                        val df = SimpleDateFormat("M/d", Locale.US)
+                                        // Subtract the end-of-day offset (24h - 1ms) for display to show the actual selected date
+                                        val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
+                                        "${df.format(Date(customStartMs))}–${df.format(Date(displayEndMs))}"
+                                    } else {
+                                        Translations.t(language, "custom").takeIf { it.isNotEmpty() } ?: "CUSTOM"
+                                    },
+                                    fontSize = 7.sp, fontWeight = FontWeight.Black,
+                                    color = if (isCompactCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     letterSpacing = 1.sp
                                 )
                             }

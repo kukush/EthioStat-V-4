@@ -13,7 +13,9 @@ class FormatTransactionUseCase @Inject constructor() {
         timeFilter: String,
         sourceFilter: String?,
         searchQuery: String,
-        configuredSources: List<TransactionSourceEntity>
+        configuredSources: List<TransactionSourceEntity>,
+        customStartMs: Long? = null,
+        customEndMs: Long? = null
     ): List<TransactionEntity> {
         val enabledResolved = configuredSources.map {
             it.abbreviation.lowercase()
@@ -60,6 +62,11 @@ class FormatTransactionUseCase @Inject constructor() {
             "today"     -> filtered.filter { it.timestamp >= startOfToday }
             "thisWeek"  -> filtered.filter { it.timestamp >= startOfWeek }
             "thisMonth" -> filtered.filter { it.timestamp >= startOfMonth }
+            "custom"    -> {
+                val start = customStartMs ?: 0L
+                val end = customEndMs ?: Long.MAX_VALUE
+                filtered.filter { it.timestamp in start..end }
+            }
             else -> filtered
         }
 

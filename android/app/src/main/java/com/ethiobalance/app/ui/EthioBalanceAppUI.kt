@@ -202,6 +202,8 @@ fun EthioBalanceAppUI() {
                         val sourceFilter by transactionVM.sourceFilter.collectAsStateWithLifecycle()
                         val searchQuery by transactionVM.searchQuery.collectAsStateWithLifecycle()
                         val isScanning by transactionVM.isScanningHistory.collectAsStateWithLifecycle()
+                        val customStartMs by transactionVM.customStartMs.collectAsStateWithLifecycle()
+                        val customEndMs by transactionVM.customEndMs.collectAsStateWithLifecycle()
 
                         TransactionScreen(
                             language = language,
@@ -213,9 +215,12 @@ fun EthioBalanceAppUI() {
                             sourceFilter = sourceFilter,
                             searchQuery = searchQuery,
                             _isScanningHistory = isScanning,
+                            customStartMs = customStartMs,
+                            customEndMs = customEndMs,
                             onTimeFilterChange = { transactionVM.setTimeFilter(it) },
                             onSourceFilterChange = { transactionVM.setSourceFilter(it) },
                             onSearchChange = { transactionVM.setSearchQuery(it) },
+                            onCustomRangeChange = { start, end -> transactionVM.setCustomRange(start, end) },
                             onExportCsv = { transactionVM.exportToCsv(context) },
                             _onScanAll = { transactionVM.scanSmsHistory() }
                         )
