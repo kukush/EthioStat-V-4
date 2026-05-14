@@ -17,6 +17,9 @@ class SettingsViewModel @Inject constructor(
     private val transactionRepo: TransactionRepository
 ) : ViewModel() {
 
+    val hasSeenOnboarding: StateFlow<Boolean?> = settingsRepo.hasSeenOnboarding
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val language: StateFlow<String> = settingsRepo.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
 
@@ -47,6 +50,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepo.setUserProfile(name, phone, avatar)
         }
+    }
+
+    fun markOnboardingSeen() {
+        viewModelScope.launch { settingsRepo.setOnboardingSeen() }
     }
 
     fun addTransactionSource(source: TransactionSourceEntity) {

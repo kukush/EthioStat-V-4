@@ -142,7 +142,7 @@ private fun PackageItem(label: String, value: String, unit: String, color: Color
         Column {
             Text(
                 label,
-                fontSize = 8.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 2.sp

@@ -112,7 +112,30 @@ object Translations {
         "grantPermission" to "Grant Permission",
         "smsPermissionNeeded" to "SMS permission required for sync & recharge. Go to Settings to grant.",
         "phoneValidationError" to "Phone number must start with 7 or 9 and be 9 digits",
-        "phoneErrorPrefix" to "Please enter phone number without country code or leading zero"
+        "phoneErrorPrefix" to "Please enter phone number without country code or leading zero",
+        // Onboarding
+        "onboardingWelcomeTitle" to "Welcome to EthioStat",
+        "onboardingWelcomeSubtitle" to "Balance & Telecom Tracker",
+        "onboardingWelcomeDesc" to "Transforms complex SMS messages from telecom services and banks into a clean, visual dashboard — so you instantly understand your balance, data usage, and transactions without reading long, confusing alerts.",
+        "onboardingSkip" to "Skip",
+        "onboardingNext" to "Next",
+        "onboardingGetStarted" to "Get Started",
+        "onboardingPermissionTitle" to "SMS Permission",
+        "onboardingPermissionDesc" to "Allow access to read transaction SMS from your selected banks and Ethio Telecom",
+        "onboardingPermissionWarningTitle" to "For Full Functionality",
+        "onboardingPermissionWarningBody" to "Please grant SMS permission to read SMS and Notification",
+        "onboardingTelecomTitle" to "Track Your Data, Voice & SMS",
+        "onboardingTelecomDesc" to "Monitor packages, voice minutes, airtime & expiry — automatically from Ethio Telecom SMS.",
+        "onboardingTransactionTitle" to "Every Transaction, Automatically",
+        "onboardingTransactionDesc" to "Income, expenses, transfers & loans — parsed from bank and Telebirr SMS. 90-day history on first install.",
+        "onboardingSettingsTitle" to "25+ Banks. 3 Languages.",
+        "onboardingSettingsDesc" to "Add Telebirr, CBE, Awash and 25+ banks. Switch between English, Amharic and Afaan Oromo anytime.",
+        "onboardingSetupTitle" to "You're Almost Ready",
+        "onboardingSetupDesc" to "Choose your language and allow SMS access — EthioStat never sends your data anywhere.",
+        "onboardingPunchTelecom" to "📊 SMART BALANCE & DATA TRACKING\n• See package expiry dates with countdown timers\n⚡ INSTANT BALANCE SYNC\n• Checks your balance using USSD (*804#)\n• Automatically parses results into clear insights\n• Perfect for new users and elderly users\n📦 RECHARGE & PACKAGE MANAGEMENT\n• Recharge airtime using vouchers",
+        "onboardingPunchTrans" to "💰 AUTOMATIC FINANCIAL TRACKING\n• Convert SMS alerts from banks and wallets into a smart ledger\n• Automatically categorize income and expenses\n• View daily, weekly, monthly, custom summaries\n• See your live Net Balance without manual calculations",
+        "onboardingPunchSetting" to "📱 CUSTOMIZABLE SOURCES\n• Choose which banks or wallets to track from Settings\n• Supports Telebirr and all major Ethiopian banks\n• Track only the sources you select",
+        "onboardingPunchSetup" to "🔒 100% OFFLINE & PRIVATE\n• No internet required\n• Your data never leaves your device\n• No account, no signup, no cloud\n🌍 BUILT FOR ETHIOPIA\n• Supports English, Amharic (አማርኛ), and Afaan Oromo\n🎯 WHY ETHIOSTAT?\n• No manual tracking\n• No confusing SMS messages\n• No internet dependency"
     )
 
     private val am = mapOf(
@@ -229,7 +252,30 @@ object Translations {
         "grantPermission" to "ፍቃድ ስጥ",
         "smsPermissionNeeded" to "ለአመሳሰል እና ለመሙላት የSMS ፍቃድ ያስፈልጋል። ወደ ቅንብሮች ይሂዱ።",
         "phoneValidationError" to "ስልክ ቁጥር መጀመሪያ በ7 ወይም 9 መጀመር አለበት እና 9 አሃዝ መሆን አለበት",
-        "phoneErrorPrefix" to "እባክዎ ስልክ ቁጥር ያስገቡ ያለ የአገር ኮድ ወይም የመጀመሪያ ዜሮ"
+        "phoneErrorPrefix" to "እባክዎ ስልክ ቁጥር ያስገቡ ያለ የአገር ኮድ ወይም የመጀመሪያ ዜሮ",
+        // Onboarding
+        "onboardingWelcomeTitle" to "እንኳን ወደ ኢትዮስታት መጡ",
+        "onboardingWelcomeSubtitle" to "ቀሪ ሂሳብ እና ቴሌኮም ክትትል",
+        "onboardingWelcomeDesc" to "ከቴሌኮም አገልግሎቶች እና ባንኮች የሚመጡ ውስብስብ SMS መልዕክቶችን ወደ ግልፅ፣ ምስላዊ ዳሽቦርድ ይቀይራል — ቀሪ ሂሳብዎን፣ የዳታ አጠቃቀምዎን እና ግብይቶቻዎን ያለ ጭንቀት ወዲያው ይረዱ።",
+        "onboardingSkip" to "ዝለል",
+        "onboardingNext" to "ቀጣይ",
+        "onboardingGetStarted" to "ጀምር",
+        "onboardingPermissionTitle" to "የSMS ፍቃድ",
+        "onboardingPermissionDesc" to "ከተመረጡ ባንኮች እና ኢትዮ ቴሌኮም የግብይት ኤስኤምኤስ ለማንበብ ፍቃድ ይስጡ",
+        "onboardingPermissionWarningTitle" to "ሙሉ አቅሙ እንዲጠቀሙ",
+        "onboardingPermissionWarningBody" to "እባክዎ የSMS ፍቃድ ይስጡ — ኤስኤምኤስ እና ማሳወቂያ ለማንበብ",
+        "onboardingTelecomTitle" to "ዳታ፣ ድምፅ እና ኤስኤምኤስዎን ይከታተሉ",
+        "onboardingTelecomDesc" to "ፓኬጆችን፣ የድምፅ ደቂቃዎችን፣ ክሬዲት እና የሚያበቃቸውን ቀን ከኢትዮ ቴሌኮም ኤስኤምኤስ በራስ-ሰር ይከታተሉ።",
+        "onboardingTransactionTitle" to "እያንዳንዱ ግብይት በራስ-ሰር",
+        "onboardingTransactionDesc" to "ገቢ፣ ወጪ፣ ዝውውር እና ብድሮች — ከባንክ እና ቴሌብር ኤስኤምኤስ የተወሰዱ። በመጀመሪያ ጫኝ 90-ቀን ታሪክ።",
+        "onboardingSettingsTitle" to "25+ ባንኮች። 3 ቋንቋዎች።",
+        "onboardingSettingsDesc" to "ቴሌብር፣ የኢትዮጵያ ንግድ ባንክ፣ አዋሽ እና 25+ ባንኮችን ያክሉ። በእንግሊዝኛ፣ በአማርኛ እና በኦሮምኛ በከፈልኩ ለይተው ይጠቀሙ።",
+        "onboardingSetupTitle" to "እስኪ ጨርስ ሲቃርቡ",
+        "onboardingSetupDesc" to "ቋንቋዎን ይምረጡ እና የኤስኤምኤስ መዳረሻ ይስጡ — ኢትዮስታት ውሂብዎን በየትኛውም ቦታ አይልክም።",
+        "onboardingPunchTelecom" to "📊 ሚዛን ና ዳታ ክትትል\n• የፓኬጅ የማብቂያ ቀን ካውንትዳውን ሲቆጥሩ ይመልከቱ\n⚡ ቅጽበታዊ ሚዛን ማመሳሰል\n• ሚዛንዎን በUSSD (*804#) ይፈትሻሉ\n• ውጤቶች በራስ-ሰር ይተነተናሉ\n• ለአዳዲስ እና አዛውንት ተጠቃሚዎች ተስማሚ\n📦 ሬቻርጅ ና ፓኬጅ አያያዝ\n• አየር ሰዓት ቫውቸር ተጠቅሞ ሬቻርጅ ያድርጉ",
+        "onboardingPunchTrans" to "💰 ራስ-ሰር የፋይናንስ ክትትል\n• ከባንኮች እና ዋሌቶች SMS ወደ ስማርት ሌጀር ይቀይሩ\n• ገቢ እና ወጪ በራስ-ሰር ይመደባሉ\n• የዕለት፣ ሳምንት፣ ወር፣ ብጁ ማጠቃለያዎችን ይመልከቱ\n• ቀጥታ ጠቅላላ ሚዛን ያለ ማስላት ያሳያል",
+        "onboardingPunchSetting" to "📱 ብጁ ምንጮች\n• ከቅንብሮች የትኞቹ ባንኮች ወይም ዋሌቶች እንደሚከታተሉ ይምረጡ\n• ቴሌብርና ዋና የኢትዮጵያ ባንኮችን ይደግፋሉ\n• የሚፈልጉትን ምንጮች ብቻ ይከታተሉ",
+        "onboardingPunchSetup" to "🔒 100% ከበይነ-መረብ ነፃ ና ምስጢራዊ\n• ኢንተርኔት አያስፈልግም\n• ውሂብዎ መሣሪያዎ ላይ ብቻ ይቆያሉ\n• አካውንት፣ ምዝገባ፣ ወይም ክላውድ አያስፈልግም\n🌍 ለኢትዮጵያ የተሠራ\n• እንግሊዝኛ፣ አማርኛ እና አፋን ኦሮሞን ይደግፋሉ\n🎯 ለምን ኢትዮስታት?\n• ምንም ማስላት የለም\n• ምንም ግራ-አጋቢ SMS የለም\n• ምንም ኢንተርኔት ጥገኛ የለም"
     )
 
     private val om = mapOf(
@@ -351,7 +397,30 @@ object Translations {
         "grantPermission" to "Hayyama Kenni",
         "smsPermissionNeeded" to "Walsimsuuf fi guutuuf hayyamni SMS barbaachisaa. Gara Qindaa'inaatti deemi.",
         "phoneValidationError" to "Lakkoofsa bilbilaa jalqaba 7 ykn 9 ta'uu fi dijiitii 9 ta'uu qaba",
-        "phoneErrorPrefix" to "Lakkoofsa bilbilaa galchuu maaloo daangessa biyyaa ykn jalqaba zero ilaalutti"
+        "phoneErrorPrefix" to "Lakkoofsa bilbilaa galchuu maaloo daangessa biyyaa ykn jalqaba zero ilaalutti",
+        // Onboarding
+        "onboardingWelcomeTitle" to "EthioStat Baga Nagaan Dhuftan",
+        "onboardingWelcomeSubtitle" to "Hordoffii Balansi fi Telekoomii",
+        "onboardingWelcomeDesc" to "Ergaawwan SMS wal-xaxaa tajaajila telekoomii fi baankiiwwanirraa gara daashboordii ifaa, mul'ataa jijjiira — balansi, fayyadama daataa fi daldalii kee hin gufachiisinee adeemsisuuf.",
+        "onboardingSkip" to "Irra darbi",
+        "onboardingNext" to "Itti fufi",
+        "onboardingGetStarted" to "Jalqabi",
+        "onboardingPermissionTitle" to "Hayyama SMS",
+        "onboardingPermissionDesc" to "SMS daldalaa baankiiwwan keessan filataman fi Ityoo Telekoom irraa dubbisuu hayyamni",
+        "onboardingPermissionWarningTitle" to "Hojii Guutuuuf",
+        "onboardingPermissionWarningBody" to "Maaloo hayyama SMS kenni — SMS fi beeksisa dubbisuuuf",
+        "onboardingTelecomTitle" to "Daataa, Sagalee fi SMS Hordofaa",
+        "onboardingTelecomDesc" to "Paakeejiiwwan, daqiiqaa sagalee, kireediitii fi guyyaan dhumuu — Ityoo Telekoom SMS irraa ofumaan.",
+        "onboardingTransactionTitle" to "Daldaliin Hunda Ofumaan",
+        "onboardingTransactionDesc" to "Galii, baasii, dabarsuu fi loonii — baankii fi Telebirr SMS irraa argaman. Ji'a 90 seenaa jalqabaa.",
+        "onboardingSettingsTitle" to "25+ Baankiiwwan. 3 Afaan.",
+        "onboardingSettingsDesc" to "Telebirr, CBE, Awash fi 25+ baankiiwwan dabalaa. Afaan Ingilizii, Amaaraa fi Oromoo jiddutti jijjiraa.",
+        "onboardingSetupTitle" to "Garuu Si'aadha",
+        "onboardingSetupDesc" to "Afaan kee filiifi hayyama SMS kenni — EthioStat daataa kee bakka kamutti hin ergu.",
+        "onboardingPunchTelecom" to "📊 HORDOFFII BALANSI FI DAATAA\n• Guyyaa xumuraa paakaajii lakkaawwaa hordofaa\n⚡ WALSIMSIISUU BALANSI ARIIFATAA\n• Balansi kee USSD (*804#) fayyadamuun mirkaneessa\n• Bu'aa ofumaan hiika\n• Fayyadamtoota haaraa fi jaarsa gargaara\n📦 BULCHIINSA HAARAA FI PAAKEJII\n• Yeroo vawuchara fayyadamuun airtimii haaressi",
+        "onboardingPunchTrans" to "💰 HORDOFFII MAALLAQAA OFUMAAN\n• SMS baankii fi waalleetii irraa gara leejarii qaroo jijjiiraa\n• Galii fi baasii ofumaan qoodi\n• Cuunfaa guyyaa, torbee, ji'a, barbaachisaa ilaali\n• Balansi qulqulluu jiraataa herreguu malee ilaali",
+        "onboardingPunchSetting" to "📱 MADDA FILATAMAADHA\n• Baankii fi waalleetii hordofuu barbaaddu Qindaa'ina irraa fili\n• Telebirr fi baankiiwwan gurguddoo Itoophiyaa ni deeggaraa\n• Madda filatte qofaa hordofaa",
+        "onboardingPunchSetup" to "🔒 100% TOORA ALAA FI DHUUNFAA\n• Interneetii hin barbaachisu\n• Daataan kee meeshaa kee irraa hin baatu\n• Herreegaa, galmee, ykn klaawdii hin barbaachisu\n🌍 ITOOPHIYAAF IJAARAME\n• Afaan Ingilizii, Amaaraa fi Afaan Oromoo ni deeggaraa\n🎯 MAALIIF ETHIOSTAT?\n• Hordoffii harkaan hin jiru\n• SMS gaddisiisaa hin jiru\n• Interneetiirratti hirkatuu hin jiru"
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)

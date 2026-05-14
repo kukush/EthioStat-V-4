@@ -45,6 +45,7 @@ fun EthioBalanceAppUI() {
 
     val theme by settingsVM.theme.collectAsStateWithLifecycle()
     val language by settingsVM.language.collectAsStateWithLifecycle()
+    val hasSeenOnboarding by settingsVM.hasSeenOnboarding.collectAsStateWithLifecycle(initialValue = null)
 
     var currentRoute by remember { mutableStateOf("home") }
 
@@ -75,6 +76,20 @@ fun EthioBalanceAppUI() {
     }
 
     EthioBalanceTheme(themeId = theme) {
+        // Onboarding gate - prevent one-frame flash of main UI
+        if (hasSeenOnboarding == null) {
+            // Still loading onboarding state; splash screen handles visual
+            return@EthioBalanceTheme
+        }
+
+        if (hasSeenOnboarding == false) {
+            OnboardingScreen(
+                settingsViewModel = settingsVM,
+                onComplete = { settingsVM.markOnboardingSeen() }
+            )
+            return@EthioBalanceTheme
+        }
+
         Scaffold(
             topBar = {
                 Surface(

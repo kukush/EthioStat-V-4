@@ -607,8 +607,8 @@ class ParseSmsUseCase @Inject constructor() {
             textLower.contains("bonus") -> "Bonus"
             textLower.contains("daily") -> "Daily"
             textLower.contains("weekly") -> "Weekly"
-            textLower.contains("monthly") -> "Monthly"
-            textLower.contains("yearly") -> "Yearly"
+            textLower.contains("monthly") || textLower.contains("for 1 month") || textLower.contains("for one month") -> "Monthly"
+            textLower.contains("yearly") || textLower.contains("for 1 year") || textLower.contains("for one year") -> "Yearly"
             textLower.contains("recurring") -> "Recurring"
             else -> ""
         }

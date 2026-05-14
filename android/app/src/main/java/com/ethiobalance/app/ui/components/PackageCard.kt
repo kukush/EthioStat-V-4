@@ -38,47 +38,47 @@ fun PackageCard(
         "internet", "data" -> PackageTheme(
             bg = MaterialTheme.colorScheme.primaryContainer,
             text = MaterialTheme.colorScheme.onPrimaryContainer,
-            progressBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-            progressFg = MaterialTheme.colorScheme.onPrimaryContainer,
+            circularBarBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            circularBarFg = MaterialTheme.colorScheme.onPrimaryContainer,
             accent = MaterialTheme.colorScheme.primary,
-            barBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-            barFg = MaterialTheme.colorScheme.onPrimaryContainer
+            linearBarBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            linearBarFg = MaterialTheme.colorScheme.onPrimaryContainer
         )
         "voice" -> PackageTheme(
             bg = MaterialTheme.colorScheme.tertiaryContainer,
             text = MaterialTheme.colorScheme.onTertiaryContainer,
-            progressBg = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
-            progressFg = MaterialTheme.colorScheme.onTertiaryContainer,
+            circularBarBg = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+            circularBarFg = MaterialTheme.colorScheme.onTertiaryContainer,
             accent = MaterialTheme.colorScheme.tertiary,
-            barBg = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
-            barFg = MaterialTheme.colorScheme.onTertiaryContainer
+            linearBarBg = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f),
+            linearBarFg = MaterialTheme.colorScheme.onTertiaryContainer
         )
         "sms" -> PackageTheme(
             bg = MaterialTheme.colorScheme.secondaryContainer,
             text = MaterialTheme.colorScheme.onSecondaryContainer,
-            progressBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-            progressFg = MaterialTheme.colorScheme.onSecondaryContainer,
+            circularBarBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+            circularBarFg = MaterialTheme.colorScheme.onSecondaryContainer,
             accent = MaterialTheme.colorScheme.secondary,
-            barBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-            barFg = MaterialTheme.colorScheme.onSecondaryContainer
+            linearBarBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
+            linearBarFg = MaterialTheme.colorScheme.onSecondaryContainer
         )
         "bonus" -> PackageTheme(
             bg = MaterialTheme.colorScheme.surfaceVariant,
             text = MaterialTheme.colorScheme.onSurfaceVariant,
-            progressBg = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-            progressFg = MaterialTheme.colorScheme.onSurfaceVariant,
+            circularBarBg = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+            circularBarFg = MaterialTheme.colorScheme.onSurfaceVariant,
             accent = MaterialTheme.colorScheme.primary,
-            barBg = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-            barFg = MaterialTheme.colorScheme.onSurfaceVariant
+            linearBarBg = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+            linearBarFg = MaterialTheme.colorScheme.onSurfaceVariant
         )
         else -> PackageTheme(
             bg = MaterialTheme.colorScheme.primaryContainer,
             text = MaterialTheme.colorScheme.onPrimaryContainer,
-            progressBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-            progressFg = MaterialTheme.colorScheme.onPrimaryContainer,
+            circularBarBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            circularBarFg = MaterialTheme.colorScheme.onPrimaryContainer,
             accent = MaterialTheme.colorScheme.primary,
-            barBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-            barFg = MaterialTheme.colorScheme.onPrimaryContainer
+            linearBarBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            linearBarFg = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
 
@@ -89,14 +89,14 @@ fun PackageCard(
     val circularColor = when {
         percentage < 5  -> MaterialTheme.colorScheme.error    // 🔴 Critical: <5% remaining
         percentage < 20 -> MaterialTheme.colorScheme.tertiary   // 🟠 Warning: <20% remaining (>80% used)
-        else -> theme.progressFg      // 🟢 Healthy
+        else -> theme.circularBarFg      // 🟢 Healthy
     }
 
     // Urgency colors for linear bar (expiry)
     val expiryBarColor = when {
         daysLeft < 3 -> MaterialTheme.colorScheme.error       // 🔴 Critical: <3 days left
         daysLeft < 7 -> MaterialTheme.colorScheme.tertiary      // 🟠 Warning: 3-6 days left
-        else -> theme.barFg           // 🟢 Healthy
+        else -> theme.linearBarFg           // 🟢 Healthy
     }
 
     val expiryDateStr = if (expiryMs > 0) Translations.formatDate(language, expiryMs, "MMM d, yyyy") else "N/A"
@@ -163,7 +163,7 @@ fun PackageCard(
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(theme.barBg)
+                        .background(theme.linearBarBg)
                 ) {
                     Box(
                         modifier = Modifier
@@ -195,7 +195,7 @@ fun PackageCard(
                         .matchParentSize()
                         .drawBehind {
                             drawArc(
-                                color = theme.progressBg,
+                                color = theme.circularBarBg,
                                 startAngle = 0f,
                                 sweepAngle = 360f,
                                 useCenter = false,
@@ -233,11 +233,11 @@ fun PackageCard(
 data class PackageTheme(
     val bg: Color,
     val text: Color,
-    val progressBg: Color,
-    val progressFg: Color,
+    val circularBarBg: Color,  // Background for circular usage bar
+    val circularBarFg: Color,  // Foreground for circular usage bar (with urgency override)
     val accent: Color,
-    val barBg: Color,
-    val barFg: Color
+    val linearBarBg: Color,    // Background for linear expiry bar
+    val linearBarFg: Color     // Foreground for linear expiry bar (with urgency override)
 )
 
 @Preview(showBackground = true)

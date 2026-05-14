@@ -36,6 +36,13 @@ class SettingsRepository @Inject constructor(
         val USER_NAME_KEY = stringPreferencesKey("user_name")
         val USER_PHONE_KEY = stringPreferencesKey("user_phone")
         val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
+        val ONBOARDING_KEY = booleanPreferencesKey("onboarding_seen")
+    }
+
+    // Onboarding
+    val hasSeenOnboarding: Flow<Boolean> = dataStore.data.map { it[ONBOARDING_KEY] ?: false }
+    suspend fun setOnboardingSeen() {
+        dataStore.edit { it[ONBOARDING_KEY] = true }
     }
 
     // Language
@@ -194,9 +201,9 @@ class SettingsRepository @Inject constructor(
      * Only runs if transaction_sources table is empty.
      *
      * Behavior:
-     * - If SMS permission is granted: only add sources that have SMS transactions in last 90 days
-     * - If SMS permission NOT granted: add all default sources (CBE, Telebirr) so user sees them
-     *   and can use them. SMS scanning will happen after permission is granted via MainActivity.
+     * - If SMS permission is granted: seed CBE and Telebirr as defaults unconditionally.
+     * - If SMS permission NOT granted: no-op. Called again by MainActivity after the user
+     *   grants permission, at which point sources are added and the 90-day scan runs.
      */
     suspend fun seedDefaultSourcesIfEmpty() = withContext(Dispatchers.IO) {
         val currentSources = transactionSourceDao.getAllSources().first()
@@ -204,33 +211,26 @@ class SettingsRepository @Inject constructor(
 
         val hasPermission = hasSmsPermission()
 
-        val sourcesToAdd = if (hasPermission) {
-            // With permission: only add sources that have actual SMS transactions
-            AppConstants.DEFAULT_TRANSACTION_SOURCES.mapNotNull { abbrev ->
-                val bankInfo = AppConstants.KNOWN_BANKS.find { it.abbreviation == abbrev }
-                bankInfo?.let {
-                    val allSenderIds = getAllSenderIdsForBank(it.abbreviation)
-                        .split(",")
-                        .map { id -> id.trim() }
-                        .filter { id -> id.isNotEmpty() }
+        // Only seed default sources (CBE, Telebirr) after SMS permission is granted.
+        // Without permission nothing is added — seeding is triggered again by
+        // MainActivity once the user grants permission.
+        if (!hasPermission) return@withContext
 
-                    // Only add source if there are actual SMS messages
-                    if (hasSmsFromSenders(allSenderIds, days = 90)) {
-                        TransactionSourceEntity(
-                            abbreviation = it.abbreviation,
-                            name = it.fullName,
-                            ussd = "",
-                            senderId = allSenderIds.joinToString(","),
-                            isEnabled = true
-                        )
-                    } else {
-                        null // Skip - no transactions found
-                    }
-                }
+        val sourcesToAdd = AppConstants.DEFAULT_TRANSACTION_SOURCES.mapNotNull { abbrev ->
+            val bankInfo = AppConstants.KNOWN_BANKS.find { it.abbreviation == abbrev }
+            bankInfo?.let {
+                val allSenderIds = getAllSenderIdsForBank(it.abbreviation)
+                    .split(",")
+                    .map { id -> id.trim() }
+                    .filter { id -> id.isNotEmpty() }
+                TransactionSourceEntity(
+                    abbreviation = it.abbreviation,
+                    name = it.fullName,
+                    ussd = "",
+                    senderId = allSenderIds.joinToString(","),
+                    isEnabled = true
+                )
             }
-        } else {
-            // Without permission: do NOT seed defaults (user must grant permission first).
-            emptyList()
         }
 
         if (sourcesToAdd.isNotEmpty()) {

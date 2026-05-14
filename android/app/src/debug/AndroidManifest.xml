@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+
+        <receiver
+            android:name=".DebugSmsSeedReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.ethiobalance.app.DEBUG_SEED_SMS" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".DebugSetLanguageReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.ethiobalance.app.DEBUG_SET_LANG" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

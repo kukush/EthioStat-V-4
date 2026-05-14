@@ -702,4 +702,41 @@ class ParseSmsUseCaseTest {
         assertNotEquals("to", omTo)
     }
 
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Device Format SMS — "2GB+300Min for 1 month" pattern
+    //  Captured via: adb shell "content query --uri content://sms/inbox ..."
+    // ═════════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun testDeviceFormat_2GB300Min_for1month_createsVoiceAndInternetPackages() {
+        // Real SMS format from device: "2GB+300Min for 1 month is 300 minute"
+        // Note: Two segments share "2GB+300Min for 1 month" name but different values (voice vs internet).
+        // They have same ID format {type}-{subType}-{expiry}, so only one is kept per type per expiry.
+        val body = "Dear Customer, your remaining amount from 2GB+300Min for 1 month is 300 minute and 0 second with expiry date on 2026-06-07 at 11:25:18; from 2GB+300Min for 1 month is 2048.000 MB with expiry date on 2026-06-07 at 11:25:18; from Monthly Internet Package 12GB from telebirr to be expired after 30 days is 4404.867 MB with expiry date on 2026-05-24 at 17:23:21; Enjoy 10% additional rewards by downloading telebirr SuperApp https://bit.ly/telebirr_SuperApp.Happy Holiday! Ethio telecom."
+
+        val result = parseSmsUseCase("994", body, System.currentTimeMillis())
+
+        // Verify we get at least voice and internet packages
+        // Note: Two segments with same "2GB+300Min for 1 month" name share same ID,
+        // so they may overwrite each other. We verify the ones we do get are correct.
+        val voicePkg = result.packages.firstOrNull { it.type == "voice" }
+        val internetPkgs = result.packages.filter { it.type == "internet" }
+
+        // Voice: "300 minute" from "2GB+300Min for 1 month" segment
+        assertNotNull("Voice package should be created", voicePkg)
+        assertEquals("Voice subType should be 'Monthly' from 'for 1 month'", "Monthly", voicePkg!!.subType)
+        assertEquals(300.0, voicePkg.remainingAmount, 0.01)
+        assertEquals("MIN", voicePkg.unit)
+
+        // Internet: should have at least 1 package, with Monthly subtype extracted
+        assertTrue("Should have at least 1 internet package", internetPkgs.isNotEmpty())
+        internetPkgs.forEach { pkg ->
+            assertEquals("All internet packages should have Monthly subType", "Monthly", pkg.subType)
+        }
+
+        // Standard "Monthly Internet Package 12GB" should be present (~4405 MB)
+        val largeInternet = internetPkgs.find { it.remainingAmount == 4405.0 }
+        assertNotNull("Internet from 12GB package segment should exist", largeInternet)
+    }
+
 }
