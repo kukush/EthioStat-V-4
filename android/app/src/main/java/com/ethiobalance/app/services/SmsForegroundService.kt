@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.ethiobalance.app.AppConstants
 import dagger.hilt.android.AndroidEntryPoint
@@ -17,6 +18,7 @@ import javax.inject.Inject
 class SmsForegroundService : Service() {
     companion object {
         const val SYNC_CHANNEL_ID = "SyncNotificationChannel"
+        private const val TAG = "SmsForegroundService"
     }
 
     @Inject
@@ -34,6 +36,7 @@ class SmsForegroundService : Service() {
         val sender = intent?.getStringExtra("sender")
         val body = intent?.getStringExtra("body")
         val timestamp = intent?.getLongExtra("timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis()
+        Log.d(TAG, "onStartCommand: sender=$sender")
 
         if (sender != null && body != null) {
 
@@ -50,12 +53,17 @@ class SmsForegroundService : Service() {
                 } else {
                     startForeground(AppConstants.NOTIFICATION_ID_SMS, notification)
                 }
-            } catch (_: Exception) { }
+                Log.d(TAG, "startForeground succeeded")
+            } catch (e: Exception) {
+                Log.e(TAG, "startForeground failed: ${e.message}")
+            }
 
             // Process with Dual Tracking Engine, then stop the service when done
             scope.launch {
                 try {
+                    Log.d(TAG, "processSms start: sender=$sender")
                     reconciliationEngine.processSms(sender, body, timestamp)
+                    Log.d(TAG, "processSms completed for $sender")
 
                     // If this was a telecom sender (994, 804, etc.), notify the app
                     // so it can auto-return from the dialer after a sync
@@ -63,6 +71,7 @@ class SmsForegroundService : Service() {
                         it.equals(sender, ignoreCase = true)
                     }
                     if (isTelecom) {
+                        Log.d(TAG, "Sending ACTION_TELECOM_SMS_ARRIVED for $sender")
                         sendBroadcast(Intent(AppConstants.ACTION_TELECOM_SMS_ARRIVED).setPackage(packageName))
 
                         // Show heads-up notification so user can tap to return
@@ -84,12 +93,16 @@ class SmsForegroundService : Service() {
                             .build()
                         val nm = getSystemService(NotificationManager::class.java)
                         nm?.notify(AppConstants.NOTIFICATION_ID_SMS + 1, headsUp)
+                        Log.d(TAG, "Heads-up notification posted")
                     }
-                } catch (_: Exception) { } finally {
+                } catch (e: Exception) {
+                    Log.e(TAG, "processSms failed: ${e.message}")
+                } finally {
                     stopSelf(startId)
                 }
             }
         } else {
+            Log.w(TAG, "onStartCommand: null sender or body — stopping")
             stopSelf(startId)
         }
 
