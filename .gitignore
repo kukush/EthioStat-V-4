@@ -36,6 +36,14 @@ proguard/
 # Build tool directories
 target/
 
+# IDE and tool directories
+.qwen/
+.windsurf/
+.snapshots/
+.agents/
+.vscode/
+.idea/
+
 # windsurf directories
 .windsurf
 
