@@ -30,4 +30,15 @@ interface TransactionSourceDao {
 
     @Query("SELECT senderId FROM transaction_sources WHERE isEnabled = 1")
     fun getEnabledSenderIds(): List<String>
+
+    /**
+     * Get all enabled sender IDs as flattened individual values.
+     * Parses comma-separated senderId field (e.g., "889,847,CBE" -> ["889", "847", "CBE"]).
+     */
+    fun getEnabledSenderIdsFlattened(): List<String> {
+        return getEnabledSenderIds()
+            .flatMap { it.split(",") }
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+    }
 }

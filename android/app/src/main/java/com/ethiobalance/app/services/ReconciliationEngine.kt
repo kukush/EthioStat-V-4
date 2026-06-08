@@ -1,114 +1,196 @@
 package com.ethiobalance.app.services
 
 import com.ethiobalance.app.AppConstants
-import com.ethiobalance.app.data.AppDatabase
-import com.ethiobalance.app.data.SmsLogEntity
-import com.ethiobalance.app.data.TransactionEntity
+import com.ethiobalance.app.data.*
+import com.ethiobalance.app.domain.model.SmsScenario
+import com.ethiobalance.app.domain.usecase.ParseSmsUseCase
+import kotlinx.coroutines.flow.first
 import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 
-object ReconciliationEngine {
+@Singleton
+class ReconciliationEngine @Inject constructor(
+    private val smsLogDao: SmsLogDao,
+    private val transactionDao: TransactionDao,
+    private val balancePackageDao: BalancePackageDao,
+    private val transactionSourceDao: TransactionSourceDao,
+    private val parseSmsUseCase: ParseSmsUseCase
+) {
+
+    fun normalizeSender(raw: String): String {
+        var s = raw.trim()
+        if (s.any { it.isLetter() }) return s.uppercase()
+        if (s.startsWith("+")) s = s.substring(1)
+        if (s.startsWith("251") && s.length > 3) {
+            val remainder = s.substring(3)
+            if (remainder.length <= 6) s = remainder
+        }
+        if (s.startsWith("0") && s.length > 1) s = s.substring(1)
+        return s
+    }
     
-    suspend fun processSms(sender: String?, body: String, timestamp: Long, db: AppDatabase) {
+    suspend fun processSms(sender: String?, body: String, timestamp: Long, forceReparse: Boolean = false) {
         if (sender == null) return
-        
-        // 1. Log Raw SMS
-        val logDao = db.smsLogDao()
-        logDao.insert(SmsLogEntity(sender = sender, message = body, parsedType = AppConstants.SMS_LOG_TYPE_PROCESSING, confidence = 0f, processed = false, timestamp = timestamp))
 
-        // 2. Parse SMS
-        val parsedResult = SmsParser.parse(sender, body, timestamp)
-        if (parsedResult.confidence < 0.7f) {
-            return
+        val normalizedSender = normalizeSender(sender)
+        
+        // 1. Dedup check
+        val bodyHash = body.hashCode()
+        
+        if (!forceReparse && smsLogDao.existsByHash(normalizedSender, timestamp, bodyHash)) return
+        
+        // Check if we've already processed this exact transaction ID before
+        val parsedResult = parseSmsUseCase(normalizedSender, body, timestamp)
+        if (parsedResult.confidence < 0.7f) return
+        
+        // Generate transaction ID
+        val transactionId = if (!parsedResult.reference.isNullOrBlank()) {
+            UUID.nameUUIDFromBytes("${normalizedSender}-${parsedResult.reference}".toByteArray()).toString()
+        } else if (parsedResult.addedAmount != null && parsedResult.addedAmount > 0) {
+            UUID.nameUUIDFromBytes("${normalizedSender}-INCOME-${parsedResult.addedAmount}-${timestamp}".toByteArray()).toString()
+        } else if (parsedResult.deductedAmount != null && parsedResult.deductedAmount > 0) {
+            UUID.nameUUIDFromBytes("${normalizedSender}-EXPENSE-${parsedResult.deductedAmount}-${timestamp}".toByteArray()).toString()
+        } else {
+            val uniqueStr = "$normalizedSender-$timestamp-${body.hashCode()}"
+            UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
+        }
+        
+        // Early duplicate check (skip for forceReparse — allows package refresh)
+        if (!forceReparse && transactionDao.existsById(transactionId)) return
+
+        // Time-window dedup: reject if same (source, type, amount) exists within 60s
+        if (!forceReparse) {
+            val allSources = transactionSourceDao.getAllSources().first()
+            val configuredSource = allSources.find { src ->
+                src.senderId.split(",").map { it.trim() }.any { it.equals(normalizedSender, ignoreCase = true) }
+            }
+            val resolvedSrcForDedup = configuredSource?.abbreviation ?: AppConstants.resolveSource(normalizedSender)
+            val txType = if ((parsedResult.addedAmount ?: 0.0) > 0) "INCOME" else "EXPENSE"
+            val txAmount = parsedResult.addedAmount ?: parsedResult.deductedAmount ?: 0.0
+            if (txAmount > 0 && transactionDao.existsNearDuplicate(resolvedSrcForDedup, txType, txAmount, timestamp, 60_000L)) return
         }
 
-        // 3. Apply Dual Tracking Rules based on Parsed Output
-        val uniqueStr = "$sender-$timestamp-${body.hashCode()}"
-        val transactionId = UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString()
+        // 2. Log Raw SMS
+        val logEntity = SmsLogEntity(
+            sender = normalizedSender, 
+            message = body, 
+            parsedType = AppConstants.SMS_LOG_TYPE_PROCESSING, 
+            confidence = parsedResult.confidence, 
+            processed = true, 
+            timestamp = timestamp, 
+            bodyHash = bodyHash
+        )
+        
+        if (forceReparse) {
+            val existing = smsLogDao.getAllLogs().find { it.sender == normalizedSender && it.timestamp == timestamp && it.bodyHash == bodyHash }
+            if (existing != null) {
+                smsLogDao.insert(logEntity.copy(id = existing.id))
+            } else {
+                smsLogDao.insert(logEntity)
+            }
+        } else {
+            smsLogDao.insert(logEntity)
+        }
+
+        // 3. Save Transaction
+        // Try to resolve the source to a user-configured abbreviation first
+        val allSources = transactionSourceDao.getAllSources().first()
+        val configuredSource = allSources.find { src ->
+            src.senderId.split(",").map { it.trim() }.any { it.equals(normalizedSender, ignoreCase = true) }
+        }
+        val resolvedSrc = configuredSource?.abbreviation ?: AppConstants.resolveSource(normalizedSender)
 
         when (parsedResult.scenario) {
             SmsScenario.SELF_PURCHASE -> {
-                db.transactionDao().insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "EXPENSE",
                     amount = parsedResult.deductedAmount ?: 0.0,
                     category = "PURCHASE",
-                    source = AppConstants.resolveSource(sender),
+                    source = resolvedSrc,
                     timestamp = timestamp,
-                    reference = null
-                ))
-                parsedResult.packages.forEach { pkg ->
-                    db.balancePackageDao().insertOrUpdate(pkg)
-                }
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
+                )
+                transactionDao.insert(entity)
+                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
 
             SmsScenario.EXPENSE -> {
-                db.transactionDao().insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "EXPENSE",
                     amount = parsedResult.deductedAmount ?: 0.0,
                     category = parsedResult.transactionCategory ?: "EXPENSE",
-                    source = AppConstants.resolveSource(sender),
+                    source = resolvedSrc,
                     timestamp = timestamp,
-                    reference = null
-                ))
-                // Also persist any packages found alongside the expense (e.g. airtime balance update)
-                parsedResult.packages.forEach { pkg ->
-                    db.balancePackageDao().insertOrUpdate(pkg)
-                }
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
+                )
+                transactionDao.insert(entity)
+                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
 
             SmsScenario.GIFT_SENT -> {
-                // Airtime/money transfers are expenses
-                db.transactionDao().insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "EXPENSE",
                     amount = parsedResult.deductedAmount ?: 0.0,
                     category = parsedResult.transactionCategory ?: "GIFT",
-                    source = AppConstants.resolveSource(sender),
+                    source = resolvedSrc,
                     timestamp = timestamp,
-                    reference = null
-                ))
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
+                )
+                transactionDao.insert(entity)
             }
 
             SmsScenario.RECHARGE_OR_GIFT_RECEIVED -> {
-                // Ignore raw airtime recharges as financial transactions per user rule.
-                if (!parsedResult.isRecharge) {
-                    parsedResult.packages.forEach { pkg ->
-                        db.balancePackageDao().insertOrUpdate(pkg)
-                    }
+                val src = AppConstants.resolveSource(normalizedSender)
+                if (src != AppConstants.SOURCE_AIRTIME) {
+                    val entity = TransactionEntity(
+                        id = transactionId,
+                        type = "INCOME",
+                        amount = parsedResult.addedAmount ?: 0.0,
+                        category = "RECHARGE",
+                        source = src,
+                        timestamp = timestamp,
+                        reference = parsedResult.reference,
+                        partyName = parsedResult.partyName,
+                        transactionSubType = parsedResult.transactionSubType
+                    )
+                    transactionDao.insert(entity)
                 }
+                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
 
             SmsScenario.INCOME -> {
-                db.transactionDao().insert(TransactionEntity(
+                val entity = TransactionEntity(
                     id = transactionId,
                     type = "INCOME",
                     amount = parsedResult.addedAmount ?: 0.0,
                     category = "CREDIT",
-                    source = AppConstants.resolveSource(sender),
+                    source = AppConstants.resolveSource(normalizedSender),
                     timestamp = timestamp,
-                    reference = null
-                ))
+                    reference = parsedResult.reference,
+                    partyName = parsedResult.partyName,
+                    transactionSubType = parsedResult.transactionSubType
+                )
+                transactionDao.insert(entity)
             }
 
-            SmsScenario.LOAN_TAKEN -> {
-                // Airtime loans are telecom assets, not financial transactions.
-            }
-            
-            SmsScenario.BALANCE_UPDATE -> {
-                parsedResult.packages.forEach { pkg ->
-                    db.balancePackageDao().insertOrUpdate(pkg)
-                }
+            SmsScenario.BALANCE_UPDATE, SmsScenario.BALANCE_QUERY -> {
+                // Multi-segment 994 balance SMS → purge stale SMS-sourced telecom rows first.
+                // Single-segment package SMS (e.g. "received Night Internet 600MB") is additive: no purge.
+                if (parsedResult.isMultiSegmentBalance) balancePackageDao.deleteTelecomPackages()
+                parsedResult.packages.forEach { balancePackageDao.insertOrUpdate(it) }
             }
 
-            SmsScenario.BALANCE_QUERY -> {
-                // Upsert the airtime balance package so the UI always reflects the latest ETB balance.
-                parsedResult.packages.forEach { pkg ->
-                    db.balancePackageDao().insertOrUpdate(pkg)
-                }
-            }
-            
-            SmsScenario.UNKNOWN -> {}
+            else -> { /* Unknown scenario - skip */ }
         }
     }
 }

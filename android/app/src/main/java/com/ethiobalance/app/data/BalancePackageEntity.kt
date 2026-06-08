@@ -7,10 +7,11 @@ import androidx.room.PrimaryKey
 data class BalancePackageEntity(
     @PrimaryKey val id: String,
     val simId: String,
-    val type: String, // DATA_AIRTIME, DATA_NIGHT, VOICE, SMS, BONUS
+    val type: String, // internet, voice, sms, bonus, airtime, bank_balance
+    val subType: String = "", // Night, Free, Bonus, Monthly, Daily, Weekly, Recurring, Normal
     val totalAmount: Double,
     val remainingAmount: Double,
-    val unit: String, // MB, GB, MIN, SMS, BIRR
+    val unit: String, // MB, GB, MIN, SMS, ETB
     val expiryDate: Long,
     val isActive: Boolean,
     val source: String, // SMS, USSD, SYSTEM

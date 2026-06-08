@@ -7,11 +7,11 @@ EthioStat functions strictly as an offline-first analytical tool, enforcing accu
 ## 1. Standard Self-Purchase (Telebirr / Airtime)
 **Trigger**: User buys a 1GB Data package for themselves.
 **Sequence**:
-- SMS 1 (Telebirr 830): *"You paid 19 ETB for 1GB..."*
+- SMS 1 (Telebirr 127): *"You paid 19 ETB for 1GB..."*
 - SMS 2 (Ethio 251994): *"You purchased 1GB..."*
 
 **Dual-Tracking Execution**:
-- **Financial Update**: The 830 message triggers an **EXPENSE** of 19 ETB (category: `PURCHASE`), lowering the dashboard Net Balance.
+- **Financial Update**: The 127 message triggers an **EXPENSE** of 19 ETB (category: `PURCHASE`), lowering the dashboard Net Balance.
 - **Asset Update**: The 251994 message triggers an **ASSET GAIN**, appending a new 1GB `BalancePackageEntity` to the database. The engine explicitly ignores adding a duplicate 19 ETB expense here.
 
 ## 2. Telebirr Transfer (ETB Sent to Another Person)
@@ -120,38 +120,30 @@ EthioStat functions strictly as an offline-first analytical tool, enforcing accu
 - **Financial Update**: No transaction logged (bonuses are not liquid cash).
 - **Asset Update**: `bonus-sim1` `BalancePackageEntity` upserted with the bonus amount in ETB.
 
-## 15. Historical Database Initialization (7-Day Scan)
-**Trigger**: The user installs EthioStat for the first time, grants SMS permission, or adds a new bank source.
-**Sequence**: `useNativeBridge` hook calls `SmsMonitor.scanHistory({ senderId, days: 7 })` for each sender.
+EthioStat functions strictly as an offline-first analytical tool, enforcing accurate dual tracking of physical money vs telecom assets. Business logic is strictly encapsulated in **Domain Layer Use Cases** (e.g., `ParseSmsUseCase`), ensuring a single source of truth for message interpretation.
+
+---
+
+## 15. Historical Database Initialization (90-Day Scan)
+**Trigger**: The user installs EthioStat for the first time, grants SMS permission, or manually initiates a refresh from the Transaction screen.
+**Sequence**: `TransactionViewModel.scanSmsHistory()` triggers `SmsRepository.scanAllTransactionSources(days = 90)`.
 
 **Execution**:
-- **Permission Flow**: `checkPermissions()` → `requestPermissions()` → on grant, `scanHistory()` fires.
-- **System Scan**: `SmsMonitorPlugin.performSmsScan()` queries `content://sms/inbox` with `address LIKE %senderId%` and 7-day date cutoff.
-- **Idempotent Reconciliation**: Each message is fed sequentially into `ReconciliationEngine.processSms()`. Canonical IDs (`airtime-sim1`, `internet-sim1`, etc.) ensure upsert deduplication — processing the same message twice produces identical state.
-- **Senders Scanned**: `ALWAYS_SCAN_SENDERS` (127, 251994, 804, 810, 994, 830) + user-configured bank senders.
-
-## 16. Reset App / Unrecognized Formats (No Transaction Logged)
-**Trigger**: A corrupted USSD result or an unmapped generic SMS arrives from 251994.
-**Sequence**: SMS from 251994: *"Welcome to Ethio telecom! Dial *999#..."*
-
-**Dual-Tracking Execution**:
-- **Confidence Check Fails**: The native `SmsParser` assigns a confidence score below the `0.70` threshold.
-- **Action Omitted**: The `ReconciliationEngine` flags the entry as `UNKNOWN` and aborts Room DB writes. This protects the integrity of the math.
+- **Permission Flow**: `ActivityCompat.requestPermissions()` is handled in `MainActivity`.
+- **System Scan**: `SmsRepository` queries `Telephony.Sms.Inbox.CONTENT_URI` for all whitelisted and user-configured senders.
+- **90-Day Window**: The scan now covers 3 months of history by default to ensure a comprehensive initial financial profile.
+- **Idempotent Reconciliation**: `ReconciliationEngine` (injected via Hilt) processes each message. Hash-based deduplication in `SmsLogDao` prevents double-counting of transactions even if the same message is scanned multiple times.
 
 ---
 
-## Transaction Category Reference
+## 16. Technical Implementation (Clean Architecture)
 
-| Category | Scenario | Direction |
-|----------|----------|-----------|
-| `PURCHASE` | Self-purchase, merchant payment | Expense |
-| `GIFT` | Transfer to another person, gifted package | Expense |
-| `REPAYMENT` | Loan repayment deduction | Expense |
-| `FEE` | Service fee deduction | Expense |
-| `EXPENSE` | Generic bank debit | Expense |
-| `CREDIT` | Bank credit, received funds | Income |
-| `Loan` | Emergency airtime loan | Income |
-| `Income` | Recharge, airtime received | Income |
+EthioStat uses a multi-layered approach to ensure reliability and testability:
+- **Domain Layer**: Contains pure Kotlin Use Cases like `ParseSmsUseCase` and `SyncAirtimeUseCase`. This is where all the "Dual-Tracking" logic lives, independent of the Android framework.
+- **Data Layer**: Room DAOs and Entities (now 100% Kotlin) provide reactive `Flow` streams to the UI.
+- **Presentation Layer**: Hilt-injected ViewModels coordinate state and delegate actions to Use Cases.
+- **Service Layer**: Background services like `SmsForegroundService` leverage the same injected `ReconciliationEngine` to ensure consistent processing of real-time events.
 
 ---
-*For live testing, execute `sh scripts/test-workflow.sh` with an Android device connected, or `npm test` for the web parser test suite.*
+*For live testing, execute `sh scripts/test-workflow.sh` with an Android device connected.*
+

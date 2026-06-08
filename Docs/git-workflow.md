@@ -91,11 +91,10 @@ git push origin main --tags
 
 ## CI Checklist (before every PR merge)
 
-- [ ] `npm run lint` — zero TypeScript errors
-- [ ] `npm test` — all SMS parser unit tests pass
-- [ ] `./scripts/test-workflow.sh` — all 7 ADB assertions pass on a real device
-- [ ] App builds cleanly: `npm run build && npx cap sync`
-- [ ] Manual smoke test: open app, navigate to Transactions — only one Telebirr source shown
+- [ ] `./gradlew testDebugUnitTest` — all JVM unit tests pass
+- [ ] `./scripts/test-workflow.sh` — all ADB integration assertions pass on a real device
+- [ ] `./gradlew assembleDebug` — app builds cleanly with zero errors
+- [ ] Manual smoke test: open app, navigate all tabs — Home, Transactions, Telecom, Settings
 
 ---
 

@@ -3,46 +3,84 @@ package com.ethiobalance.app.services
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Telephony
 import android.util.Log
 import com.ethiobalance.app.AppConstants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class SmsReceiver : BroadcastReceiver() {
-    companion object {
-        private const val TAG = "SmsReceiver"
+    init {
+        Log.d(TAG, "SmsReceiver instantiated")
     }
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
-            val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-            for (message in messages) {
-                val sender = message.displayOriginatingAddress ?: ""
-                val body = message.displayMessageBody
-                val timestamp = message.timestampMillis
+        Log.d(TAG, "onReceive: action=${intent.action}")
+        when (intent.action) {
+            Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
+                val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
+                Log.d(TAG, "SMS_RECEIVED: ${messages.size} message parts")
 
-                Log.d(TAG, "SMS Received from: $sender")
-
-                // Filter: Check both system whitelist and user-defined transaction sources
-                val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
-                val userWhitelist = prefs.getStringSet("sms_whitelist", emptySet()) ?: emptySet()
-                
-                val isWhitelisted = sender.contains("TELEBIRR", ignoreCase = true) ||
-                                  AppConstants.SMS_SENDER_WHITELIST.contains(sender) ||
-                                  userWhitelist.contains(sender)
-
-                if (isWhitelisted) {
-                    Log.d(TAG, "Sender $sender is whitelisted. Starting processing...")
-                    // Start Foreground Service to ensure processing continues if app is in background
-                    val serviceIntent = Intent(context, SmsForegroundService::class.java).apply {
-                        putExtra("sender", sender)
-                        putExtra("body", body)
-                        putExtra("timestamp", timestamp)
+                // Concatenate multi-part SMS segments from the same sender to avoid
+                // processing each segment as a separate transaction.
+                val grouped = mutableMapOf<String, Pair<StringBuilder, Long>>()
+                for (message in messages) {
+                    val sender = message.displayOriginatingAddress ?: ""
+                    val body = message.displayMessageBody ?: ""
+                    val timestamp = message.timestampMillis
+                    val existing = grouped[sender]
+                    if (existing != null) {
+                        existing.first.append(body)
+                    } else {
+                        grouped[sender] = Pair(StringBuilder(body), timestamp)
                     }
-                    context.startForegroundService(serviceIntent)
-                } else {
-                    Log.d(TAG, "Sender $sender is NOT whitelisted. Ignoring message.")
+                }
+
+                val prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                val userWhitelist = prefs.getStringSet(AppConstants.PREF_KEY_SMS_WHITELIST, emptySet()) ?: emptySet()
+
+                for ((sender, pair) in grouped) {
+                    val body = pair.first.toString()
+                    val timestamp = pair.second
+
+                    // A sender is whitelisted ONLY if:
+                    //  (a) it is in the DB-backed user whitelist (which includes all variants for configured sources), OR
+                    //  (b) it is a telecom sender (994, 804, etc.)
+                    // NOTE: The broad resolveSource() gate has been removed per project standards.
+                    // Only configured transaction sources + telecom are accepted.
+                    val upperSender = sender.trim().uppercase()
+                    val isTelecomSender = AppConstants.TELECOM_SENDERS.any {
+                        it.equals(sender, ignoreCase = true) || it == upperSender
+                    }
+                    val isInUserWhitelist = userWhitelist.any { it.equals(sender, ignoreCase = true) }
+                    val isWhitelisted = sender.isNotEmpty() && (isInUserWhitelist || isTelecomSender)
+
+                    Log.d(TAG, "sender=$sender isTelecom=$isTelecomSender inWhitelist=$isInUserWhitelist whitelisted=$isWhitelisted")
+
+                    if (isWhitelisted) {
+                        // Use FGS for all SMS processing
+                        val serviceIntent = Intent(context, SmsForegroundService::class.java).apply {
+                            putExtra("sender", sender)
+                            putExtra("body", body)
+                            putExtra("timestamp", timestamp)
+                        }
+                        Log.d(TAG, "Starting SmsForegroundService for $sender")
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(serviceIntent)
+                        } else {
+                            context.startService(serviceIntent)
+                        }
+                    }
                 }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "SmsReceiver"
     }
 }
