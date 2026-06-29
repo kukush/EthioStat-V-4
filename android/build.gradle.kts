@@ -8,6 +8,7 @@ buildscript {
         classpath("com.google.gms:google-services:4.4.4")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
         classpath("com.google.dagger:hilt-android-gradle-plugin:2.51.1")
+        classpath("io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.6")
     }
 }
 

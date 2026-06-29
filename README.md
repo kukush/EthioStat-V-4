@@ -60,6 +60,25 @@ cd android
 ./gradlew test
 ```
 
+For debug unit tests with JaCoCo coverage:
+
+```bash
+cd android
+./gradlew :app:testDebugUnitTest
+```
+
+The `testDebugUnitTest` task also generates the JaCoCo report. Open the HTML report in a browser:
+
+```bash
+open app/build/reports/jacoco/jacocoDebugUnitTestReport/html/index.html
+```
+
+The XML report for CI or coverage tooling is written to:
+
+```text
+android/app/build/reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml
+```
+
 ### Deploying to Android Device
 
 #### Prerequisites

@@ -1,8 +1,26 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
+    id("jacoco")
+    id("io.gitlab.arturbosch.detekt")
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    ignoreFailures = false
+    toolVersion = "1.23.6"
+    basePath = rootDir.absolutePath
+    config = files("$rootDir/config/detekt/detekt.yml")
+    baseline = file("$rootDir/config/detekt/detekt-baseline.xml")
+}
+
+jacoco {
+    toolVersion = "0.8.13"
 }
 
 android {
@@ -53,6 +71,70 @@ android {
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    extensions.configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
+}
+
+val coverageExclusions = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+    "**/*Test*.*",
+    "**/*\$*",
+    "**/*ComposableSingletons*.*",
+    "**/Hilt_*.*",
+    "**/*_HiltModules*.*",
+    "**/*_Factory.*",
+    "**/*_Impl.*",
+    "**/*_MembersInjector.*",
+    "**/*Module_*Factory.*",
+    "**/*Component*.*",
+    "**/*Dagger*.*",
+    "**/dagger/hilt/**",
+    "**/hilt_aggregated_deps/**"
+)
+
+tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
+    group = "verification"
+    description = "Generates JaCoCo HTML and XML coverage reports for debug unit tests."
+
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/jacocoDebugUnitTestReport/html"))
+        xml.required.set(true)
+        xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml"))
+        csv.required.set(false)
+    }
+
+    sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
+    classDirectories.setFrom(
+        fileTree(layout.buildDirectory.dir("intermediates/classes/debug/transformDebugClassesWithAsm/dirs")) {
+            exclude(coverageExclusions)
+        }
+    )
+    executionData.setFrom(
+        fileTree(layout.buildDirectory) {
+            include(
+                "jacoco/*.exec",
+                "outputs/unit_test_code_coverage/**/*.exec",
+                "outputs/code_coverage/**/*.ec"
+            )
+        }
+    )
+}
+
+afterEvaluate {
+    tasks.named("testDebugUnitTest") {
+        finalizedBy("jacocoDebugUnitTestReport")
     }
 }
 

@@ -19,12 +19,40 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     version = 8,
     exportSchema = false
 )
+/**
+ * Main database for the EthioBalance application.
+ * Provides DAOs for accessing various data entities such as SMS, USSD, Balance Packages, Transactions, and Transaction Sources.
+ */
 abstract class AppDatabase : RoomDatabase() {
+    /**
+     * Returns the Data Access Object (DAO) for SMS operations.
+     * @return The [SmsDao] instance.
+     */
     abstract fun smsDao(): SmsDao
+    /**
+     * Returns the Data Access Object (DAO) for USSD operations.
+     * @return The [UssdDao] instance.
+     */
     abstract fun ussdDao(): UssdDao
+    /**
+     * Returns the Data Access Object (DAO) for Balance Package operations.
+     * @return The [BalancePackageDao] instance.
+     */
     abstract fun balancePackageDao(): BalancePackageDao
+    /**
+     * Returns the Data Access Object (DAO) for Transaction operations.
+     * @return The [TransactionDao] instance.
+     */
     abstract fun transactionDao(): TransactionDao
+    /**
+     * Returns the Data Access Object (DAO) for SMS Log operations.
+     * @return The [SmsLogDao] instance.
+     */
     abstract fun smsLogDao(): SmsLogDao
+    /**
+     * Returns the Data Access Object (DAO) for Transaction Source operations.
+     * @return The [TransactionSourceDao] instance.
+     */
     abstract fun transactionSourceDao(): TransactionSourceDao
 
     companion object {

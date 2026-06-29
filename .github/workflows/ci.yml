@@ -32,6 +32,18 @@ jobs:
       run: |
         cd android
         ./gradlew test
+    - name: Generate JaCoCo report
+      run: |
+        cd android
+        ./gradlew jacocoDebugUnitTestReport
+    - name: Run Detekt
+      run: |
+        cd android
+        ./gradlew detekt
+    - name: Run Android Lint
+      run: |
+        cd android
+        ./gradlew lintDebug
 
     - name: Build Android App
       run: |
