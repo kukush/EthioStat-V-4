@@ -35,8 +35,8 @@ class SmsDaoTest {
     @Test
     @Throws(Exception::class)
     fun insertAndGetAllSms() = runBlocking {
-        val sms1 = SmsEntity(id = 1, sender = "SenderA", message = "Message A", timestamp = 1L, isRead = false, isProcessed = false, isSynced = false)
-        val sms2 = SmsEntity(id = 2, sender = "SenderB", message = "Message B", timestamp = 2L, isRead = false, isProcessed = false, isSynced = false)
+        val sms1 = SmsEntity(id = 1, sender = "SenderA", body = "Message A", timestamp = 1L, simSlot = 0, isSynced = false)
+        val sms2 = SmsEntity(id = 2, sender = "SenderB", body = "Message B", timestamp = 2L, simSlot = 1, isSynced = false)
         smsDao.insert(sms1)
         smsDao.insert(sms2)
 
@@ -48,9 +48,9 @@ class SmsDaoTest {
     @Test
     @Throws(Exception::class)
     fun getUnsyncedSms() = runBlocking {
-        val sms1 = SmsEntity(id = 1, sender = "SenderA", message = "Message A", timestamp = 1L, isRead = false, isProcessed = false, isSynced = false)
-        val sms2 = SmsEntity(id = 2, sender = "SenderB", message = "Message B", timestamp = 2L, isRead = false, isProcessed = false, isSynced = true)
-        val sms3 = SmsEntity(id = 3, sender = "SenderC", message = "Message C", timestamp = 3L, isRead = false, isProcessed = false, isSynced = false)
+        val sms1 = SmsEntity(id = 1, sender = "SenderA", body = "Message A", timestamp = 1L, simSlot = 0, isSynced = false)
+        val sms2 = SmsEntity(id = 2, sender = "SenderB", body = "Message B", timestamp = 2L, simSlot = 1, isSynced = true)
+        val sms3 = SmsEntity(id = 3, sender = "SenderC", body = "Message C", timestamp = 3L, simSlot = 0, isSynced = false)
         smsDao.insert(sms1)
         smsDao.insert(sms2)
         smsDao.insert(sms3)
@@ -63,22 +63,21 @@ class SmsDaoTest {
     @Test
     @Throws(Exception::class)
     fun updateSms() = runBlocking {
-        val sms = SmsEntity(id = 1, sender = "SenderA", message = "Message A", timestamp = 1L, isRead = false, isProcessed = false, isSynced = false)
+        val sms = SmsEntity(id = 1, sender = "SenderA", body = "Message A", timestamp = 1L, simSlot = 0, isSynced = false)
         smsDao.insert(sms)
 
-        val updatedSms = sms.copy(isRead = true, isProcessed = true)
+        val updatedSms = sms.copy(isSynced = true)
         smsDao.update(updatedSms)
 
         val retrievedSms = smsDao.getAllSmsFlow().first().first { it.id == 1 }
-        assert(retrievedSms.isRead)
-        assert(retrievedSms.isProcessed)
+        assert(retrievedSms.isSynced)
     }
 
     @Test
     @Throws(Exception::class)
     fun markAsSynced() = runBlocking {
-        val sms1 = SmsEntity(id = 1, sender = "SenderA", message = "Message A", timestamp = 1L, isRead = false, isProcessed = false, isSynced = false)
-        val sms2 = SmsEntity(id = 2, sender = "SenderB", message = "Message B", timestamp = 2L, isRead = false, isProcessed = false, isSynced = false)
+        val sms1 = SmsEntity(id = 1, sender = "SenderA", body = "Message A", timestamp = 1L, simSlot = 0, isSynced = false)
+        val sms2 = SmsEntity(id = 2, sender = "SenderB", body = "Message B", timestamp = 2L, simSlot = 1, isSynced = false)
         smsDao.insert(sms1)
         smsDao.insert(sms2)
 

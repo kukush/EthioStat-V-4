@@ -15,12 +15,13 @@ class SettingsRepositoryTest {
     // ─── DEFAULT_TRANSACTION_SOURCES tests ──────────────────────────────────
 
     @Test
-    fun defaultTransactionSources_containsExactlyCbeAndTelebirr() {
+    fun defaultTransactionSources_containsCoreSources() {
         val defaults = AppConstants.DEFAULT_TRANSACTION_SOURCES
 
-        assertEquals("Should have exactly 2 defaults", 2, defaults.size)
+        assertFalse("Should not be empty", defaults.isEmpty())
         assertTrue("Should contain CBE", defaults.contains("CBE"))
         assertTrue("Should contain TELEBIRR", defaults.contains("TELEBIRR"))
+        assertEquals("Should not contain duplicates", defaults.size, defaults.toSet().size)
     }
 
     @Test

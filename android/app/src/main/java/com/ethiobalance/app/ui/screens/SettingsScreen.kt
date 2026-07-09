@@ -549,8 +549,8 @@ private fun AddSourceSheet(
         // Add the abbreviation itself
         variants.add(upper)
 
-        // Also check TELECOM_SENDERS for Telebirr
-        if (upper == "TELEBIRR") {
+        // Also check TELECOM_SENDERS for special cases
+        if (upper == "TELEBIRR" || upper == "APOLLO") {
             AppConstants.TELECOM_SENDERS.forEach { senderId ->
                 if (AppConstants.resolveSource(senderId) == upper) {
                     variants.add(senderId)

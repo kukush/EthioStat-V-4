@@ -1,6 +1,7 @@
 package com.ethiobalance.app.repository
 
 import android.content.Context
+import android.util.Log
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Telephony
@@ -40,8 +41,13 @@ class SettingsRepository @Inject constructor(
     }
 
     // Onboarding
-    val hasSeenOnboarding: Flow<Boolean> = dataStore.data.map { it[ONBOARDING_KEY] ?: false }
+    val hasSeenOnboarding: Flow<Boolean> = dataStore.data.map {
+        val value = it[ONBOARDING_KEY] ?: false
+        Log.d("OnboardingDebug", "Repository read onboarding=$value")
+        value
+    }
     suspend fun setOnboardingSeen() {
+        Log.d("OnboardingDebug", "Repository writing onboarding=true")
         dataStore.edit { it[ONBOARDING_KEY] = true }
     }
 
@@ -209,12 +215,8 @@ class SettingsRepository @Inject constructor(
         val currentSources = transactionSourceDao.getAllSources().first()
         if (currentSources.isNotEmpty()) return@withContext
 
-        val hasPermission = hasSmsPermission()
-
-        // Only seed default sources (CBE, Telebirr) after SMS permission is granted.
-        // Without permission nothing is added — seeding is triggered again by
-        // MainActivity once the user grants permission.
-        if (!hasPermission) return@withContext
+        // Seed default sources (CBE, Telebirr) regardless of permission status.
+        // Sources are added during onboarding, SMS scanning happens after permission is granted.
 
         val sourcesToAdd = AppConstants.DEFAULT_TRANSACTION_SOURCES.mapNotNull { abbrev ->
             val bankInfo = AppConstants.KNOWN_BANKS.find { it.abbreviation == abbrev }

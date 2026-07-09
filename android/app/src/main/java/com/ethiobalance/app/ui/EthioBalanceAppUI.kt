@@ -2,6 +2,7 @@ package com.ethiobalance.app.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -45,7 +47,7 @@ fun EthioBalanceAppUI() {
 
     val theme by settingsVM.theme.collectAsStateWithLifecycle()
     val language by settingsVM.language.collectAsStateWithLifecycle()
-    val hasSeenOnboarding by settingsVM.hasSeenOnboarding.collectAsStateWithLifecycle(initialValue = null)
+    val hasSeenOnboarding by settingsVM.hasSeenOnboarding.collectAsStateWithLifecycle()
 
     var currentRoute by remember { mutableStateOf("home") }
 
@@ -76,16 +78,22 @@ fun EthioBalanceAppUI() {
     }
 
     EthioBalanceTheme(themeId = theme) {
-        // Onboarding gate - prevent one-frame flash of main UI
+        // Wait for onboarding state to load from DataStore
         if (hasSeenOnboarding == null) {
-            // Still loading onboarding state; splash screen handles visual
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             return@EthioBalanceTheme
         }
 
-        if (hasSeenOnboarding == false) {
+        // Onboarding gate - show onboarding only for first-time installs and until completion
+        val shouldShowOnboarding = OnboardingConfig.shouldShowOnboarding(hasSeenOnboarding!!)
+        Log.d("OnboardingDebug", "UI gate hasSeenOnboarding=$hasSeenOnboarding shouldShow=$shouldShowOnboarding")
+        if (shouldShowOnboarding) {
             OnboardingScreen(
                 settingsViewModel = settingsVM,
-                onComplete = { settingsVM.markOnboardingSeen() }
+                onComplete = {
+                    Log.d("OnboardingDebug", "UI onboarding complete callback fired")
+                    settingsVM.markOnboardingSeen()
+                }
             )
             return@EthioBalanceTheme
         }

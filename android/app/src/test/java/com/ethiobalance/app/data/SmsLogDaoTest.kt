@@ -9,6 +9,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.Assert.assertEquals
 import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
@@ -34,8 +35,8 @@ class SmsLogDaoTest {
     @Test
     @Throws(Exception::class)
     fun insertAndGetAllLogs() = runBlocking {
-        val log1 = SmsLogEntity(smsId = 1, sender = "SenderA", bodyHash = 123, timestamp = 1L, status = "Processed")
-        val log2 = SmsLogEntity(smsId = 2, sender = "SenderB", bodyHash = 456, timestamp = 2L, status = "Failed")
+        val log1 = SmsLogEntity(id = 1, sender = "SenderA", message = "MsgA", parsedType = "TRANSACTION", confidence = 1.0f, processed = true, bodyHash = 123, timestamp = 1L)
+        val log2 = SmsLogEntity(id = 2, sender = "SenderB", message = "MsgB", parsedType = "UNKNOWN", confidence = 0.5f, processed = false, bodyHash = 456, timestamp = 2L)
         smsLogDao.insert(log1)
         smsLogDao.insert(log2)
 
@@ -48,20 +49,20 @@ class SmsLogDaoTest {
     @Test
     @Throws(Exception::class)
     fun updateLog() = runBlocking {
-        val log = SmsLogEntity(smsId = 1, sender = "SenderA", bodyHash = 123, timestamp = 1L, status = "Processed")
+        val log = SmsLogEntity(id = 1, sender = "SenderA", message = "Msg", parsedType = "TRANSACTION", confidence = 1.0f, processed = true, bodyHash = 123, timestamp = 1L)
         smsLogDao.insert(log)
 
-        val updatedLog = log.copy(status = "Retried")
+        val updatedLog = log.copy(processed = false)
         smsLogDao.update(updatedLog)
 
         val retrievedLog = smsLogDao.getAllLogs().first { it.id == log.id }
-        assert(retrievedLog.status == "Retried")
+        assert(!retrievedLog.processed)
     }
 
     @Test
     @Throws(Exception::class)
     fun existsByHash() = runBlocking {
-        val log = SmsLogEntity(smsId = 1, sender = "SenderA", bodyHash = 123, timestamp = 1L, status = "Processed")
+        val log = SmsLogEntity(id = 1, sender = "SenderA", message = "Msg", parsedType = "TRANSACTION", confidence = 1.0f, processed = true, bodyHash = 123, timestamp = 1L)
         smsLogDao.insert(log)
 
         val exists = smsLogDao.existsByHash("SenderA", 1L, 123)
@@ -74,9 +75,9 @@ class SmsLogDaoTest {
     @Test
     @Throws(Exception::class)
     fun getLastTimestampForSender() = runBlocking {
-        val log1 = SmsLogEntity(smsId = 1, sender = "SenderX", bodyHash = 101, timestamp = 100L, status = "Processed")
-        val log2 = SmsLogEntity(smsId = 2, sender = "SenderY", bodyHash = 202, timestamp = 200L, status = "Processed")
-        val log3 = SmsLogEntity(smsId = 3, sender = "SenderX", bodyHash = 303, timestamp = 300L, status = "Processed")
+        val log1 = SmsLogEntity(id = 1, sender = "SenderX", message = "Msg", parsedType = "TRANSACTION", confidence = 1.0f, processed = true, bodyHash = 101, timestamp = 100L)
+        val log2 = SmsLogEntity(id = 2, sender = "SenderY", message = "Msg", parsedType = "TRANSACTION", confidence = 1.0f, processed = true, bodyHash = 202, timestamp = 200L)
+        val log3 = SmsLogEntity(id = 3, sender = "SenderX", message = "Msg", parsedType = "TRANSACTION", confidence = 1.0f, processed = true, bodyHash = 303, timestamp = 300L)
 
         smsLogDao.insert(log1)
         smsLogDao.insert(log2)
@@ -92,8 +93,8 @@ class SmsLogDaoTest {
     @Test
     @Throws(Exception::class)
     fun deleteAll() = runBlocking {
-        val log1 = SmsLogEntity(smsId = 1, sender = "SenderA", bodyHash = 123, timestamp = 1L, status = "Processed")
-        val log2 = SmsLogEntity(smsId = 2, sender = "SenderB", bodyHash = 456, timestamp = 2L, status = "Failed")
+        val log1 = SmsLogEntity(id = 1, sender = "SenderA", message = "MsgA", parsedType = "TRANSACTION", confidence = 1.0f, processed = true, bodyHash = 123, timestamp = 1L)
+        val log2 = SmsLogEntity(id = 2, sender = "SenderB", message = "MsgB", parsedType = "UNKNOWN", confidence = 0.5f, processed = false, bodyHash = 456, timestamp = 2L)
         smsLogDao.insert(log1)
         smsLogDao.insert(log2)
 

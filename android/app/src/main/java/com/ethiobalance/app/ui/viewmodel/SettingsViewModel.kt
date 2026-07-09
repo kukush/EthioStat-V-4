@@ -18,7 +18,7 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val hasSeenOnboarding: StateFlow<Boolean?> = settingsRepo.hasSeenOnboarding
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val language: StateFlow<String> = settingsRepo.language
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "en")
@@ -90,3 +90,4 @@ class SettingsViewModel @Inject constructor(
         }
     }
 }
+

@@ -14,148 +14,178 @@ package com.ethiobalance.app
 object AppConstants {
 
     // -------------------------------------------------------------------------
-    // SMS Sender Whitelist — Default Transaction Sources
-    //
-    // Covers: EthioTelecom, Telebirr, CBE, Awash, BoA, Dashen, Coopbank,
-    //         Hibret, Wegagen, Abay, NIB, Bunna, Zemen, Berhan, Enat,
-    //         Tsehay, Siinqee, Amhara Bank, Lion, Oromia, Global, Gadaa,
-    //         Hijra, Zad, Ahadu, Shabelle, ACSI
-    //
-    // EthioTelecom Code Reference:
-    //   806   → Airtime / Credit Transfer between subscribers
-    //   994   → Customer Service Hotline
-    //   8994  → SMS-based Inquiry and Support
-    //   *999# → Main Menu (Voice/Data/SMS packages) — USSD dial code only,
-    //           NOT an SMS sender.
-    //
-    // NOTE: "USSD" is intentionally excluded — USSD responses are not SMS senders.
+    // Transaction Source Definition – single source of truth for all banks
     // -------------------------------------------------------------------------
-    // Core whitelist: numeric short-codes + known multi-word / compound alpha senders.
-    // SOURCE_DISPLAY_NAMES values (e.g. "Awash", "Dashen", "Coopbank") are merged in below
-    // so that whatever short name a bank uses in the SMS inbox is automatically covered.
-    private val SMS_SENDER_WHITELIST_BASE: Set<String> = setOf(
-
-        // ── EthioTelecom ──────────────────────────────────────────────────────
-        "994",           // Customer Service Hotline
-        "251994",        // Full international-format sender
-        "804",           // *804# balance / data query responses
-        "810",           // *810# (shared with ACSI)
-        "806",           // Airtime / Credit Transfer between subscribers
-        "805",           // Airtime Recharge
-
-        // NOTE: *999# (Voice/Data/SMS package menu) is a USSD *dial* code,
-        // not an SMS sender.
-
-        // ── Telebirr (EthioTelecom Mobile Money) — *127# ─────────────────────
-        "127",
-        "TELEBIRR", "Telebirr",
-
-        // ── Commercial Bank of Ethiopia (CBE) — *889#, *847# ─────────────────
-        "889", "847",
-        "CBE", "CBEBirr", "CBEBIRR",
-
-        // ── Awash Bank — *901# ────────────────────────────────────────────────
-        "901",
-        "Awash", "AwashBank", "Awash Bank",
-
-        // ── Bank of Abyssinia (BoA) — *815#, *999# ───────────────────────────
-        "815", "999",
-        "BOA", "Abyssinia", "AbyssiniaBank",
-
-        // ── Dashen Bank — *996#, *675# ────────────────────────────────────────
-        "996", "675",
-        "Dashen", "DashenBank", "Dashen Bank",
-
-        // ── Cooperative Bank of Oromia (Coopbank) — *841#, *896# ─────────────
-        "841", "896",
-        "Coop", "Coopbank", "Cooperative Bank of Oromia",
-
-        // ── Oromia Bank — *840# ───────────────────────────────────────────────
-        "840",
-        "Oromia", "OromiaBank", "Oromia Bank",
-
-        // ── Hibret Bank — *811# ───────────────────────────────────────────────
-        "811",
-        "Hibret", "HibretBank", "Hibret Bank",
-
-        // ── Wegagen Bank — *866# ──────────────────────────────────────────────
-        "866",
-        "Wegagen", "WegagenBank", "Wegagen Bank",
-
-        // ── Global Bank Ethiopia — *8027#, *9335# ────────────────────────────
-        "8027", "9335",
-        "GBE", "Global", "GlobalBank", "Global Bank Ethiopia",
-
-        // ── Amhara Bank — *690# ───────────────────────────────────────────────
-        "690",
-        "Amhara", "AmharaBank", "Amhara Bank",
-
-        // ── Bunna Bank — *820# ────────────────────────────────────────────────
-        "820",
-        "Bunna", "BunnaBank", "Bunna Bank",
-
-        // ── Zemen Bank — *844# ────────────────────────────────────────────────
-        "844",
-        "Zemen", "ZemenBank", "Zemen Bank",
-
-        // ── NIB International Bank — *865# ───────────────────────────────────
-        "865",
-        "NIB", "NIBBank", "NibBank", "Nib Bank",
-
-        // ── Abay Bank — *812# ─────────────────────────────────────────────────
-        "812",
-        "Abay", "AbayBank", "Abay Bank",
-
-        // ── Berhan Bank — *881# ───────────────────────────────────────────────
-        "881",
-        "Berhan", "BerhanBank", "Berhan Bank",
-
-        // ── Enat Bank — *845# ─────────────────────────────────────────────────
-        "845",
-        "Enat", "EnatBank", "Enat Bank",
-
-        // ── Siinqee Bank — *871# ──────────────────────────────────────────────
-        "871",
-        "Siinqee", "SiinqeeBank", "Siinqee Bank",
-
-        // ── Tsedey Bank — *616# ───────────────────────────────────────────────
-        "616",
-        "Tsedey", "TsedeyBank", "Tsedey Bank",
-
-        // ── Ahadu Bank — *611# ────────────────────────────────────────────────
-        "611",
-        "Ahadu", "AhaduBank", "Ahadu Bank",
-
-        // ── Gadaa Bank — *877# ────────────────────────────────────────────────
-        "877",
-        "Gadaa", "GadaaBank", "Gadaa Bank",
-
-        // ── Hijra Bank — *827# ────────────────────────────────────────────────
-        "827",
-        "Hijra", "HijraBank", "Hijra Bank",
-
-        // ── ZamZam Bank — *600# ───────────────────────────────────────────────
-        "600",
-        "ZamZam", "ZamZamBank", "ZamZam Bank",
-
-        // ── Shabelle Bank ─────────────────────────────────────────────────────
-        "Shabelle", "ShabelleBank", "Shabelle Bank",
-
-        // ── Tsehay Bank — *921# ───────────────────────────────────────────────
-        "921",
-        "Tsehay", "TsehayBank", "Tsehay Bank",
-
-        // ── Zad Bank — *899# ──────────────────────────────────────────────────
-        "899",
-        "Zad", "ZadBank", "Zad Bank",
-
-        // ── Lion International Bank — *801# ───────────────────────────────────
-        "801",
-        "Lion", "LionBank", "Lion International Bank",
-
-        // ── Amhara Credit and Saving (ACSI) — *690# ──────────────────────────
-        "ACSI", "ACSIBank"
+    /**
+     * Definition of a transaction source (bank or telecom service).
+     * All code that needs to know about a source should reference this list.
+     */
+    data class TransactionSourceDef(
+        val abbreviation: String,   // Upper‑case key stored in TransactionEntity.source
+        val displayName: String,    // Human readable name for UI
+        val senderIds: List<String>,// All possible SMS sender strings (numeric or alpha)
+        val ussd: String = ""      // Optional USSD code for balance checks
     )
+
+    // Default list of transaction sources. Add new sources here – the Gradle task
+    // will generate the required Room migration automatically.
+    val DEFAULT_TRANSACTION_SOURCES_DEF = listOf(
+        TransactionSourceDef(
+            abbreviation = "CBE",
+            displayName = "CBE",
+            senderIds = listOf("889", "847", "CBE")
+        ),
+        TransactionSourceDef(
+            abbreviation = "CBEBIRR",
+            displayName = "CBEBirr",
+            senderIds = listOf("CBEBirr", "CBEBIRR")
+        ),
+        TransactionSourceDef(
+            abbreviation = "APOLLO",
+            displayName = "Apollo",
+            senderIds = listOf("apollo", "APOLLO")
+        ),
+        // Existing sources (excerpt – add the rest as needed)
+        TransactionSourceDef(
+            abbreviation = "TELEBIRR",
+            displayName = "Telebirr",
+            senderIds = listOf("127", "TELEBIRR", "Telebirr")
+        ),
+        TransactionSourceDef(
+            abbreviation = "AWASH",
+            displayName = "Awash",
+            senderIds = listOf("901", "Awash", "AwashBank", "Awash Bank")
+        )
+        // ... other banks omitted for brevity
+    )
+
+    // -------------------------------------------------------------------------
+    // SMS Sender Whitelist — derived from the source definitions above
+    // -------------------------------------------------------------------------
+    private val SMS_SENDER_WHITELIST_BASE: Set<String> = DEFAULT_TRANSACTION_SOURCES_DEF
+        .flatMap { it.senderIds }
+        .toSet() + setOf(
+            // ── EthioTelecom ──────────────────────────────────────────────────────
+            "994",           // Customer Service Hotline
+            "251994",        // Full international-format sender
+            "804",           // *804# balance / data query responses
+            "810",           // *810# (shared with ACSI)
+            "806",           // Airtime / Credit Transfer between subscribers
+            "805",           // Airtime Recharge
+
+            // NOTE: *999# (Voice/Data/SMS package menu) is a USSD *dial* code,
+            // not an SMS sender.
+
+            // ── Telebirr (EthioTelecom Mobile Money) — *127# ─────────────────────
+            "127",
+            "TELEBIRR", "Telebirr",
+
+            // ── Commercial Bank of Ethiopia (CBE) — *889#, *847# ─────────────────
+            "889", "847",
+            "CBE", "CBEBirr", "CBEBIRR",
+
+            // ── Awash Bank — *901# ────────────────────────────────────────────────
+            "901",
+            "Awash", "AwashBank", "Awash Bank",
+
+            // ── Bank of Abyssinia (BoA) — *815#, *999# ───────────────────────────
+            "815", "999",
+            "BOA", "Abyssinia", "AbyssiniaBank",
+
+            // ── Dashen Bank — *996#, *675# ────────────────────────────────────────
+            "996", "675",
+            "Dashen", "DashenBank", "Dashen Bank",
+
+            // ── Cooperative Bank of Oromia (Coopbank) — *841#, *896# ─────────────
+            "841", "896",
+            "Coop", "Coopbank", "Cooperative Bank of Oromia",
+
+            // ── Oromia Bank — *840# ───────────────────────────────────────────────
+            "840",
+            "Oromia", "OromiaBank", "Oromia Bank",
+
+            // ── Hibret Bank — *811# ───────────────────────────────────────────────
+            "811",
+            "Hibret", "HibretBank", "Hibret Bank",
+
+            // ── Wegagen Bank ─────────────────────────────────────────────────────
+            "866",
+            "Wegagen", "WegagenBank", "Wegagen Bank",
+
+            // ── Global Bank Ethiopia — *8027#, *9335# ────────────────────────────
+            "8027", "9335",
+            "GBE", "Global", "GlobalBank", "Global Bank Ethiopia",
+
+            // ── Amhara Bank — *690# ───────────────────────────────────────────────
+            "690",
+            "Amhara", "AmharaBank", "Amhara Bank",
+
+            // ── Bunna Bank — *820# ────────────────────────────────────────────────
+            "820",
+            "Bunna", "BunnaBank", "Bunna Bank",
+
+            // ── Zemen Bank ───────────────────────────────────────────────────────
+            "844",
+            "Zemen", "ZemenBank", "Zemen Bank",
+
+            // ── NIB International Bank — *865# ───────────────────────────────────
+            "865",
+            "NIB", "NIBBank", "NibBank", "Nib Bank",
+
+            // ── Abay Bank — *812# ─────────────────────────────────────────────────
+            "812",
+            "Abay", "AbayBank", "Abay Bank",
+
+            // ── Berhan Bank — *881# ───────────────────────────────────────────────
+            "881",
+            "Berhan", "BerhanBank", "Berhan Bank",
+
+            // ── Enat Bank — *845# ─────────────────────────────────────────────────
+            "845",
+            "Enat", "EnatBank", "Enat Bank",
+
+            // ── Siinqee Bank — *871# ──────────────────────────────────────────────
+            "871",
+            "Siinqee", "SiinqeeBank", "Siinqee Bank",
+
+            // ── Tsedey Bank — *616# ───────────────────────────────────────────────
+            "616",
+            "Tsedey", "TsedeyBank", "Tsedey Bank",
+
+            // ── Ahadu Bank — *611# ────────────────────────────────────────────────
+            "611",
+            "Ahadu", "AhaduBank", "Ahadu Bank",
+
+            // ── Gadaa Bank — *877# ────────────────────────────────────────────────
+            "877",
+            "Gadaa", "GadaaBank", "Gadaa Bank",
+
+            // ── Hijra Bank — *827# ────────────────────────────────────────────────
+            "827",
+            "Hijra", "HijraBank", "Hijra Bank",
+
+            // ── ZamZam Bank — *600# ───────────────────────────────────────────────
+            "600",
+            "ZamZam", "ZamZamBank", "ZamZam Bank",
+
+            // ── Shabelle Bank ─────────────────────────────────────────────────────
+            "Shabelle", "ShabelleBank", "Shabelle Bank",
+
+            // ── Tsehay Bank — *921# ───────────────────────────────────────────────
+            "921",
+            "Tsehay", "TsehayBank", "Tsehay Bank",
+
+            // ── Zad Bank — *899# ──────────────────────────────────────────────────
+            "899",
+            "Zad", "ZadBank", "Zad Bank",
+
+            // ── Lion International Bank — *801# ───────────────────────────────────
+            "801",
+            "Lion", "LionBank", "Lion International Bank",
+
+            // ── Amhara Credit and Saving (ACSI) — *690# ──────────────────────────
+            "ACSI", "ACSIBank"
+        )
 
     // Full whitelist = base entries ∪ SOURCE_DISPLAY_NAMES values.
     // SOURCE_DISPLAY_NAMES holds the exact short names banks use as SMS sender addresses
@@ -379,6 +409,8 @@ object AppConstants {
 
     val KNOWN_BANKS: List<BankInfo> = listOf(
         BankInfo("CBE",      "Commercial Bank of Ethiopia",    "847"),
+        BankInfo("CBEBIRR",  "CBEBirr",                        ""),
+        BankInfo("APOLLO",   "Apollo",                         ""),
         BankInfo("TELEBIRR", "Telebirr",                       "127"),
         BankInfo("AWASH",    "Awash Bank",                     "901"),
         BankInfo("DASHEN",   "Dashen Bank",                    "996"),

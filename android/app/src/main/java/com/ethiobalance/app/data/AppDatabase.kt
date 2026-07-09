@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SmsLogEntity::class,
         TransactionSourceEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 /**

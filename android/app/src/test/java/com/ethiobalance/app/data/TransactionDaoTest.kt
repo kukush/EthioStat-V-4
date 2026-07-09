@@ -35,12 +35,12 @@ class TransactionDaoTest {
     @Test
     @Throws(Exception::class)
     fun insertAndGetAllTransactions() = runBlocking {
-        val transactionSource = TransactionSourceEntity(sourceName = "Bank", accountNumber = "123")
-        db.transactionSourceDao().insert(transactionSource)
-        val source = db.transactionSourceDao().getAllTransactionSources().first().first()
+        val transactionSource = TransactionSourceEntity(abbreviation = "Bank", name = "Bank", ussd = "", senderId = "123", isEnabled = true, lastUpdated = System.currentTimeMillis())
+        db.transactionSourceDao().insertOrUpdate(transactionSource)
+        val source = db.transactionSourceDao().getAllSources().first().first()
 
-        val transaction1 = TransactionEntity(id = "1", amount = 100.0, type = "Credit", date = 1L, description = "Deposit", sourceId = source.id)
-        val transaction2 = TransactionEntity(id = "2", amount = 50.0, type = "Debit", date = 2L, description = "Withdrawal", sourceId = source.id)
+        val transaction1 = TransactionEntity(id = "1", amount = 100.0, type = "Credit", timestamp = 1L, reference = "Deposit", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null)
+        val transaction2 = TransactionEntity(id = "2", amount = 50.0, type = "Debit", timestamp = 2L, reference = "Withdrawal", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null)
         transactionDao.insert(transaction1)
         transactionDao.insert(transaction2)
 
@@ -53,11 +53,11 @@ class TransactionDaoTest {
     @Test
     @Throws(Exception::class)
     fun existsById() = runBlocking {
-        val transactionSource = TransactionSourceEntity(sourceName = "Bank", accountNumber = "123")
-        db.transactionSourceDao().insert(transactionSource)
-        val source = db.transactionSourceDao().getAllTransactionSources().first().first()
+        val transactionSource = TransactionSourceEntity(abbreviation = "Bank", name = "Bank", ussd = "", senderId = "123", isEnabled = true, lastUpdated = System.currentTimeMillis())
+        db.transactionSourceDao().insertOrUpdate(transactionSource)
+        val source = db.transactionSourceDao().getAllSources().first().first()
 
-        val transaction = TransactionEntity(id = "3", amount = 200.0, type = "Credit", date = 3L, description = "Transfer In", sourceId = source.id)
+        val transaction = TransactionEntity(id = "3", amount = 200.0, type = "Credit", timestamp = 3L, reference = "Transfer In", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null)
         transactionDao.insert(transaction)
 
         assert(transactionDao.existsById("3"))
@@ -67,70 +67,70 @@ class TransactionDaoTest {
     @Test
     @Throws(Exception::class)
     fun existsNearDuplicate() = runBlocking {
-        val transactionSource = TransactionSourceEntity(sourceName = "Bank", accountNumber = "123")
-        db.transactionSourceDao().insert(transactionSource)
-        val source = db.transactionSourceDao().getAllTransactionSources().first().first()
+        val transactionSource = TransactionSourceEntity(abbreviation = "Bank", name = "Bank", ussd = "", senderId = "123", isEnabled = true, lastUpdated = System.currentTimeMillis())
+        db.transactionSourceDao().insertOrUpdate(transactionSource)
+        val source = db.transactionSourceDao().getAllSources().first().first()
 
-        val timestamp = System.currentTimeMillis()
-        val transaction = TransactionEntity(id = "4", amount = 123.45, type = "Debit", date = timestamp, description = "Payment", sourceId = source.id)
+        val ts = System.currentTimeMillis()
+        val transaction = TransactionEntity(id = "4", amount = 123.45, type = "Debit", timestamp = ts, reference = "Payment", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null)
         transactionDao.insert(transaction)
 
         // Exact duplicate within window
-        assert(transactionDao.existsNearDuplicate(source.sourceName, "Debit", 123.45, timestamp, 1000L))
+        assert(transactionDao.existsNearDuplicate(source.abbreviation, "Debit", 123.45, ts, 1000L))
         // Same transaction, different timestamp but outside window
-        assert(!transactionDao.existsNearDuplicate(source.sourceName, "Debit", 123.45, timestamp + 2000L, 1000L))
+        assert(!transactionDao.existsNearDuplicate(source.abbreviation, "Debit", 123.45, ts + 2000L, 1000L))
         // Different amount
-        assert(!transactionDao.existsNearDuplicate(source.sourceName, "Debit", 123.46, timestamp, 1000L))
+        assert(!transactionDao.existsNearDuplicate(source.abbreviation, "Debit", 123.46, ts, 1000L))
     }
 
     @Test
     @Throws(Exception::class)
     fun getTotalByType() = runBlocking {
-        val transactionSource = TransactionSourceEntity(sourceName = "Bank", accountNumber = "123")
-        db.transactionSourceDao().insert(transactionSource)
-        val source = db.transactionSourceDao().getAllTransactionSources().first().first()
+        val transactionSource = TransactionSourceEntity(abbreviation = "Bank", name = "Bank", ussd = "", senderId = "123", isEnabled = true, lastUpdated = System.currentTimeMillis())
+        db.transactionSourceDao().insertOrUpdate(transactionSource)
+        val source = db.transactionSourceDao().getAllSources().first().first()
 
-        transactionDao.insert(TransactionEntity(id = "5", amount = 100.0, type = "Credit", date = 5L, description = "", sourceId = source.id))
-        transactionDao.insert(TransactionEntity(id = "6", amount = 200.0, type = "Debit", date = 6L, description = "", sourceId = source.id))
-        transactionDao.insert(TransactionEntity(id = "7", amount = 50.0, type = "Credit", date = 7L, description = "", sourceId = source.id))
+        transactionDao.insert(TransactionEntity(id = "5", amount = 100.0, type = "Credit", timestamp = 5L, reference = "", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null))
+        transactionDao.insert(TransactionEntity(id = "6", amount = 200.0, type = "Debit", timestamp = 6L, reference = "", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null))
+        transactionDao.insert(TransactionEntity(id = "7", amount = 50.0, type = "Credit", timestamp = 7L, reference = "", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null))
 
         val totalCredit = transactionDao.getTotalByType("Credit")
-        assertEquals(150.0, totalCredit, 0.0)
+        org.junit.Assert.assertEquals(150.0, totalCredit ?: 0.0, 0.0)
 
         val totalDebit = transactionDao.getTotalByType("Debit")
-        assertEquals(200.0, totalDebit, 0.0)
+        org.junit.Assert.assertEquals(200.0, totalDebit ?: 0.0, 0.0)
 
         val totalUnknown = transactionDao.getTotalByType("Unknown")
-        assertEquals(null, totalUnknown)
+        org.junit.Assert.assertEquals(null, totalUnknown)
     }
 
     @Test
     @Throws(Exception::class)
     fun countBySource() = runBlocking {
-        val transactionSource1 = TransactionSourceEntity(sourceName = "Bank A", accountNumber = "123")
-        val transactionSource2 = TransactionSourceEntity(sourceName = "Bank B", accountNumber = "456")
-        db.transactionSourceDao().insert(transactionSource1)
-        db.transactionSourceDao().insert(transactionSource2)
-        val sourceA = db.transactionSourceDao().getAllTransactionSources().first().first { it.sourceName == "Bank A" }
-        val sourceB = db.transactionSourceDao().getAllTransactionSources().first().first { it.sourceName == "Bank B" }
+        val transactionSource1 = TransactionSourceEntity(abbreviation = "Bank A", name = "Bank A", ussd = "", senderId = "123", isEnabled = true, lastUpdated = System.currentTimeMillis())
+        val transactionSource2 = TransactionSourceEntity(abbreviation = "Bank B", name = "Bank B", ussd = "", senderId = "456", isEnabled = true, lastUpdated = System.currentTimeMillis())
+        db.transactionSourceDao().insertOrUpdate(transactionSource1)
+        db.transactionSourceDao().insertOrUpdate(transactionSource2)
+        val sourceA = db.transactionSourceDao().getAllSources().first().first { it.abbreviation == "Bank A" }
+        val sourceB = db.transactionSourceDao().getAllSources().first().first { it.abbreviation == "Bank B" }
 
-        transactionDao.insert(TransactionEntity(id = "8", amount = 10.0, type = "Credit", date = 8L, description = "", sourceId = sourceA.id))
-        transactionDao.insert(TransactionEntity(id = "9", amount = 20.0, type = "Debit", date = 9L, description = "", sourceId = sourceA.id))
-        transactionDao.insert(TransactionEntity(id = "10", amount = 30.0, type = "Credit", date = 10L, description = "", sourceId = sourceB.id))
+        transactionDao.insert(TransactionEntity(id = "8", amount = 10.0, type = "Credit", timestamp = 8L, reference = "", source = sourceA.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null))
+        transactionDao.insert(TransactionEntity(id = "9", amount = 20.0, type = "Debit", timestamp = 9L, reference = "", source = sourceA.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null))
+        transactionDao.insert(TransactionEntity(id = "10", amount = 30.0, type = "Credit", timestamp = 10L, reference = "", source = sourceB.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null))
 
-        assertEquals(2, transactionDao.countBySource(sourceA.sourceName))
-        assertEquals(1, transactionDao.countBySource(sourceB.sourceName))
-        assertEquals(0, transactionDao.countBySource("Bank C"))
+        org.junit.Assert.assertEquals(2, transactionDao.countBySource(sourceA.abbreviation))
+        org.junit.Assert.assertEquals(1, transactionDao.countBySource(sourceB.abbreviation))
+        org.junit.Assert.assertEquals(0, transactionDao.countBySource("Bank C"))
     }
 
     @Test
     @Throws(Exception::class)
     fun deleteAll() = runBlocking {
-        val transactionSource = TransactionSourceEntity(sourceName = "Bank", accountNumber = "123")
-        db.transactionSourceDao().insert(transactionSource)
-        val source = db.transactionSourceDao().getAllTransactionSources().first().first()
+        val transactionSource = TransactionSourceEntity(abbreviation = "Bank", name = "Bank", ussd = "", senderId = "123", isEnabled = true, lastUpdated = System.currentTimeMillis())
+        db.transactionSourceDao().insertOrUpdate(transactionSource)
+        val source = db.transactionSourceDao().getAllSources().first().first()
 
-        val transaction1 = TransactionEntity(id = "11", amount = 100.0, type = "Credit", date = 11L, description = "", sourceId = source.id)
+        val transaction1 = TransactionEntity(id = "11", amount = 100.0, type = "Credit", timestamp = 11L, reference = "", source = source.abbreviation, category = "TRANSFER", partyName = null, transactionSubType = null)
         transactionDao.insert(transaction1)
         
         transactionDao.deleteAll()

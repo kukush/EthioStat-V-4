@@ -64,6 +64,11 @@ android {
         jvmTarget = "21"
     }
 
+    // Enable Android resources in local unit tests so AndroidJUnit4 can be used
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     buildFeatures {
         buildConfig = true
         compose = true
@@ -122,13 +127,9 @@ tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
         }
     )
     executionData.setFrom(
-        fileTree(layout.buildDirectory) {
-            include(
-                "jacoco/*.exec",
-                "outputs/unit_test_code_coverage/**/*.exec",
-                "outputs/code_coverage/**/*.ec"
-            )
-        }
+        files(
+            layout.buildDirectory.file("jacoco/testDebugUnitTest.exec")
+        )
     )
 }
 
@@ -189,7 +190,89 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("app.cash.turbine:turbine:1.1.0")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
+    // Add AndroidX JUnit4 runner for unit tests that reference AndroidJUnit4
+    // AndroidX test libraries required for unit tests that use AndroidJUnit4
+    // AndroidX test libraries for unit tests that rely on AndroidJUnit4
+    testImplementation("androidx.test.ext:junit:1.1.5")
+    testImplementation("androidx.test:runner:1.5.2")
+    testImplementation("androidx.test:core:1.5.0")
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    // Also keep them for instrumented (androidTest) usage
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:core:1.5.0")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+}
+
+// -----------------------------------------------------------------------------
+// Transaction Source Migration Generator
+// -----------------------------------------------------------------------------
+val generateSourceMigration by tasks.registering {
+    val inputFile = file("src/main/java/com/ethiobalance/app/AppConstants.kt")
+    val outputDir = layout.buildDirectory.dir("generated/source/migration/com/ethiobalance/app/data")
+    val outputFile = outputDir.map { it.file("GeneratedSourceMigration.kt") }
+
+    inputs.file(inputFile)
+    outputs.dir(outputDir)
+
+    doLast {
+        val content = inputFile.readText()
+        val regex = Regex("""TransactionSourceDef\s*\(\s*abbreviation\s*=\s*"([^"]+)",\s*displayName\s*=\s*"([^"]+)",\s*senderIds\s*=\s*listOf\(([^)]+)\)(?:,\s*ussd\s*=\s*"([^"]*)")?""")
+        
+        val matches = regex.findAll(content)
+        val sourcesCode = matches.map { match ->
+            val abbreviation = match.groupValues[1]
+            val name = match.groupValues[2]
+            val sendersStr = match.groupValues[3].replace("\"", "").replace(" ", "")
+            val ussd = if (match.groupValues.size > 4) match.groupValues[4] else ""
+            
+            """TransactionSourceEntity("$abbreviation", "$name", "$ussd", "$sendersStr", true, System.currentTimeMillis())"""
+        }.joinToString(",\n                ")
+
+        val generatedCode = """
+package com.ethiobalance.app.data
+
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
+object SourceMigration {
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            val sources = listOf(
+                $sourcesCode
+            )
+            sources.forEach { src ->
+                database.execSQL(""${'"'}
+                    INSERT OR IGNORE INTO transaction_sources
+                    (abbreviation, name, ussd, senderId, isEnabled, lastUpdated)
+                    VALUES ('${'$'}{src.abbreviation}', '${'$'}{src.name}', '${'$'}{src.ussd}', '${'$'}{src.senderId}', 1, ${'$'}{src.lastUpdated})
+                ""${'"'}.trimIndent())
+            }
+        }
+    }
+}
+""".trimIndent()
+
+        outputDir.get().asFile.mkdirs()
+        outputFile.get().asFile.writeText(generatedCode)
+    }
+}
+
+android.applicationVariants.all {
+    val variantName = name
+    tasks.named("generate${variantName.replaceFirstChar { it.uppercase() }}Sources") {
+        dependsOn(generateSourceMigration)
+    }
+}
+
+tasks.matching { it.name.startsWith("kapt") }.configureEach {
+    dependsOn(generateSourceMigration)
+}
+
+android.sourceSets {
+    getByName("main") {
+        java.srcDir(layout.buildDirectory.dir("generated/source/migration"))
+    }
 }
