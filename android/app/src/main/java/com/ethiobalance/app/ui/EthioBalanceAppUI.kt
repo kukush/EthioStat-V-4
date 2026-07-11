@@ -97,8 +97,10 @@ fun EthioBalanceAppUI() {
             )
             return@EthioBalanceTheme
         }
+        val snackbarHostState = remember { SnackbarHostState() }
 
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
@@ -182,6 +184,13 @@ fun EthioBalanceAppUI() {
                         val packages by homeVM.packages.collectAsStateWithLifecycle()
                         val transactions by homeVM.transactions.collectAsStateWithLifecycle()
                         val bankBalances by homeVM.bankBalances.collectAsStateWithLifecycle()
+                        val isSyncing by homeVM.isSyncing.collectAsStateWithLifecycle()
+
+                        LaunchedEffect(Unit) {
+                            homeVM.syncEvent.collect { message ->
+                                snackbarHostState.showSnackbar(message)
+                            }
+                        }
 
                         HomeScreen(
                             userName = userName,
@@ -192,6 +201,8 @@ fun EthioBalanceAppUI() {
                             packages = packages,
                             transactions = transactions,
                             bankBalances = bankBalances,
+                            isSyncing = isSyncing,
+                            onSync = { homeVM.triggerManualSync() },
                             onViewAllTransactions = { currentRoute = "transactions" }
                         )
                     }

@@ -1,5 +1,6 @@
 package com.ethiobalance.app.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ethiobalance.app.AppConstants
@@ -8,18 +9,80 @@ import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.domain.usecase.GetFinancialSummaryUseCase
 import com.ethiobalance.app.repository.BalanceRepository
 import com.ethiobalance.app.repository.SettingsRepository
+import com.ethiobalance.app.repository.SmsRepository
 import com.ethiobalance.app.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Home screen.
+ *
+ * Responsibilities:
+ * - Exposes filtered transactions, financial summaries, telecom packages,
+ *   and bank balances for display.
+ * - Provides [triggerManualSync] to scan SMS history for all user-configured
+ *   transaction sources, resuming from the last scanned timestamp to avoid
+ *   re-processing already-seen messages.
+ *
+ * The manual sync is the primary fallback when [SmsReceiver]'s real-time
+ * `goAsync()` processing misses SMS due to power-saving or Doze mode.
+ */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val transactionRepo: TransactionRepository,
     private val balanceRepo: BalanceRepository,
     private val settingsRepo: SettingsRepository,
-    private val getFinancialSummaryUseCase: GetFinancialSummaryUseCase
+    private val smsRepo: SmsRepository,
+    private val getFinancialSummaryUseCase: GetFinancialSummaryUseCase,
 ) : ViewModel() {
+
+    // ─── Manual Sync State ──────────────────────────────────────────────────
+
+    private val _isSyncing = MutableStateFlow(false)
+    /** True while a manual SMS history scan is in progress. */
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    private val _syncEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    /** One-shot event emitted after a sync completes (message for Snackbar). */
+    val syncEvent: SharedFlow<String> = _syncEvent.asSharedFlow()
+
+    /**
+     * Triggers a manual scan of SMS history for all user-configured transaction
+     * sources.  Scans only messages newer than [SettingsRepository.lastScannedTimestamp]
+     * to avoid re-processing.
+     *
+     * Safe to call multiple times — concurrent invocations are guarded by
+     * [_isSyncing].
+     */
+    fun triggerManualSync() {
+        if (_isSyncing.value) return
+        viewModelScope.launch {
+            _isSyncing.value = true
+            try {
+                val lastScanned = settingsRepo.lastScannedTimestamp.first()
+                val now = System.currentTimeMillis()
+
+                val daysSinceLastScan = if (lastScanned == 0L) {
+                    90
+                } else {
+                    ((now - lastScanned) / AppConstants.MILLISECONDS_PER_DAY).toInt() + 1
+                }
+
+                val scanned = smsRepo.scanAllTransactionSources(days = daysSinceLastScan)
+                settingsRepo.setLastScannedTimestamp(now)
+
+                _syncEvent.tryEmit("Synced $scanned transactions")
+                Log.d(TAG, "Manual sync completed: $scanned messages, window=$daysSinceLastScan days")
+            } catch (e: Exception) {
+                _syncEvent.tryEmit("Sync failed: ${e.message}")
+                Log.e(TAG, "Manual sync failed", e)
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
 
     private val allTransactions: StateFlow<List<TransactionEntity>> = transactionRepo.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -27,8 +90,10 @@ class HomeViewModel @Inject constructor(
     val transactions: StateFlow<List<TransactionEntity>> = combine(
         allTransactions, settingsRepo.getTransactionSources()
     ) { txList, configuredSources ->
-        val enabledResolved = configuredSources.map {
-            AppConstants.resolveSource(it.senderId).lowercase()
+        val enabledResolved = configuredSources.flatMap { source ->
+            source.senderId.split(",").map { id ->
+                AppConstants.resolveSource(id.trim()).lowercase()
+            }
         }.toSet()
         txList.filter {
             val resolved = AppConstants.resolveSource(it.source).lowercase()
@@ -68,17 +133,21 @@ class HomeViewModel @Inject constructor(
     val totalExpense: StateFlow<Double> = financialSummary.map { it.totalExpense }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    // Bank/wallet balances keyed by resolved source name (e.g. "TeleBirr" → 7.96)
-    // Only shows balances for sources configured in Settings
     val bankBalances: StateFlow<Map<String, Double>> = combine(
         balanceRepo.getAllPackages(),
         settingsRepo.getTransactionSources()
     ) { packages, configuredSources ->
-        val enabledResolved = configuredSources.map {
-            AppConstants.resolveSource(it.senderId).lowercase()
+        val enabledResolved = configuredSources.flatMap { source ->
+            source.senderId.split(",").map { id ->
+                AppConstants.resolveSource(id.trim()).lowercase()
+            }
         }.toSet()
         packages.filter { it.type.equals("bank_balance", ignoreCase = true) }
             .filter { enabledResolved.contains(it.simId.lowercase()) }
             .associate { it.simId to it.remainingAmount }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    companion object {
+        private const val TAG = "HomeViewModel"
+    }
 }

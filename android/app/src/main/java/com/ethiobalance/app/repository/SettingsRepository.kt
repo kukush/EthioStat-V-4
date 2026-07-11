@@ -38,6 +38,7 @@ class SettingsRepository @Inject constructor(
         val USER_PHONE_KEY = stringPreferencesKey("user_phone")
         val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
         val ONBOARDING_KEY = booleanPreferencesKey("onboarding_seen")
+        val LAST_SCANNED_TIMESTAMP_KEY = longPreferencesKey("last_scanned_timestamp")
     }
 
     // Onboarding
@@ -74,6 +75,13 @@ class SettingsRepository @Inject constructor(
             it[USER_PHONE_KEY] = phone
             it[USER_AVATAR_KEY] = avatar
         }
+    }
+
+    // SMS Scanning
+    val lastScannedTimestamp: Flow<Long> = dataStore.data.map { it[LAST_SCANNED_TIMESTAMP_KEY] ?: 0L }
+    
+    suspend fun setLastScannedTimestamp(timestamp: Long) {
+        dataStore.edit { it[LAST_SCANNED_TIMESTAMP_KEY] = timestamp }
     }
 
     // Transaction Sources
