@@ -89,8 +89,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun seedAndScan(smsGranted: Boolean) {
-        settingsRepo.seedDefaultSourcesIfEmpty()
         if (!smsGranted) return
+        settingsRepo.seedDefaultSourcesIfEmpty()
         smsRepo.refreshTelecomSmart()
         smsRepo.scanAllTransactionSources(days = 90)
         settingsRepo.pruneEmptyDefaultSources()

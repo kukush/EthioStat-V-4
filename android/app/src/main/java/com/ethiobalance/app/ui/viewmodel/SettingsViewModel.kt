@@ -81,8 +81,8 @@ class SettingsViewModel @Inject constructor(
 
     fun onPermissionGranted() {
         viewModelScope.launch {
-            settingsRepo.seedDefaultSourcesIfEmpty()
             if (settingsRepo.hasSmsPermission()) {
+                settingsRepo.seedDefaultSourcesIfEmpty()
                 transactionRepo.smsRepo.refreshTelecomSmart()
                 transactionRepo.smsRepo.scanAllTransactionSources(days = 90)
                 settingsRepo.pruneEmptyDefaultSources()
@@ -90,4 +90,3 @@ class SettingsViewModel @Inject constructor(
         }
     }
 }
-

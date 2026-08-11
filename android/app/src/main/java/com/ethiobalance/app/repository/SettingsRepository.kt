@@ -215,7 +215,7 @@ class SettingsRepository @Inject constructor(
      * Only runs if transaction_sources table is empty.
      *
      * Behavior:
-     * - If SMS permission is granted: seed CBE and Telebirr as defaults unconditionally.
+     * - If SMS permission is granted: seed AppConstants.DEFAULT_TRANSACTION_SOURCES.
      * - If SMS permission NOT granted: no-op. Called again by MainActivity after the user
      *   grants permission, at which point sources are added and the 90-day scan runs.
      */
@@ -223,8 +223,7 @@ class SettingsRepository @Inject constructor(
         val currentSources = transactionSourceDao.getAllSources().first()
         if (currentSources.isNotEmpty()) return@withContext
 
-        // Seed default sources (CBE, Telebirr) regardless of permission status.
-        // Sources are added during onboarding, SMS scanning happens after permission is granted.
+        if (!hasSmsPermission()) return@withContext
 
         val sourcesToAdd = AppConstants.DEFAULT_TRANSACTION_SOURCES.mapNotNull { abbrev ->
             val bankInfo = AppConstants.KNOWN_BANKS.find { it.abbreviation == abbrev }
