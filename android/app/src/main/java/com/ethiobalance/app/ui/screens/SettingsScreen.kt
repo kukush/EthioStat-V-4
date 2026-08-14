@@ -54,7 +54,6 @@ fun SettingsScreen(
 ) {
     var showEditProfile by remember { mutableStateOf(false) }
     var showAddSource by remember { mutableStateOf(false) }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(
         modifier = Modifier
@@ -113,7 +112,7 @@ fun SettingsScreen(
             )
             themes.chunked(2).forEach { chunk ->
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    chunk.forEach { (meta, _bgColor) ->
+                    chunk.forEach { (meta, _) ->
                         val (id, label, icon) = meta
                         val isActive = theme == id
                         Surface(

@@ -146,13 +146,13 @@ fun SummaryCard(
                     // For Home view, show history trends simplified
                     Column(modifier = Modifier.weight(0.5f), horizontalAlignment = Alignment.End) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(12.dp))
+                            Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
                             Text(if(showAmounts) "+${fmt.format(totalIncome)}" else "••••", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Emerald600)
                         }
                         Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingDown, null, tint = Rose600, modifier = Modifier.size(12.dp))
+                            Icon(Icons.AutoMirrored.Filled.TrendingDown, null, tint = Rose600, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
                             Text(if(showAmounts) "-${fmt.format(totalExpense)}" else "••••", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Rose600)
                         }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -948,13 +950,13 @@ private fun TransactionsIllustration() {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(10.dp))
+                            Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(10.dp))
                             Spacer(Modifier.width(3.dp))
                             Text("+87,500.00", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Emerald600)
                         }
                         Spacer(Modifier.height(3.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingDown, null, tint = Rose500, modifier = Modifier.size(10.dp))
+                            Icon(Icons.AutoMirrored.Filled.TrendingDown, null, tint = Rose500, modifier = Modifier.size(10.dp))
                             Spacer(Modifier.width(3.dp))
                             Text("-12,950.00", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Rose500)
                         }

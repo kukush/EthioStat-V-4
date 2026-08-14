@@ -143,8 +143,9 @@ class HomeViewModel @Inject constructor(
             }
         }.toSet()
         packages.filter { it.type.equals("bank_balance", ignoreCase = true) }
-            .filter { enabledResolved.contains(it.simId.lowercase()) }
-            .associate { it.simId to it.remainingAmount }
+            .filter { enabledResolved.contains(AppConstants.resolveSource(it.simId).lowercase()) }
+            .groupBy { AppConstants.resolveSource(it.simId).uppercase() }
+            .mapValues { entry -> entry.value.sumOf { it.remainingAmount } }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     companion object {

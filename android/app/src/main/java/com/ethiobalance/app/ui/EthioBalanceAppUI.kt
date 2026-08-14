@@ -194,7 +194,6 @@ fun EthioBalanceAppUI() {
 
                         HomeScreen(
                             userName = userName,
-                            userPhone = userPhone,
                             language = language,
                             totalIncome = totalIncome,
                             totalExpense = totalExpense,
@@ -227,7 +226,6 @@ fun EthioBalanceAppUI() {
                     }
 
                     "transactions" -> {
-                        val context = LocalContext.current
                         val transactions by transactionVM.filteredTransactions.collectAsStateWithLifecycle()
                         val totalIncome by transactionVM.totalIncome.collectAsStateWithLifecycle()
                         val totalExpense by transactionVM.totalExpense.collectAsStateWithLifecycle()

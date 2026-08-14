@@ -46,11 +46,18 @@ This project employs a fully modernized **Kotlin DSL (`.gradle.kts`)** build sys
 - Android SDK (API 24+)
 - Kotlin 1.9.24
 
-### Building the App
+### Building the APK
 
 ```bash
+# Build Debug APK
 cd android
 ./gradlew assembleDebug
+
+# Output APK Location:
+# android/app/build/outputs/apk/debug/app-debug.apk
+
+# Build Release APK
+./gradlew assembleRelease
 ```
 
 ### Running Tests

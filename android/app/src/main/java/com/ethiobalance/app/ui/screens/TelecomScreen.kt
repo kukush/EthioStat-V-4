@@ -40,10 +40,6 @@ fun TelecomScreen(
     onRecharge: (String) -> Unit,
     onTransfer: (String, String) -> Unit
 ) {
-    val _fmt = NumberFormat.getNumberInstance(Locale.US).apply {
-        minimumFractionDigits = 2; maximumFractionDigits = 2
-    } // Reserved for future number formatting
-
     var showRechargeSheet by remember { mutableStateOf(false) }
     var showTransferSheet by remember { mutableStateOf(false) }
 

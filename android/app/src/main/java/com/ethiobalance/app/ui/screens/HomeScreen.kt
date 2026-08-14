@@ -42,7 +42,6 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     userName: String,
-    userPhone: String,
     language: String,
     totalIncome: Double,
     totalExpense: Double,
