@@ -413,14 +413,15 @@ private fun EditProfileSheet(
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = phone,
-                onValueChange = {
-                    if (it.length <= PhoneConstants.MAX_LOCAL_LENGTH) {
-                        phone = it
+                onValueChange = { input ->
+                    val filtered = input.filter { it.isDigit() }
+                    if (filtered.length <= PhoneConstants.MAX_LOCAL_LENGTH) {
+                        phone = filtered
                         // Validate phone number
                         phoneError = when {
-                            it.startsWith("0") -> Translations.t(language, "phoneErrorPrefix")
-                            it.isNotEmpty() && !it.first().let { c -> c == '7' || c == '9' } -> Translations.t(language, "phoneValidationError")
-                            it.length == PhoneConstants.MAX_LOCAL_LENGTH && !PhoneConstants.isValidEthiopianPhone(it) -> Translations.t(language, "phoneValidationError")
+                            filtered.startsWith("0") -> Translations.t(language, "phoneErrorPrefix")
+                            filtered.isNotEmpty() && !filtered.first().let { c -> c == '7' || c == '9' } -> Translations.t(language, "phoneValidationError")
+                            filtered.length == PhoneConstants.MAX_LOCAL_LENGTH && !PhoneConstants.isValidEthiopianPhone(filtered) -> Translations.t(language, "phoneValidationError")
                             else -> ""
                         }
                     }

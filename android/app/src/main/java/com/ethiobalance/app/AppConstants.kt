@@ -49,7 +49,7 @@ object AppConstants {
         TransactionSourceDef(
             abbreviation = "TELEBIRR",
             displayName = "Telebirr",
-            senderIds = listOf("127", "TELEBIRR", "Telebirr")
+            senderIds = listOf("127")
         ),
         TransactionSourceDef(
             abbreviation = "AWASH",
@@ -78,7 +78,6 @@ object AppConstants {
 
             // ── Telebirr (EthioTelecom Mobile Money) — *127# ─────────────────────
             "127",
-            "TELEBIRR", "Telebirr",
 
             // ── Commercial Bank of Ethiopia (CBE) — *889#, *847# ─────────────────
             "889", "847",
@@ -217,10 +216,16 @@ object AppConstants {
         val upper = sender.trim().uppercase()
         
         // Telebirr
-        if (upper.contains("TELEBIRR") || TELEBIRR_SENDERS.contains(upper) || TELEBIRR_SENDERS.contains(sender.trim())) return SOURCE_TELEBIRR
+        if (TELEBIRR_SENDERS.contains(upper) || TELEBIRR_SENDERS.contains(sender.trim())) return SOURCE_TELEBIRR
+        
+        // CBEBirr (MUST be checked before CBE to prevent overlap)
+        if (upper.contains("CBEBIRR")) return "CBEBIRR"
         
         // Commercial Bank of Ethiopia (CBE) — 889, 847
-        if (upper in setOf("889", "847") || upper.contains("CBE") || upper.contains("CBEBIRR")) return "CBE"
+        if (upper in setOf("889", "847") || upper.contains("CBE")) return "CBE"
+        
+        // Apollo
+        if (upper.contains("APOLLO")) return "APOLLO"
         
         // Awash Bank — 901
         if (upper == "901" || upper.contains("AWASH")) return "AWASH"
