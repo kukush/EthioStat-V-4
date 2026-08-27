@@ -16,15 +16,43 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SmsLogEntity::class,
         TransactionSourceEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
+/**
+ * Main database for the EthioBalance application.
+ * Provides DAOs for accessing various data entities such as SMS, USSD, Balance Packages, Transactions, and Transaction Sources.
+ */
 abstract class AppDatabase : RoomDatabase() {
+    /**
+     * Returns the Data Access Object (DAO) for SMS operations.
+     * @return The [SmsDao] instance.
+     */
     abstract fun smsDao(): SmsDao
+    /**
+     * Returns the Data Access Object (DAO) for USSD operations.
+     * @return The [UssdDao] instance.
+     */
     abstract fun ussdDao(): UssdDao
+    /**
+     * Returns the Data Access Object (DAO) for Balance Package operations.
+     * @return The [BalancePackageDao] instance.
+     */
     abstract fun balancePackageDao(): BalancePackageDao
+    /**
+     * Returns the Data Access Object (DAO) for Transaction operations.
+     * @return The [TransactionDao] instance.
+     */
     abstract fun transactionDao(): TransactionDao
+    /**
+     * Returns the Data Access Object (DAO) for SMS Log operations.
+     * @return The [SmsLogDao] instance.
+     */
     abstract fun smsLogDao(): SmsLogDao
+    /**
+     * Returns the Data Access Object (DAO) for Transaction Source operations.
+     * @return The [TransactionSourceDao] instance.
+     */
     abstract fun transactionSourceDao(): TransactionSourceDao
 
     companion object {
@@ -34,9 +62,9 @@ abstract class AppDatabase : RoomDatabase() {
          * Only applies if the table contains exactly those 4 banks and nothing else.
          */
         val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // Check current sources
-                val cursor = database.query("SELECT abbreviation FROM transaction_sources")
+                val cursor = db.query("SELECT abbreviation FROM transaction_sources")
                 val currentSources = mutableSetOf<String>()
                 while (cursor.moveToNext()) {
                     currentSources.add(cursor.getString(0))
@@ -49,10 +77,10 @@ abstract class AppDatabase : RoomDatabase() {
                 // Only migrate if user has exactly the old default set (hasn't customized)
                 if (currentSources == oldDefaultSet) {
                     // Delete old defaults except CBE (which we'll keep and update)
-                    database.execSQL("DELETE FROM transaction_sources WHERE abbreviation IN ('AWASH', 'DASHEN', 'BOA')")
+                    db.execSQL("DELETE FROM transaction_sources WHERE abbreviation IN ('AWASH', 'DASHEN', 'BOA')")
 
                     // Update CBE with all sender variants
-                    database.execSQL("""
+                    db.execSQL("""
                         UPDATE transaction_sources
                         SET senderId = '889,847,CBE,CBEBirr,CBEBIRR',
                             name = 'Commercial Bank of Ethiopia',
@@ -61,7 +89,7 @@ abstract class AppDatabase : RoomDatabase() {
                     """.trimIndent())
 
                     // Insert Telebirr with all sender variants
-                    database.execSQL("""
+                    db.execSQL("""
                         INSERT INTO transaction_sources (abbreviation, name, ussd, senderId, isEnabled, lastUpdated)
                         VALUES ('TELEBIRR', 'Telebirr', '', '127,TELEBIRR,Telebirr', 1, ${System.currentTimeMillis()})
                     """.trimIndent())

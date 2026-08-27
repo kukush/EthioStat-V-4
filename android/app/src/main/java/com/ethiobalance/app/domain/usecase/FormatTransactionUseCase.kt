@@ -27,7 +27,6 @@ class FormatTransactionUseCase @Inject constructor() {
         }
 
         val now = System.currentTimeMillis()
-        val cal = Calendar.getInstance()
         val startOfToday = Calendar.getInstance().apply {
             timeInMillis = now
             set(Calendar.HOUR_OF_DAY, 0)

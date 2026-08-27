@@ -48,10 +48,6 @@ class ParseSmsUseCase @Inject constructor() {
         var airtimeBalance: Double? = null
         var partyName: String? = null
         
-        // Generate a deterministic base ID
-        val uniqueStr = "$sender-$timestamp-${body.hashCode()}"
-        val _baseId = UUID.nameUUIDFromBytes(uniqueStr.toByteArray()).toString() // Unused - for future deterministic ID generation
-
         // 1. Multi-segment Package Detection (Status SMS)
         val isMultiSegment = Regex(";\\s+from ", RegexOption.IGNORE_CASE).containsMatchIn(body) &&
                 body.contains("expiry date on", ignoreCase = true)
@@ -441,7 +437,7 @@ class ParseSmsUseCase @Inject constructor() {
 
             // Check for balance (wallet, bank, or airtime depending on sender)
             val balanceMatch = Regex(
-                """(?:your\s+(?:telebirr\s+)?(?:account\s+)?(?:new\s+)?balance\s+(?:after\s+\S+\s+)?(?:is|:)|(?:new\s+)?balance[:\s]+|ቀሪ\s*(?:ሒሳ\S*|ብዛ)?|current\s+balance\s+is)[\s:]*(?:ETB\s*)?([\d,]+\.?\d*)\s*(?:ETB|ብር)?""",
+                """(?:your\s+(?:telebirr\s+)?(?:account\s+)?(?:new\s+)?balance\s+(?:after\s+\S+\s+)?(?:now\s+)?(?:is|:)|(?:new\s+)?balance[:\s]+|ቀሪ\s*(?:ሒሳ\S*|ብዛ)?|current\s+balance\s+is)[\s:]*(?:ETB\s*)?([\d,]+\.?\d*)\s*(?:ETB|ብር)?""",
                 RegexOption.IGNORE_CASE
             ).find(body)
             

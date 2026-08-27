@@ -453,35 +453,37 @@ object Translations {
             return java.text.SimpleDateFormat(pattern, java.util.Locale.US)
                 .format(java.util.Date(timestamp))
         }
-        return try {
-            val ethCal = android.icu.util.EthiopicCalendar()
-            ethCal.timeInMillis = timestamp
-            val ethMonth = ethCal.get(android.icu.util.Calendar.MONTH) // 0-based
-            val ethDay = ethCal.get(android.icu.util.Calendar.DAY_OF_MONTH)
-            val ethYear = ethCal.get(android.icu.util.Calendar.YEAR)
-            val ethHour = ethCal.get(android.icu.util.Calendar.HOUR_OF_DAY)
-            val ethMin = ethCal.get(android.icu.util.Calendar.MINUTE)
-            val monthNames = if (normalizedLang == "am") ethMonthsAm else ethMonthsOm
-            val monthName = if (ethMonth in monthNames.indices) monthNames[ethMonth] else "?"
-            // Build output by replacing pattern tokens with Ethiopian calendar values
-            // Use placeholders to avoid double-replacement (e.g. "d" matching inside "dd" result)
-            pattern
-                .replace("yyyy", "\u0000Y")
-                .replace("MMM", "\u0000M")
-                .replace("dd", "\u0000D")
-                .replace("d", "\u0000d")
-                .replace("HH", "\u0000H")
-                .replace("mm", "\u0000m")
-                .replace("\u0000Y", ethYear.toString())
-                .replace("\u0000M", monthName)
-                .replace("\u0000D", ethDay.toString().padStart(2, '0'))
-                .replace("\u0000d", ethDay.toString())
-                .replace("\u0000H", ethHour.toString().padStart(2, '0'))
-                .replace("\u0000m", ethMin.toString().padStart(2, '0'))
-        } catch (_: Exception) {
-            // Ultimate fallback: Gregorian with Locale.US
-            java.text.SimpleDateFormat(pattern, java.util.Locale.US)
-                .format(java.util.Date(timestamp))
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            try {
+                val ethCal = android.icu.util.EthiopicCalendar()
+                ethCal.timeInMillis = timestamp
+                val ethMonth = ethCal.get(android.icu.util.Calendar.MONTH) // 0-based
+                val ethDay = ethCal.get(android.icu.util.Calendar.DAY_OF_MONTH)
+                val ethYear = ethCal.get(android.icu.util.Calendar.YEAR)
+                val ethHour = ethCal.get(android.icu.util.Calendar.HOUR_OF_DAY)
+                val ethMin = ethCal.get(android.icu.util.Calendar.MINUTE)
+                val monthNames = if (normalizedLang == "am") ethMonthsAm else ethMonthsOm
+                val monthName = if (ethMonth in monthNames.indices) monthNames[ethMonth] else "?"
+                // Build output by replacing pattern tokens with Ethiopian calendar values
+                // Use placeholders to avoid double-replacement (e.g. "d" matching inside "dd" result)
+                return pattern
+                    .replace("yyyy", "\u0000Y")
+                    .replace("MMM", "\u0000M")
+                    .replace("dd", "\u0000D")
+                    .replace("d", "\u0000d")
+                    .replace("HH", "\u0000H")
+                    .replace("mm", "\u0000m")
+                    .replace("\u0000Y", ethYear.toString())
+                    .replace("\u0000M", monthName)
+                    .replace("\u0000D", ethDay.toString().padStart(2, '0'))
+                    .replace("\u0000d", ethDay.toString())
+                    .replace("\u0000H", ethHour.toString().padStart(2, '0'))
+                    .replace("\u0000m", ethMin.toString().padStart(2, '0'))
+            } catch (_: Exception) {
+                // Fallback to Gregorian with Locale.US
+            }
         }
+        return java.text.SimpleDateFormat(pattern, java.util.Locale.US)
+            .format(java.util.Date(timestamp))
     }
 }

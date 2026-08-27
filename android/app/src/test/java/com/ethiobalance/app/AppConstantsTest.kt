@@ -40,7 +40,7 @@ class AppConstantsTest {
         assertEquals("CBE", AppConstants.resolveSource("CBE"))
 
     @Test fun resolveSource_alphaCBEBirr() =
-        assertEquals("CBE", AppConstants.resolveSource("CBEBirr"))
+        assertEquals("CBEBIRR", AppConstants.resolveSource("CBEBirr"))
 
     @Test fun resolveSource_numericDashen() =
         assertEquals("DASHEN", AppConstants.resolveSource("996"))
@@ -243,5 +243,23 @@ class AppConstantsTest {
                 )
             }
         }
+    }
+
+    // ─── DEFAULT_TRANSACTION_SOURCES_DEF: Verification ─────────
+
+    @Test fun defaultTransactionSourcesDef_isCorrect() {
+        val defs = AppConstants.DEFAULT_TRANSACTION_SOURCES_DEF
+        
+        // Assert CBE exists and has expected data
+        val cbeDef = defs.find { it.abbreviation == "CBE" }
+        assertNotNull("CBE definition must exist", cbeDef)
+        assertEquals("CBE", cbeDef?.displayName)
+        assertTrue(cbeDef!!.senderIds.containsAll(listOf("889", "847", "CBE")))
+        
+        // Assert TELEBIRR exists and has expected data
+        val telebirrDef = defs.find { it.abbreviation == "TELEBIRR" }
+        assertNotNull("TELEBIRR definition must exist", telebirrDef)
+        assertEquals("Telebirr", telebirrDef?.displayName)
+        assertTrue(telebirrDef!!.senderIds.containsAll(listOf("127")))
     }
 }

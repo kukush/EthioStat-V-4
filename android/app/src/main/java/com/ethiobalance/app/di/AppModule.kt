@@ -22,7 +22,7 @@ object AppModule {
             AppDatabase::class.java,
             "ethio_balance_db"
         )
-        .addMigrations(AppDatabase.MIGRATION_6_7)
+        .addMigrations(AppDatabase.MIGRATION_6_7, SourceMigration.MIGRATION_8_9)
         .fallbackToDestructiveMigration()
         .build()
     }

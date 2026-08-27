@@ -54,7 +54,6 @@ fun SettingsScreen(
 ) {
     var showEditProfile by remember { mutableStateOf(false) }
     var showAddSource by remember { mutableStateOf(false) }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(
         modifier = Modifier
@@ -113,7 +112,7 @@ fun SettingsScreen(
             )
             themes.chunked(2).forEach { chunk ->
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    chunk.forEach { (meta, _bgColor) ->
+                    chunk.forEach { (meta, _) ->
                         val (id, label, icon) = meta
                         val isActive = theme == id
                         Surface(
@@ -413,14 +412,15 @@ private fun EditProfileSheet(
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = phone,
-                onValueChange = {
-                    if (it.length <= PhoneConstants.MAX_LOCAL_LENGTH) {
-                        phone = it
+                onValueChange = { input ->
+                    val filtered = input.filter { it.isDigit() }
+                    if (filtered.length <= PhoneConstants.MAX_LOCAL_LENGTH) {
+                        phone = filtered
                         // Validate phone number
                         phoneError = when {
-                            it.startsWith("0") -> Translations.t(language, "phoneErrorPrefix")
-                            it.isNotEmpty() && !it.first().let { c -> c == '7' || c == '9' } -> Translations.t(language, "phoneValidationError")
-                            it.length == PhoneConstants.MAX_LOCAL_LENGTH && !PhoneConstants.isValidEthiopianPhone(it) -> Translations.t(language, "phoneValidationError")
+                            filtered.startsWith("0") -> Translations.t(language, "phoneErrorPrefix")
+                            filtered.isNotEmpty() && !filtered.first().let { c -> c == '7' || c == '9' } -> Translations.t(language, "phoneValidationError")
+                            filtered.length == PhoneConstants.MAX_LOCAL_LENGTH && !PhoneConstants.isValidEthiopianPhone(filtered) -> Translations.t(language, "phoneValidationError")
                             else -> ""
                         }
                     }
@@ -549,8 +549,8 @@ private fun AddSourceSheet(
         // Add the abbreviation itself
         variants.add(upper)
 
-        // Also check TELECOM_SENDERS for Telebirr
-        if (upper == "TELEBIRR") {
+        // Also check TELECOM_SENDERS for special cases
+        if (upper == "TELEBIRR" || upper == "APOLLO") {
             AppConstants.TELECOM_SENDERS.forEach { senderId ->
                 if (AppConstants.resolveSource(senderId) == upper) {
                     variants.add(senderId)

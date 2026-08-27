@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -117,9 +120,9 @@ fun TransactionItem(
         "TELECOM", "RECHARGE", "PHONE", "AIRTIME" -> Pair(Icons.Default.Smartphone, Green500)
         "INTERNET" -> Pair(Icons.Default.Wifi, Blue500)
         "VOICE" -> Pair(Icons.Default.Phone, Green500)
-        "SMS" -> Pair(Icons.Default.Message, Purple500)
+        "SMS" -> Pair(Icons.AutoMirrored.Filled.Message, Purple500)
         "PURCHASE" -> Pair(Icons.Default.ShoppingCart, Orange500)
-        else -> if (isIncome) Pair(Icons.Default.TrendingUp, Emerald500) else Pair(Icons.Default.TrendingDown, Rose500)
+        else -> if (isIncome) Pair(Icons.AutoMirrored.Filled.TrendingUp, Emerald500) else Pair(Icons.AutoMirrored.Filled.TrendingDown, Rose500)
     }
 
     Box(

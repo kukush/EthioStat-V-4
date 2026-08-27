@@ -1,6 +1,7 @@
 package com.ethiobalance.app.repository
 
 import android.content.Context
+import android.util.Log
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Telephony
@@ -37,11 +38,17 @@ class SettingsRepository @Inject constructor(
         val USER_PHONE_KEY = stringPreferencesKey("user_phone")
         val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
         val ONBOARDING_KEY = booleanPreferencesKey("onboarding_seen")
+        val LAST_SCANNED_TIMESTAMP_KEY = longPreferencesKey("last_scanned_timestamp")
     }
 
     // Onboarding
-    val hasSeenOnboarding: Flow<Boolean> = dataStore.data.map { it[ONBOARDING_KEY] ?: false }
+    val hasSeenOnboarding: Flow<Boolean> = dataStore.data.map {
+        val value = it[ONBOARDING_KEY] ?: false
+        Log.d("OnboardingDebug", "Repository read onboarding=$value")
+        value
+    }
     suspend fun setOnboardingSeen() {
+        Log.d("OnboardingDebug", "Repository writing onboarding=true")
         dataStore.edit { it[ONBOARDING_KEY] = true }
     }
 
@@ -68,6 +75,13 @@ class SettingsRepository @Inject constructor(
             it[USER_PHONE_KEY] = phone
             it[USER_AVATAR_KEY] = avatar
         }
+    }
+
+    // SMS Scanning
+    val lastScannedTimestamp: Flow<Long> = dataStore.data.map { it[LAST_SCANNED_TIMESTAMP_KEY] ?: 0L }
+    
+    suspend fun setLastScannedTimestamp(timestamp: Long) {
+        dataStore.edit { it[LAST_SCANNED_TIMESTAMP_KEY] = timestamp }
     }
 
     // Transaction Sources
@@ -201,7 +215,7 @@ class SettingsRepository @Inject constructor(
      * Only runs if transaction_sources table is empty.
      *
      * Behavior:
-     * - If SMS permission is granted: seed CBE and Telebirr as defaults unconditionally.
+     * - If SMS permission is granted: seed AppConstants.DEFAULT_TRANSACTION_SOURCES.
      * - If SMS permission NOT granted: no-op. Called again by MainActivity after the user
      *   grants permission, at which point sources are added and the 90-day scan runs.
      */
@@ -209,12 +223,7 @@ class SettingsRepository @Inject constructor(
         val currentSources = transactionSourceDao.getAllSources().first()
         if (currentSources.isNotEmpty()) return@withContext
 
-        val hasPermission = hasSmsPermission()
-
-        // Only seed default sources (CBE, Telebirr) after SMS permission is granted.
-        // Without permission nothing is added — seeding is triggered again by
-        // MainActivity once the user grants permission.
-        if (!hasPermission) return@withContext
+        if (!hasSmsPermission()) return@withContext
 
         val sourcesToAdd = AppConstants.DEFAULT_TRANSACTION_SOURCES.mapNotNull { abbrev ->
             val bankInfo = AppConstants.KNOWN_BANKS.find { it.abbreviation == abbrev }

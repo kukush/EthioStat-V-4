@@ -32,17 +32,25 @@ import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * Home screen composable displaying financial summary, telecom assets,
+ * source summaries, and recent transactions.
+ *
+ * @param isSyncing     True while a manual SMS history scan is in progress.
+ * @param onSync        Callback to trigger a manual SMS history sync.
+ */
 @Composable
 fun HomeScreen(
     userName: String,
-    userPhone: String,
     language: String,
     totalIncome: Double,
     totalExpense: Double,
     packages: List<com.ethiobalance.app.data.BalancePackageEntity>,
     transactions: List<TransactionEntity>,
     bankBalances: Map<String, Double> = emptyMap(),
-    onViewAllTransactions: () -> Unit
+    isSyncing: Boolean = false,
+    onSync: () -> Unit = {},
+    onViewAllTransactions: () -> Unit,
 ) {
     var showAmounts by remember { mutableStateOf(true) }
     val netBalance = totalIncome - totalExpense
@@ -61,10 +69,9 @@ fun HomeScreen(
         it.source 
     }
     
-    // Include sources that have transactions OR bank balances
+    // Include sources that have transactions
     val txSources = groupedTransactions.keys.filter { it != "Unknown" }
-    val balanceSources = bankBalances.keys
-    val uniqueSources = (txSources + balanceSources).distinct().sorted()
+    val uniqueSources = txSources.distinct().sorted()
 
     // Telecom Package computations
     val internetPkgs = packages.filter { it.type.contains("internet", ignoreCase = true) || it.type.contains("data", ignoreCase = true) }
@@ -108,6 +115,16 @@ fun HomeScreen(
             totalExpense = totalExpense,
             showAmounts = showAmounts,
             onToggleAmounts = { showAmounts = !showAmounts }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Manual SMS history sync button
+        SyncActionButton(
+            label = Translations.t(language, "sync"),
+            isLoading = isSyncing,
+            enabled = !isSyncing,
+            onClick = onSync,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -215,3 +232,38 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(120.dp)) // Nav bar padding
     }
 }
+
+@Composable
+private fun SyncActionButton(
+    label: String,
+    isLoading: Boolean = false,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isLoading,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Blue600.copy(alpha = if (enabled) 0.2f else 0.1f),
+            disabledContainerColor = Slate200
+        ),
+        shape = RoundedCornerShape(16.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Blue600)
+        } else {
+            Icon(Icons.Default.Refresh, null, tint = if (enabled) Blue600 else Slate400, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label.uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (enabled) Blue600 else Slate400,
+            letterSpacing = 1.sp
+        )
+    }
+}
+

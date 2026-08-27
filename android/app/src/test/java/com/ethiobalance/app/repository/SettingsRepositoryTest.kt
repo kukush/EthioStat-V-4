@@ -15,12 +15,13 @@ class SettingsRepositoryTest {
     // ─── DEFAULT_TRANSACTION_SOURCES tests ──────────────────────────────────
 
     @Test
-    fun defaultTransactionSources_containsExactlyCbeAndTelebirr() {
+    fun defaultTransactionSources_containsCoreSources() {
         val defaults = AppConstants.DEFAULT_TRANSACTION_SOURCES
 
-        assertEquals("Should have exactly 2 defaults", 2, defaults.size)
+        assertFalse("Should not be empty", defaults.isEmpty())
         assertTrue("Should contain CBE", defaults.contains("CBE"))
         assertTrue("Should contain TELEBIRR", defaults.contains("TELEBIRR"))
+        assertEquals("Should not contain duplicates", defaults.size, defaults.toSet().size)
     }
 
     @Test
@@ -55,8 +56,8 @@ class SettingsRepositoryTest {
     @Test
     fun resolveSource_cbeAlphaVariants() {
         assertEquals("CBE", AppConstants.resolveSource("CBE"))
-        assertEquals("CBE", AppConstants.resolveSource("CBEBirr"))
-        assertEquals("CBE", AppConstants.resolveSource("CBEBIRR"))
+        assertEquals("CBEBIRR", AppConstants.resolveSource("CBEBirr"))
+        assertEquals("CBEBIRR", AppConstants.resolveSource("CBEBIRR"))
     }
 
     @Test
@@ -90,8 +91,8 @@ class SettingsRepositoryTest {
     fun smsSenderWhitelist_containsTelebirrSenders() {
         assertTrue("Should contain 127",
             AppConstants.SMS_SENDER_WHITELIST.contains("127"))
-        assertTrue("Should contain TELEBIRR",
-            AppConstants.SMS_SENDER_WHITELIST.contains("TELEBIRR"))
+        assertTrue("Should contain Telebirr",
+            AppConstants.SMS_SENDER_WHITELIST.contains("Telebirr"))
     }
 
     @Test

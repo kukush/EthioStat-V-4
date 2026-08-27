@@ -1,5 +1,6 @@
 package com.ethiobalance.app.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,6 +10,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,15 +41,20 @@ import com.ethiobalance.app.ui.theme.Slate900
 import com.ethiobalance.app.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
+internal object OnboardingConfig {
+    const val TOTAL_PAGES = 5
+
+    fun shouldShowOnboarding(hasSeenOnboarding: Boolean): Boolean = !hasSeenOnboarding
+}
+
 @Composable
 fun OnboardingScreen(
     settingsViewModel: SettingsViewModel,
     onComplete: () -> Unit
 ) {
     val language by settingsViewModel.language.collectAsState()
-    val pagerState = rememberPagerState(pageCount = { 5 })
+    val pagerState = rememberPagerState(pageCount = { OnboardingConfig.TOTAL_PAGES })
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -110,7 +118,7 @@ fun OnboardingScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                repeat(5) { index ->
+                repeat(OnboardingConfig.TOTAL_PAGES) { index ->
                     val selected = pagerState.currentPage == index
                     Box(
                         modifier = Modifier
@@ -134,11 +142,11 @@ fun OnboardingScreen(
             ) {
                 val currentPage = pagerState.currentPage
 
-                // Skip button (slides 0-3 only)
-                if (currentPage < 4) {
+                // Skip button (slides 0-2 only)
+                if (currentPage < OnboardingConfig.TOTAL_PAGES - 1) {
                     TextButton(
                         onClick = {
-                            scope.launch { pagerState.animateScrollToPage(4) }
+                            scope.launch { pagerState.animateScrollToPage(OnboardingConfig.TOTAL_PAGES - 1) }
                         }
                     ) {
                         Text(
@@ -153,12 +161,14 @@ fun OnboardingScreen(
                 }
 
                 // Next / Get Started button
-                val isLastPage = currentPage == 4
+                val isLastPage = currentPage == OnboardingConfig.TOTAL_PAGES - 1
                 Button(
                     onClick = {
                         if (isLastPage) {
+                            Log.d("OnboardingDebug", "Onboarding last-page button tapped")
                             onComplete()
                         } else {
+                            Log.d("OnboardingDebug", "Onboarding next button tapped from page $currentPage")
                             scope.launch { pagerState.animateScrollToPage(currentPage + 1) }
                         }
                     },
@@ -940,13 +950,13 @@ private fun TransactionsIllustration() {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(10.dp))
+                            Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Emerald600, modifier = Modifier.size(10.dp))
                             Spacer(Modifier.width(3.dp))
                             Text("+87,500.00", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Emerald600)
                         }
                         Spacer(Modifier.height(3.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.TrendingDown, null, tint = Rose500, modifier = Modifier.size(10.dp))
+                            Icon(Icons.AutoMirrored.Filled.TrendingDown, null, tint = Rose500, modifier = Modifier.size(10.dp))
                             Spacer(Modifier.width(3.dp))
                             Text("-12,950.00", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Rose500)
                         }

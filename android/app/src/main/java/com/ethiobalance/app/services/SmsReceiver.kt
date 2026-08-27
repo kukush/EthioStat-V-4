@@ -7,23 +7,33 @@ import android.os.Build
 import android.provider.Telephony
 import android.util.Log
 import com.ethiobalance.app.AppConstants
+import com.ethiobalance.app.services.SmsForegroundService // Keeping for manual scan reference if needed, else remove
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import android.app.NotificationManager
+import android.app.PendingIntent
+import androidx.core.app.NotificationCompat
 
+@AndroidEntryPoint
 class SmsReceiver : BroadcastReceiver() {
+    @Inject
+    lateinit var reconciliationEngine: ReconciliationEngine
+
     init {
-        Log.d(TAG, "SmsReceiver instantiated")
+        Log.w(TAG, "SmsReceiver instantiated")
     }
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "onReceive: action=${intent.action}")
+        Log.w(TAG, "onReceive: action=${intent.action}")
         when (intent.action) {
             Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
                 val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-                Log.d(TAG, "SMS_RECEIVED: ${messages.size} message parts")
+                Log.w(TAG, "SMS_RECEIVED: ${messages.size} message parts")
 
                 // Concatenate multi-part SMS segments from the same sender to avoid
                 // processing each segment as a separate transaction.
@@ -59,20 +69,46 @@ class SmsReceiver : BroadcastReceiver() {
                     val isInUserWhitelist = userWhitelist.any { it.equals(sender, ignoreCase = true) }
                     val isWhitelisted = sender.isNotEmpty() && (isInUserWhitelist || isTelecomSender)
 
-                    Log.d(TAG, "sender=$sender isTelecom=$isTelecomSender inWhitelist=$isInUserWhitelist whitelisted=$isWhitelisted")
+                    Log.w(TAG, "sender=$sender isTelecom=$isTelecomSender inWhitelist=$isInUserWhitelist whitelisted=$isWhitelisted")
 
                     if (isWhitelisted) {
-                        // Use FGS for all SMS processing
-                        val serviceIntent = Intent(context, SmsForegroundService::class.java).apply {
-                            putExtra("sender", sender)
-                            putExtra("body", body)
-                            putExtra("timestamp", timestamp)
-                        }
-                        Log.d(TAG, "Starting SmsForegroundService for $sender")
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            context.startForegroundService(serviceIntent)
-                        } else {
-                            context.startService(serviceIntent)
+                        val pendingResult = goAsync()
+                        scope.launch {
+                            try {
+                                Log.w(TAG, "processSms start: sender=$sender")
+                                reconciliationEngine.processSms(sender, body, timestamp)
+                                Log.w(TAG, "processSms completed for $sender")
+
+                                if (isTelecomSender) {
+                                    Log.w(TAG, "Sending ACTION_TELECOM_SMS_ARRIVED for $sender")
+                                    context.sendBroadcast(Intent(AppConstants.ACTION_TELECOM_SMS_ARRIVED).setPackage(context.packageName))
+
+                                    // Show heads-up notification so user can tap to return
+                                    val bringBack = Intent(context, Class.forName("com.ethiobalance.app.MainActivity"))
+                                    bringBack.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                                    val pendingIntent = PendingIntent.getActivity(
+                                        context, 0, bringBack,
+                                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                                    )
+                                    val headsUp = NotificationCompat.Builder(context, SmsForegroundService.SYNC_CHANNEL_ID)
+                                        .setContentTitle("EthioStat")
+                                        .setContentText("Telecom data updated — tap to return")
+                                        .setSmallIcon(android.R.drawable.stat_notify_chat)
+                                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                                        .setContentIntent(pendingIntent)
+                                        .setAutoCancel(true)
+                                        .build()
+                                    val nm = context.getSystemService(NotificationManager::class.java)
+                                    nm?.notify(AppConstants.NOTIFICATION_ID_SMS + 1, headsUp)
+                                    Log.w(TAG, "Heads-up notification posted")
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "processSms failed: ${e.message}")
+                            } finally {
+                                pendingResult.finish()
+                            }
                         }
                     }
                 }

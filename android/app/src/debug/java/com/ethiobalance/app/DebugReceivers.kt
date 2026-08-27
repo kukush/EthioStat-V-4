@@ -40,7 +40,7 @@ class DebugSmsSeedReceiver : BroadcastReceiver() {
             putExtra("body", body)
             putExtra("timestamp", System.currentTimeMillis())
         }
-        context.startForegroundService(svcIntent)
+        androidx.core.content.ContextCompat.startForegroundService(context, svcIntent)
     }
 
     private fun getSenderForSource(source: String): String = when (source.uppercase()) {

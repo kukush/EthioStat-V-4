@@ -9,10 +9,14 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.ethiobalance.app.AppConstants
+import com.ethiobalance.app.repository.SettingsRepository
+import com.ethiobalance.app.repository.SmsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
+import com.ethiobalance.app.data.AppDatabase
+import com.ethiobalance.app.AppConstants
 
 @AndroidEntryPoint
 class SmsForegroundService : Service() {
@@ -22,7 +26,10 @@ class SmsForegroundService : Service() {
     }
 
     @Inject
-    lateinit var reconciliationEngine: ReconciliationEngine
+    lateinit var settingsRepository: SettingsRepository
+
+    @Inject
+    lateinit var smsRepository: SmsRepository
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
@@ -33,77 +40,47 @@ class SmsForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val sender = intent?.getStringExtra("sender")
-        val body = intent?.getStringExtra("body")
-        val timestamp = intent?.getLongExtra("timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis()
-        Log.d(TAG, "onStartCommand: sender=$sender")
+        Log.d(TAG, "onStartCommand: Starting manual SMS scan")
 
-        if (sender != null && body != null) {
+        val notification = NotificationCompat.Builder(this, AppConstants.NOTIFICATION_CHANNEL_ID)
+            .setContentTitle("EthioStat")
+            .setContentText("Scanning transaction history...")
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
 
-            val notification = NotificationCompat.Builder(this, AppConstants.NOTIFICATION_CHANNEL_ID)
-                .setContentTitle("EthioStat")
-                .setContentText("Processing message from $sender...")
-                .setSmallIcon(android.R.drawable.stat_notify_chat)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .build()
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(AppConstants.NOTIFICATION_ID_SMS, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
+            } else {
+                startForeground(AppConstants.NOTIFICATION_ID_SMS, notification)
+            }
+            Log.d(TAG, "startForeground succeeded")
+        } catch (e: Exception) {
+            Log.e(TAG, "startForeground failed: ${e.message}")
+        }
 
+        scope.launch {
             try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startForeground(AppConstants.NOTIFICATION_ID_SMS, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
+                Log.d(TAG, "Manual scan started")
+                val lastScanned = settingsRepository.lastScannedTimestamp.first()
+                val now = System.currentTimeMillis()
+                
+                val daysSinceLastScan = if (lastScanned == 0L) {
+                    90
                 } else {
-                    startForeground(AppConstants.NOTIFICATION_ID_SMS, notification)
+                    ((now - lastScanned) / AppConstants.MILLISECONDS_PER_DAY).toInt() + 1
                 }
-                Log.d(TAG, "startForeground succeeded")
+                
+                val messagesScanned = smsRepository.scanAllTransactionSources(days = daysSinceLastScan)
+                Log.d(TAG, "Manual scan completed. Scanned $messagesScanned messages.")
+                
+                settingsRepository.setLastScannedTimestamp(now)
             } catch (e: Exception) {
-                Log.e(TAG, "startForeground failed: ${e.message}")
+                Log.e(TAG, "Manual scan failed: ${e.message}")
+            } finally {
+                stopSelf(startId)
             }
-
-            // Process with Dual Tracking Engine, then stop the service when done
-            scope.launch {
-                try {
-                    Log.d(TAG, "processSms start: sender=$sender")
-                    reconciliationEngine.processSms(sender, body, timestamp)
-                    Log.d(TAG, "processSms completed for $sender")
-
-                    // If this was a telecom sender (994, 804, etc.), notify the app
-                    // so it can auto-return from the dialer after a sync
-                    val isTelecom = AppConstants.TELECOM_SENDERS.any {
-                        it.equals(sender, ignoreCase = true)
-                    }
-                    if (isTelecom) {
-                        Log.d(TAG, "Sending ACTION_TELECOM_SMS_ARRIVED for $sender")
-                        sendBroadcast(Intent(AppConstants.ACTION_TELECOM_SMS_ARRIVED).setPackage(packageName))
-
-                        // Show heads-up notification so user can tap to return
-                        val bringBack = Intent(this@SmsForegroundService, com.ethiobalance.app.MainActivity::class.java)
-                        bringBack.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
-                                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                        val pendingIntent = android.app.PendingIntent.getActivity(
-                            this@SmsForegroundService, 0, bringBack,
-                            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-                        )
-                        val headsUp = NotificationCompat.Builder(this@SmsForegroundService, SYNC_CHANNEL_ID)
-                            .setContentTitle("EthioStat")
-                            .setContentText("Telecom data updated — tap to return")
-                            .setSmallIcon(android.R.drawable.stat_notify_chat)
-                            .setPriority(NotificationCompat.PRIORITY_HIGH)
-                            .setContentIntent(pendingIntent)
-                            .setAutoCancel(true)
-                            .build()
-                        val nm = getSystemService(NotificationManager::class.java)
-                        nm?.notify(AppConstants.NOTIFICATION_ID_SMS + 1, headsUp)
-                        Log.d(TAG, "Heads-up notification posted")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "processSms failed: ${e.message}")
-                } finally {
-                    stopSelf(startId)
-                }
-            }
-        } else {
-            Log.w(TAG, "onStartCommand: null sender or body — stopping")
-            stopSelf(startId)
         }
 
         return START_NOT_STICKY

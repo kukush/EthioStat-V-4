@@ -32,7 +32,7 @@ The application follows **MVVM (Model-View-ViewModel)** with Clean Architecture 
 ## Usage
 
 1. **Initial Setup**: Grant SMS and Call permissions to allow the app to read messages and perform USSD calls.
-2. **Sync Balances**: Tap the "Sync" button on the Telecom screen to trigger USSD *804#. The app will automatically capture the response SMS.
+2. **Sync Balances**: Tap the "Sync" button on the Telecom screen to trigger USSD \*804#. The app will automatically capture the response SMS.
 3. **Add Transaction Sources**: In Settings, add the sender IDs of your banks (e.g., `CBE`, `Telebirr`) to start tracking financial transactions.
 4. **Manage SIMs**: Register your phone numbers in Settings to link data to specific SIM cards.
 
@@ -46,11 +46,18 @@ This project employs a fully modernized **Kotlin DSL (`.gradle.kts`)** build sys
 - Android SDK (API 24+)
 - Kotlin 1.9.24
 
-### Building the App
+### Building the APK
 
 ```bash
+# Build Debug APK
 cd android
 ./gradlew assembleDebug
+
+# Output APK Location:
+# android/app/build/outputs/apk/debug/app-debug.apk
+
+# Build Release APK
+./gradlew assembleRelease
 ```
 
 ### Running Tests
@@ -60,9 +67,29 @@ cd android
 ./gradlew test
 ```
 
+For debug unit tests with JaCoCo coverage:
+
+```bash
+cd android
+./gradlew :app:testDebugUnitTest
+```
+
+The `testDebugUnitTest` task also generates the JaCoCo report. Open the HTML report in a browser:
+
+```bash
+open app/build/reports/jacoco/jacocoDebugUnitTestReport/html/index.html
+```
+
+The XML report for CI or coverage tooling is written to:
+
+```text
+android/app/build/reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml
+```
+
 ### Deploying to Android Device
 
 #### Prerequisites
+
 - Enable Developer Options and USB Debugging on your Android device
 - Connect device via USB and authorize debugging
 
@@ -107,3 +134,22 @@ You can export your transaction history to a CSV file from the Transactions scre
 ## License
 
 MIT
+
+## Icon sync
+
+This repository includes a helper to keep app launcher icons and the repository `public/dist/assets` folder in sync for distribution and other uses.
+
+Gradle integration: The `android/app/build.gradle.kts` file registers a `syncIcons` `Copy` task that runs before `preBuild`, so icons are copied automatically during Android builds.
+
+- Adaptive icons: The adaptive icon XMLs (`mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml`) were updated to reference the launcher mipmap bitmaps so the installed app icon matches the `ic_launcher` images.
+
+How to run manually:
+
+```bash
+# From project root, run via Gradle
+./android/gradlew :app:syncIcons
+```
+
+Where files are copied:
+
+`public/dist/assets/` — contains `app-icon-192.png`, `app-icon-512.png`, `logo.png`, and `ic_launcher_*` bitmaps after running the Gradle task.

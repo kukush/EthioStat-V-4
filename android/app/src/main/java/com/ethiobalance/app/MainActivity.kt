@@ -42,28 +42,34 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        var isReady = false
         lifecycleScope.launch {
-            var previousValue: Boolean? = null
+            var isFirstEmission = true
+            var previousValue = false
             settingsRepo.hasSeenOnboarding.collect { onboardingDone ->
-                if (previousValue == null) {
-                    // First emission — decide based on current state
+                isReady = true
+                if (isFirstEmission || previousValue != onboardingDone) {
                     if (onboardingDone) {
-                        triggerPermissionAndScan()
+                        // Onboarding completed
+                        if (!isFirstEmission) {
+                            // Only trigger permission prompt on state transition (false->true)
+                            triggerPermissionAndScan()
+                        }
                     } else {
-                        // Still in onboarding — seed only, no permission prompt
+                        // Still in onboarding (or fresh install) — seed only, no permission prompt
                         settingsRepo.seedDefaultSourcesIfEmpty()
                     }
-                } else if (previousValue == false && onboardingDone) {
-                    // Onboarding just completed (false→true) — DataStore write confirmed
-                    triggerPermissionAndScan()
                 }
+                isFirstEmission = false
                 previousValue = onboardingDone
             }
         }
+        
+        splashScreen.setKeepOnScreenCondition { !isReady }
 
         setContent { EthioBalanceAppUI() }
     }
@@ -83,8 +89,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun seedAndScan(smsGranted: Boolean) {
-        settingsRepo.seedDefaultSourcesIfEmpty()
         if (!smsGranted) return
+        settingsRepo.seedDefaultSourcesIfEmpty()
         smsRepo.refreshTelecomSmart()
         smsRepo.scanAllTransactionSources(days = 90)
         settingsRepo.pruneEmptyDefaultSources()
