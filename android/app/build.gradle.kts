@@ -15,7 +15,7 @@ detekt {
     ignoreFailures = false
     toolVersion = "1.23.6"
     basePath = rootDir.absolutePath
-    config = files("$rootDir/config/detekt/detekt.yml")
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
     baseline = file("$rootDir/config/detekt/detekt-baseline.xml")
 }
 
@@ -282,4 +282,113 @@ android.sourceSets {
     getByName("main") {
         java.srcDir(layout.buildDirectory.dir("generated/source/migration"))
     }
+}
+
+// Ensure icons are synced into public/dist/assets before building the app.
+// Use a Gradle Copy task rather than invoking a shell script so the build is
+// cross-platform and integrated into the Gradle lifecycle.
+tasks.register<Copy>("syncIcons") {
+    // repoRoot is one level up from the android/ Gradle root
+    val repoRoot = rootDir.parentFile
+    val destDir = repoRoot.resolve("public/dist/assets")
+    into(destDir)
+
+    // Copy web-provided icons
+    from(repoRoot.resolve("public")) {
+        include("app-icon-*.png", "logo.png")
+    }
+
+    // Copy Android mipmap launcher bitmaps and rename per density
+    val appResDir = projectDir.resolve("src/main/res")
+    val densities = listOf("xxxhdpi", "xxhdpi", "xhdpi", "hdpi", "mdpi")
+    densities.forEach { d ->
+        val mipmap = appResDir.resolve("mipmap-$d")
+        from(mipmap) {
+            include("ic_launcher.png")
+            rename("ic_launcher.png", "ic_launcher_${d}.png")
+        }
+        from(mipmap) {
+            include("ic_launcher_foreground.png")
+            rename("ic_launcher_foreground.png", "ic_launcher_foreground_${d}.png")
+        }
+        // round launcher if present
+        from(mipmap) {
+            include("ic_launcher_round.png")
+            rename("ic_launcher_round.png", "ic_launcher_round_${d}.png")
+        }
+    }
+
+    doFirst {
+        destDir.mkdirs()
+        println("[syncIcons] copying icons to ${destDir.absolutePath}")
+    }
+}
+
+// Validate adaptive icon XMLs and check that expected icons exist.
+// `checkIcons` depends on `syncIcons` and `validateAdaptiveIcons` so it can
+// fail the build early if assets are missing.
+tasks.register("validateAdaptiveIcons") {
+    doLast {
+        val resDir = projectDir.resolve("src/main/res/mipmap-anydpi-v26")
+        val launcherFile = resDir.resolve("ic_launcher.xml")
+        val roundFile = resDir.resolve("ic_launcher_round.xml")
+
+        val launcherDesired = """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher"/>
+</adaptive-icon>
+"""
+
+        val roundDesired = """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_round"/>
+</adaptive-icon>
+"""
+
+        if (!launcherFile.exists() || launcherFile.readText().trim() != launcherDesired.trim()) {
+            launcherFile.parentFile.mkdirs()
+            launcherFile.writeText(launcherDesired)
+            println("[validateAdaptiveIcons] Updated ${launcherFile.absolutePath}")
+        } else {
+            println("[validateAdaptiveIcons] ${launcherFile.absolutePath} is up-to-date")
+        }
+
+        if (!roundFile.exists() || roundFile.readText().trim() != roundDesired.trim()) {
+            roundFile.parentFile.mkdirs()
+            roundFile.writeText(roundDesired)
+            println("[validateAdaptiveIcons] Updated ${roundFile.absolutePath}")
+        } else {
+            println("[validateAdaptiveIcons] ${roundFile.absolutePath} is up-to-date")
+        }
+    }
+}
+
+tasks.register("checkIcons") {
+    dependsOn("syncIcons", "validateAdaptiveIcons")
+    doLast {
+        val repoRoot = rootDir.parentFile
+        val destDir = repoRoot.resolve("public/dist/assets")
+        val missing = mutableListOf<String>()
+
+        val required = listOf("app-icon-512.png", "app-icon-192.png", "logo.png")
+        required.forEach {
+            if (!destDir.resolve(it).exists()) missing.add(it)
+        }
+
+        val launcherPresent = destDir.listFiles()?.any { it.name.startsWith("ic_launcher_") } ?: false
+        if (!launcherPresent) missing.add("ic_launcher_* (no launcher files found)")
+
+        if (missing.isNotEmpty()) {
+            throw RuntimeException("Missing required icon files: " + missing.joinToString(", "))
+        } else {
+            println("[checkIcons] All required icons present in ${destDir.absolutePath}")
+        }
+    }
+}
+
+// Run the full check before preBuild so the build fails early if icons are missing
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("checkIcons")
 }

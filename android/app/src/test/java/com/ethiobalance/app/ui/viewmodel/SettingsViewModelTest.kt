@@ -23,12 +23,21 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+
 /**
  * Tests that default transaction sources (Apollo, CBEBirr) can be removed via the
  * SettingsViewModel and subsequently added again using the same logic as TeleBirr.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 class SettingsViewModelTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var context: Context
     private lateinit var db: AppDatabase
@@ -38,6 +47,7 @@ class SettingsViewModelTest {
 
     @Before
     fun setUp() = runBlocking {
+        Dispatchers.setMain(testDispatcher)
         context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
@@ -75,6 +85,7 @@ class SettingsViewModelTest {
 
     @After
     fun tearDown() {
+        Dispatchers.resetMain()
         db.close()
     }
 

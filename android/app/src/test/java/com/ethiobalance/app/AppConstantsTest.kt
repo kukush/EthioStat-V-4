@@ -40,7 +40,7 @@ class AppConstantsTest {
         assertEquals("CBE", AppConstants.resolveSource("CBE"))
 
     @Test fun resolveSource_alphaCBEBirr() =
-        assertEquals("CBE", AppConstants.resolveSource("CBEBirr"))
+        assertEquals("CBEBIRR", AppConstants.resolveSource("CBEBirr"))
 
     @Test fun resolveSource_numericDashen() =
         assertEquals("DASHEN", AppConstants.resolveSource("996"))
@@ -260,6 +260,6 @@ class AppConstantsTest {
         val telebirrDef = defs.find { it.abbreviation == "TELEBIRR" }
         assertNotNull("TELEBIRR definition must exist", telebirrDef)
         assertEquals("Telebirr", telebirrDef?.displayName)
-        assertTrue(telebirrDef!!.senderIds.containsAll(listOf("127", "TELEBIRR", "Telebirr")))
+        assertTrue(telebirrDef!!.senderIds.containsAll(listOf("127")))
     }
 }

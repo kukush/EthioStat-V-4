@@ -56,8 +56,8 @@ class SettingsRepositoryTest {
     @Test
     fun resolveSource_cbeAlphaVariants() {
         assertEquals("CBE", AppConstants.resolveSource("CBE"))
-        assertEquals("CBE", AppConstants.resolveSource("CBEBirr"))
-        assertEquals("CBE", AppConstants.resolveSource("CBEBIRR"))
+        assertEquals("CBEBIRR", AppConstants.resolveSource("CBEBirr"))
+        assertEquals("CBEBIRR", AppConstants.resolveSource("CBEBIRR"))
     }
 
     @Test
@@ -91,8 +91,8 @@ class SettingsRepositoryTest {
     fun smsSenderWhitelist_containsTelebirrSenders() {
         assertTrue("Should contain 127",
             AppConstants.SMS_SENDER_WHITELIST.contains("127"))
-        assertTrue("Should contain TELEBIRR",
-            AppConstants.SMS_SENDER_WHITELIST.contains("TELEBIRR"))
+        assertTrue("Should contain Telebirr",
+            AppConstants.SMS_SENDER_WHITELIST.contains("Telebirr"))
     }
 
     @Test

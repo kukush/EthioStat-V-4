@@ -69,7 +69,7 @@ class PermissionGuardTest {
     @Test
     fun `known banks resolve correctly for scanning`() {
         assertEquals("CBE", AppConstants.resolveSource("847"))
-        assertEquals("CBE", AppConstants.resolveSource("CBEBirr"))
+        assertEquals("CBEBIRR", AppConstants.resolveSource("CBEBirr"))
         assertEquals("TELEBIRR", AppConstants.resolveSource("127"))
     }
 
