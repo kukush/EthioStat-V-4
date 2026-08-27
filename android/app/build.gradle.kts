@@ -15,8 +15,14 @@ detekt {
     ignoreFailures = false
     toolVersion = "1.23.6"
     basePath = rootDir.absolutePath
-    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-    baseline = file("$rootDir/config/detekt/detekt-baseline.xml")
+    val detektConfigFile = file("$rootDir/config/detekt/detekt.yml")
+    if (detektConfigFile.exists()) {
+        config.setFrom(detektConfigFile)
+    }
+    val detektBaselineFile = file("$rootDir/config/detekt/detekt-baseline.xml")
+    if (detektBaselineFile.exists()) {
+        baseline = detektBaselineFile
+    }
 }
 
 jacoco {

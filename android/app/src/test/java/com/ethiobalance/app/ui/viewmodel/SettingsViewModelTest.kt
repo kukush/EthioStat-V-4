@@ -134,11 +134,6 @@ class SettingsViewModelTest {
 
     @Test
     fun hasSeenOnboarding_startsNullAndUpdates() = runBlocking {
-        // By default, DataStore returns false if not set, but the StateFlow starts as null.
-        // Wait for the initial state to load
-        var onboardingState = viewModel.hasSeenOnboarding.value
-        // It might be null initially before collect finishes, or false if already emitted.
-        // We'll mark it seen and then verify it becomes true
         viewModel.markOnboardingSeen()
         
         // Wait for it to become true
