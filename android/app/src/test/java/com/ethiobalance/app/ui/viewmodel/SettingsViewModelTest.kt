@@ -107,29 +107,29 @@ class SettingsViewModelTest {
         // Add Apollo source via repository (mirrors default seeding)
         val apollo = createDefaultSource("APOLLO")
         settingsRepo.addTransactionSource(apollo)
-        assertTrue(settingsRepo.getTransactionSources().first().any { it.abbreviation == "APOLLO" })
+        assertTrue(settingsRepo.getTransactionSources().first { list -> list.any { it.abbreviation == "APOLLO" } }.any { it.abbreviation == "APOLLO" })
 
         // Remove using ViewModel
         viewModel.removeTransactionSource("APOLLO")
         // Ensure removal
-        assertFalse(settingsRepo.getTransactionSources().first().any { it.abbreviation == "APOLLO" })
+        assertTrue(settingsRepo.getTransactionSources().first { list -> list.none { it.abbreviation == "APOLLO" } }.none { it.abbreviation == "APOLLO" })
 
         // Re-add using ViewModel's addTransactionSource (should follow same rule as TeleBirr)
         viewModel.addTransactionSource(apollo)
-        assertTrue(settingsRepo.getTransactionSources().first().any { it.abbreviation == "APOLLO" })
+        assertTrue(settingsRepo.getTransactionSources().first { list -> list.any { it.abbreviation == "APOLLO" } }.any { it.abbreviation == "APOLLO" })
     }
 
     @Test
     fun removeAndReaddCBEBirrSource_isIdempotent() = runBlocking {
         val cbeBirr = createDefaultSource("CBEBIRR")
         settingsRepo.addTransactionSource(cbeBirr)
-        assertTrue(settingsRepo.getTransactionSources().first().any { it.abbreviation == "CBEBIRR" })
+        assertTrue(settingsRepo.getTransactionSources().first { list -> list.any { it.abbreviation == "CBEBIRR" } }.any { it.abbreviation == "CBEBIRR" })
 
         viewModel.removeTransactionSource("CBEBIRR")
-        assertFalse(settingsRepo.getTransactionSources().first().any { it.abbreviation == "CBEBIRR" })
+        assertTrue(settingsRepo.getTransactionSources().first { list -> list.none { it.abbreviation == "CBEBIRR" } }.none { it.abbreviation == "CBEBIRR" })
 
         viewModel.addTransactionSource(cbeBirr)
-        assertTrue(settingsRepo.getTransactionSources().first().any { it.abbreviation == "CBEBIRR" })
+        assertTrue(settingsRepo.getTransactionSources().first { list -> list.any { it.abbreviation == "CBEBIRR" } }.any { it.abbreviation == "CBEBIRR" })
     }
 
     @Test
