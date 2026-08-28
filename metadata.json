@@ -1,0 +1,6 @@
+{
+  "name": "EthioBalance",
+  "description": "Offline-first telecom and financial asset management application for the Ethiopian market, featuring automatic SMS parsing, USSD airtime sync, and multi-bank ledger tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
