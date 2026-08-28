@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 🎨 UI/UX Improvements
+- **Sync Balance Placement**: Relocated the "Sync Balance" action button from the top navigation bar to directly beside the "Net Balance" title on the Home Summary Card (`SummaryCard.tsx`), providing tighter contextual cohesion for balance reconciliation and keeping the top navigation clean and focused on SIM management.
+
+### 🧪 Testing
+- **Comprehensive Unit & Integration Test Suite**: Added Vitest and React Testing Library tests covering SMS parser algorithms (Ethio Telecom *804# airtime & multi-package, CBE, Telebirr, Awash, Dashen, Bank of Abyssinia), `SummaryCard` component interactions, `Navbar` dual-SIM selectors, and full end-to-end integration flows for USSD balance sync, transaction filtering/creation, and trilingual localization (English, Amharic, Afaan Oromoo).
+
 ### 🔥 Removed
 - **SimRepository and SIM card detection**: Removed `SimRepository`, `SimCardEntity`, `SimCardDao`, and all SIM card detection functionality. The app no longer attempts to detect SIM cards or requires `READ_PHONE_STATE` permission.
 

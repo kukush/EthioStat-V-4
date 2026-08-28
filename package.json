@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "preview": "vite preview --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.7.2",

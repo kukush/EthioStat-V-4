@@ -9,6 +9,8 @@ describe('Navbar Unit Tests', () => {
     activeSim: 1,
     sim1Number: '0911223344',
     sim2Number: '0711223344',
+    sim1Carrier: 'Ethio Telecom',
+    sim2Carrier: 'Safaricom',
     airtimeBalance: 45.5,
     lastSyncedAt: Date.now(),
   };
