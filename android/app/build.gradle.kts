@@ -66,7 +66,7 @@ android {
     applicationVariants.configureEach {
         outputs.configureEach {
             val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
-            output.outputFileName = "app-debug.apk"
+            output.outputFileName = "EthioStat-${name}.apk"
         }
     }
 
