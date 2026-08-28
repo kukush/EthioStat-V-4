@@ -49,11 +49,15 @@ fun SettingsScreen(
     onThemeChange: (String) -> Unit,
     onProfileUpdate: (String, String, String) -> Unit,
     onAddSource: (TransactionSourceEntity) -> Unit,
+    onUpdateSource: (TransactionSourceEntity) -> Unit,
+    onToggleSource: (String) -> Unit,
     onRemoveSource: (String) -> Unit,
     onRequestPermissions: () -> Unit = {}
 ) {
     var showEditProfile by remember { mutableStateOf(false) }
     var showAddSource by remember { mutableStateOf(false) }
+    var bankToEdit by remember { mutableStateOf<TransactionSourceEntity?>(null) }
+    var showEditBank by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -244,7 +248,15 @@ fun SettingsScreen(
                 } else {
                     transactionSources.forEachIndexed { idx, source ->
                         if (idx > 0) HorizontalDivider(color = Slate50)
-                        SourceRow(source = source, onRemove = { onRemoveSource(source.abbreviation) })
+                        SourceRow(
+                            source = source,
+                            onToggle = { onToggleSource(source.abbreviation) },
+                            onEdit = {
+                                bankToEdit = source
+                                showEditBank = true
+                            },
+                            onRemove = { onRemoveSource(source.abbreviation) }
+                        )
                     }
                 }
             }
@@ -307,6 +319,22 @@ fun SettingsScreen(
             }
         )
     }
+
+    // Edit Source Modal
+    if (showEditBank && bankToEdit != null) {
+        EditSourceSheet(
+            sourceToEdit = bankToEdit!!,
+            onDismiss = {
+                showEditBank = false
+                bankToEdit = null
+            },
+            onSave = { updatedSource ->
+                onUpdateSource(updatedSource)
+                showEditBank = false
+                bankToEdit = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -332,9 +360,17 @@ private fun SectionHeader(text: String, icon: ImageVector, actionTitle: String? 
 }
 
 @Composable
-private fun SourceRow(source: TransactionSourceEntity, onRemove: () -> Unit) {
+private fun SourceRow(
+    source: TransactionSourceEntity,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+    onRemove: () -> Unit
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -347,10 +383,136 @@ private fun SourceRow(source: TransactionSourceEntity, onRemove: () -> Unit) {
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(source.name, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("ACTIVE SYNC · ${source.senderId}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+            Text(if (source.isEnabled) "ACTIVE SYNC · ${source.senderId}" else "DISABLED", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (source.isEnabled) Slate400 else Slate300, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+        }
+        IconButton(onClick = onEdit) {
+            Icon(Icons.Default.Edit, null, tint = Slate400, modifier = Modifier.size(18.dp))
         }
         IconButton(onClick = onRemove) {
             Icon(Icons.Default.DeleteOutline, null, tint = Slate300, modifier = Modifier.size(18.dp))
+        }
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (source.isEnabled) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .border(2.dp, if (source.isEnabled) MaterialTheme.colorScheme.primary else Slate300, RoundedCornerShape(6.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (source.isEnabled) {
+                Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditSourceSheet(
+    sourceToEdit: TransactionSourceEntity,
+    onDismiss: () -> Unit,
+    onSave: (TransactionSourceEntity) -> Unit
+) {
+    var name by remember { mutableStateOf(sourceToEdit.name) }
+    var abbreviation by remember { mutableStateOf(sourceToEdit.abbreviation) }
+    var ussd by remember { mutableStateOf(sourceToEdit.ussd) }
+    var senderId by remember { mutableStateOf(sourceToEdit.senderId) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 48.dp, topEnd = 48.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = null
+    ) {
+        Column(modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState())) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Edit Transaction Source", fontSize = 24.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                IconButton(onClick = onDismiss, modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)) {
+                    Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+
+            Text("DISPLAY NAME", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = name, onValueChange = { name = it },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp), singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text("ABBREVIATION / CODE", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = abbreviation, onValueChange = { abbreviation = it },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp), singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text("USSD CODE", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = ussd, onValueChange = { ussd = it },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp), singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text("SMS SENDER IDS (comma separated)", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Slate400, letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = senderId, onValueChange = { senderId = it },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp), singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Spacer(Modifier.height(32.dp))
+            Button(
+                onClick = {
+                    if (name.isNotBlank() && abbreviation.isNotBlank()) {
+                        onSave(sourceToEdit.copy(
+                            name = name.trim(),
+                            abbreviation = abbreviation.uppercase().trim(),
+                            ussd = ussd.trim(),
+                            senderId = senderId.trim(),
+                            lastUpdated = System.currentTimeMillis()
+                        ))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                enabled = name.isNotBlank() && abbreviation.isNotBlank(),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Slate900)
+            ) {
+                Text("SAVE CHANGES", fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            }
+            Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp))
         }
     }
 }

@@ -277,6 +277,8 @@ fun EthioBalanceAppUI() {
                             onThemeChange = { settingsVM.setTheme(it) },
                             onProfileUpdate = { n, p, a -> settingsVM.setUserProfile(n, p, a) },
                             onAddSource = { settingsVM.addTransactionSource(it) },
+                            onUpdateSource = { settingsVM.updateTransactionSource(it) },
+                            onToggleSource = { settingsVM.toggleTransactionSource(it) },
                             onRemoveSource = { settingsVM.removeTransactionSource(it) },
                             onRequestPermissions = {
                                 permissionLauncher.launch(

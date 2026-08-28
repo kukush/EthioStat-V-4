@@ -79,6 +79,18 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepo.removeTransactionSource(abbreviation) }
     }
 
+    fun updateTransactionSource(source: TransactionSourceEntity) {
+        viewModelScope.launch {
+            settingsRepo.addTransactionSource(source)
+        }
+    }
+
+    fun toggleTransactionSource(abbreviation: String) {
+        viewModelScope.launch {
+            settingsRepo.toggleTransactionSource(abbreviation)
+        }
+    }
+
     fun onPermissionGranted() {
         viewModelScope.launch {
             if (settingsRepo.hasSmsPermission()) {

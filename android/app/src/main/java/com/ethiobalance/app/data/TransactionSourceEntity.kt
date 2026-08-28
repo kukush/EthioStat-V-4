@@ -28,6 +28,9 @@ interface TransactionSourceDao {
     @Query("DELETE FROM transaction_sources WHERE abbreviation = :abbreviation")
     suspend fun deleteByAbbreviation(abbreviation: String)
 
+    @Query("SELECT * FROM transaction_sources WHERE abbreviation = :abbreviation")
+    suspend fun getSourceByAbbreviation(abbreviation: String): TransactionSourceEntity?
+
     @Query("SELECT senderId FROM transaction_sources WHERE isEnabled = 1")
     fun getEnabledSenderIds(): List<String>
 

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Check, CheckCircle2, Cpu, Download, Globe, HelpCircle, Layers, Moon, Phone, RefreshCw, RotateCcw, ShieldCheck, Smartphone, Sun, Terminal, Trash2, Wallet } from 'lucide-react';
+import { Check, CheckCircle2, Cpu, Download, Globe, HelpCircle, Layers, Moon, Pencil, Phone, Plus, RefreshCw, RotateCcw, ShieldCheck, Smartphone, Sun, Terminal, Trash2, Wallet } from 'lucide-react';
 import { BankInfo, Language, TelecomAssets, ThemeMode } from '../types';
 import { t } from '../constants/translations';
 import { APP_NAME, APP_VERSION, APP_TAGLINE } from '../constants/app';
+import { BankEditModal } from '../components/BankEditModal';
 
 interface SettingsScreenProps {
   language: Language;
@@ -11,6 +12,9 @@ interface SettingsScreenProps {
   setTheme: (theme: ThemeMode) => void;
   banks: BankInfo[];
   onToggleBank: (bankId: string) => void;
+  onAddBank: (bank: BankInfo) => void;
+  onEditBank: (bank: BankInfo) => void;
+  onDeleteBank: (bankId: string) => void;
   telecomAssets: TelecomAssets;
   onUpdateTelecomAssets: (assets: TelecomAssets) => void;
   onOpenSmsSimulator: () => void;
@@ -25,6 +29,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   setTheme,
   banks,
   onToggleBank,
+  onAddBank,
+  onEditBank,
+  onDeleteBank,
   telecomAssets,
   onUpdateTelecomAssets,
   onOpenSmsSimulator,
@@ -35,6 +42,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [sim2Phone, setSim2Phone] = useState(telecomAssets.sim2Number);
   const [savedPhoneNotice, setSavedPhoneNotice] = useState(false);
   const [searchBank, setSearchBank] = useState('');
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [bankToEdit, setBankToEdit] = useState<BankInfo | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [resetConfirm, setResetConfirm] = useState(false);
 
   const handleSavePhones = (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,9 +281,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
                 {t(language, 'transactionSources')} ({banks.filter((b) => b.enabled).length}/{banks.length})
               </h3>
-              <span className="text-[10px] text-slate-500 font-semibold">Enable or disable bank tracking</span>
+              <span className="text-[10px] text-slate-500 font-semibold">Enable, add or edit financial sources</span>
             </div>
           </div>
+          <button
+            onClick={() => {
+              setBankToEdit(null);
+              setIsBankModalOpen(true);
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-1 shadow-md transition-all active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Source</span>
+          </button>
         </div>
 
         <input
@@ -287,14 +308,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           {filteredBanks.map((bank) => (
             <div
               key={bank.id}
-              onClick={() => onToggleBank(bank.id)}
-              className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+              className={`p-2.5 rounded-2xl border transition-all flex items-center justify-between ${
                 bank.enabled
-                  ? 'bg-slate-950 border-emerald-500/40 hover:border-emerald-500'
+                  ? 'bg-slate-950 border-emerald-500/40'
                   : 'bg-slate-950/40 border-slate-800 opacity-60'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div
+                onClick={() => onToggleBank(bank.id)}
+                className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
+              >
                 <div
                   className={`w-7 h-7 rounded-xl bg-gradient-to-tr ${bank.color} flex items-center justify-center text-white font-extrabold text-[9px] shrink-0`}
                 >
@@ -306,17 +329,79 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 </div>
               </div>
 
-              <div
-                className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
-                  bank.enabled ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700'
-                }`}
-              >
-                {bank.enabled && <Check className="w-3 h-3" />}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setBankToEdit(bank);
+                    setIsBankModalOpen(true);
+                  }}
+                  title="Edit Source"
+                  className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                {deleteConfirmId === bank.id ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteBank(bank.id);
+                        setDeleteConfirmId(null);
+                      }}
+                      className="px-2 py-1.5 bg-rose-600 text-white text-[10px] font-bold rounded-lg"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirmId(null);
+                      }}
+                      className="px-2 py-1.5 bg-slate-800 text-slate-300 text-[10px] font-bold rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteConfirmId(bank.id);
+                    }}
+                    title="Delete Source"
+                    className="p-1.5 rounded-lg hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <div
+                  onClick={() => onToggleBank(bank.id)}
+                  className={`w-5 h-5 rounded-lg flex items-center justify-center cursor-pointer border transition-all ${
+                    bank.enabled ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700'
+                  }`}
+                >
+                  {bank.enabled && <Check className="w-3 h-3" />}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      <BankEditModal
+        isOpen={isBankModalOpen}
+        onClose={() => setIsBankModalOpen(false)}
+        language={language}
+        bankToEdit={bankToEdit}
+        onSaveBank={(savedBank) => {
+          if (bankToEdit) {
+            onEditBank(savedBank);
+          } else {
+            onAddBank(savedBank);
+          }
+        }}
+      />
 
       {/* Android APK Build & Export Guide */}
       <div className="rounded-3xl bg-slate-900 border border-slate-800 p-4 shadow-xl space-y-3">
@@ -368,17 +453,33 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Reset Data */}
       <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
         <span className="text-xs text-slate-400 font-semibold">Reset to defaults</span>
-        <button
-          onClick={() => {
-            if (window.confirm('Reset all transactions, packages, and custom bank balances to default?')) {
-              onResetData();
-            }
-          }}
-          className="px-2.5 py-1.5 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-colors flex items-center gap-1"
-        >
-          <RotateCcw className="w-3 h-3 text-rose-400" />
-          <span>Reset</span>
-        </button>
+        {resetConfirm ? (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                onResetData();
+                setResetConfirm(false);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-rose-600 text-white text-[10px] font-bold transition-colors"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setResetConfirm(false)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-bold transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setResetConfirm(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-colors flex items-center gap-1"
+          >
+            <RotateCcw className="w-3 h-3 text-rose-400" />
+            <span>Reset</span>
+          </button>
+        )}
       </div>
     </div>
   );

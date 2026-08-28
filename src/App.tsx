@@ -298,6 +298,18 @@ export const App: React.FC = () => {
     updateBanks(updated);
   };
 
+  const handleAddBank = (newBank: BankInfo) => {
+    updateBanks([...banks, newBank]);
+  };
+
+  const handleEditBank = (editedBank: BankInfo) => {
+    updateBanks(banks.map((b) => (b.id === editedBank.id ? editedBank : b)));
+  };
+
+  const handleDeleteBank = (bankId: string) => {
+    updateBanks(banks.filter((b) => b.id !== bankId));
+  };
+
   const handleResetData = () => {
     resetAllData();
     setTransactions(INITIAL_TRANSACTIONS);
@@ -371,6 +383,9 @@ export const App: React.FC = () => {
             setTheme={setTheme}
             banks={banks}
             onToggleBank={handleToggleBank}
+            onAddBank={handleAddBank}
+            onEditBank={handleEditBank}
+            onDeleteBank={handleDeleteBank}
             telecomAssets={telecomAssets}
             onUpdateTelecomAssets={updateTelecomAssets}
             onOpenSmsSimulator={() => setIsSmsSimOpen(true)}

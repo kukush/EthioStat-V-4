@@ -116,11 +116,17 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               onChange={(e) => setSource(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              {banks.map((b) => (
-                <option key={b.id} value={b.abbreviation}>
-                  {b.displayName} ({b.abbreviation})
-                </option>
-              ))}
+              {banks
+                .filter((b) => b.enabled)
+                .map((b) => (
+                  <option key={b.id} value={b.abbreviation}>
+                    {b.displayName} ({b.abbreviation})
+                  </option>
+                ))}
+              {/* Fallback option if user's source isn't enabled or is custom */}
+              {!banks.some((b) => b.enabled && b.abbreviation === source) && source && (
+                <option value={source}>{source}</option>
+              )}
               <option value="AIRTIME">Airtime Credit</option>
               <option value="CASH">Cash in Hand</option>
             </select>

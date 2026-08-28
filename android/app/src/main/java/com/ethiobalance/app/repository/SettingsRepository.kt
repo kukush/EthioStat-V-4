@@ -98,6 +98,15 @@ class SettingsRepository @Inject constructor(
         updateSmsWhitelist()
     }
 
+    suspend fun toggleTransactionSource(abbreviation: String) = withContext(Dispatchers.IO) {
+        val existing = transactionSourceDao.getSourceByAbbreviation(abbreviation)
+        if (existing != null) {
+            val updated = existing.copy(isEnabled = !existing.isEnabled, lastUpdated = System.currentTimeMillis())
+            transactionSourceDao.insertOrUpdate(updated)
+            updateSmsWhitelist()
+        }
+    }
+
     private suspend fun updateSmsWhitelist() {
         val enabledSenders = transactionSourceDao.getEnabledSenderIdsFlattened()
         val prefs = context.getSharedPreferences("ethio_balance_prefs", Context.MODE_PRIVATE)
