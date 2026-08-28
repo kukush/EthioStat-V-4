@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import {
   BalancePackageEntity,
   BankInfo,
@@ -60,6 +61,7 @@ export const App: React.FC = () => {
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(!hasCompletedOnboarding());
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncToast, setSyncToast] = useState(false);
 
   // Persistence hooks
   const setLanguage = (lang: Language) => {
@@ -112,6 +114,8 @@ export const App: React.FC = () => {
         lastSyncedAt: Date.now(),
       });
       setIsSyncing(false);
+      setSyncToast(true);
+      setTimeout(() => setSyncToast(false), 3000);
     }, 1200);
   };
 
@@ -397,6 +401,16 @@ export const App: React.FC = () => {
 
       {/* Mobile Bottom Navigation Bar */}
       <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} language={language} />
+
+      {/* Sync Success Toast */}
+      {syncToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-emerald-600 text-white px-4 py-2.5 rounded-full shadow-lg shadow-emerald-900/20 border border-emerald-500/50 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            <span className="text-sm font-semibold">Balances synced successfully</span>
+          </div>
+        </div>
+      )}
 
       {/* Modals & Dialogs */}
       <UssdModal

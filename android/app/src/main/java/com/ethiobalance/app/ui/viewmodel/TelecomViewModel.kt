@@ -55,6 +55,9 @@ class TelecomViewModel @Inject constructor(
     private val _syncWarning = MutableStateFlow<String?>(null)
     val syncWarning: StateFlow<String?> = _syncWarning.asStateFlow()
 
+    private val _syncSuccess = MutableStateFlow<String?>(null)
+    val syncSuccess: StateFlow<String?> = _syncSuccess.asStateFlow()
+
     /**
      * Sync telecom packages:
      * 1. Open dialer with *804# pre-filled (user presses Call manually)
@@ -75,6 +78,7 @@ class TelecomViewModel @Inject constructor(
             _isSyncing.value = true
             _syncError.value = null
             _syncWarning.value = null
+            _syncSuccess.value = null
 
             // Snapshot packages before sync to detect if SmsReceiver updated data
             // while the user was in the dialer
@@ -149,6 +153,10 @@ class TelecomViewModel @Inject constructor(
                     // Auto-dismiss warning after 5 seconds
                     kotlinx.coroutines.delay(5_000)
                     _syncWarning.value = null
+                } else {
+                    _syncSuccess.value = "Balances synced successfully"
+                    kotlinx.coroutines.delay(3_000)
+                    _syncSuccess.value = null
                 }
             } catch (e: Exception) {
                 // On error, still try to refresh from latest SMS

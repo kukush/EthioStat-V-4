@@ -73,7 +73,7 @@ class HomeViewModel @Inject constructor(
                 val scanned = smsRepo.scanAllTransactionSources(days = daysSinceLastScan)
                 settingsRepo.setLastScannedTimestamp(now)
 
-                _syncEvent.tryEmit("Synced $scanned transactions")
+                _syncEvent.tryEmit("Balances synced successfully")
                 Log.d(TAG, "Manual sync completed: $scanned messages, window=$daysSinceLastScan days")
             } catch (e: Exception) {
                 _syncEvent.tryEmit("Sync failed: ${e.message}")

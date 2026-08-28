@@ -213,6 +213,13 @@ fun EthioBalanceAppUI() {
                         val isSyncing by telecomVM.isSyncing.collectAsStateWithLifecycle()
                         val syncError by telecomVM.syncError.collectAsStateWithLifecycle()
                         val syncWarning by telecomVM.syncWarning.collectAsStateWithLifecycle()
+                        val syncSuccess by telecomVM.syncSuccess.collectAsStateWithLifecycle()
+
+                        LaunchedEffect(syncSuccess) {
+                            syncSuccess?.let { message ->
+                                snackbarHostState.showSnackbar(message)
+                            }
+                        }
 
                         TelecomScreen(
                             language = language,
