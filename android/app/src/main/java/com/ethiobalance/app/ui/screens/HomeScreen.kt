@@ -1,5 +1,6 @@
 package com.ethiobalance.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,18 +10,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.data.TransactionEntity
@@ -32,13 +32,6 @@ import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
 
-/**
- * Home screen composable displaying financial summary, telecom assets,
- * source summaries, and recent transactions.
- *
- * @param isSyncing     True while a manual SMS history scan is in progress.
- * @param onSync        Callback to trigger a manual SMS history sync.
- */
 @Composable
 fun HomeScreen(
     userName: String,
@@ -54,58 +47,56 @@ fun HomeScreen(
 ) {
     var showAmounts by remember { mutableStateOf(true) }
     val netBalance = totalIncome - totalExpense
+
     val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }
 
-    // Group transactions by resolved source name to normalize ("127" and "Telebirr" become "TeleBirr")
-    // and filter out "AIRTIME" transactions from financial summaries.
-    val financialTransactions = transactions.filter { 
-        it.source != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME 
+    val financialTransactions = transactions.filter {
+        it.source != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME
     }
-    
-    val groupedTransactions = financialTransactions.groupBy { 
-        it.source 
+
+    val groupedTransactions = financialTransactions.groupBy {
+        it.source
     }
-    
-    // Include sources that have transactions
+
     val txSources = groupedTransactions.keys.filter { it != "Unknown" }
     val uniqueSources = txSources.distinct().sorted()
 
-    // Telecom Package computations
     val internetPkgs = packages.filter { it.type.contains("internet", ignoreCase = true) || it.type.contains("data", ignoreCase = true) }
-    val dataVol = internetPkgs.sumOf { 
+    val dataVol = internetPkgs.sumOf {
         val v = it.remainingAmount
         if (it.unit.equals("GB", ignoreCase = true)) v else v / 1024.0
     }
-    
+
     val voicePkgs = packages.filter { it.type.contains("voice", ignoreCase = true) }
     val voiceVol = voicePkgs.sumOf { it.remainingAmount }
-    
+
     val smsPkgs = packages.filter { it.type.contains("sms", ignoreCase = true) }
     val smsVol = smsPkgs.sumOf { it.remainingAmount }
+    
+    val activeBanks = com.ethiobalance.app.AppConstants.KNOWN_BANKS.filter { uniqueSources.contains(it.id) || bankBalances.containsKey(it.id) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // Simulating dark mode for Home Screen body
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Header
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = "${Translations.t(language, "welcome").takeIf { it.isNotEmpty() } ?: "WELCOME"}, ${userName.ifEmpty { "USER" }}".uppercase(),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 2.sp
-            )
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
+        
+        // Welcome Header
+        Text(
+            text = "${Translations.t(language, "welcome").takeIf { it.isNotEmpty() } ?: "WELCOME"}, ${userName.ifEmpty { "USER" }}".uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = Slate400,
+            letterSpacing = 2.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+        )
 
         // Financial Summary Card
         SummaryCard(
@@ -114,77 +105,138 @@ fun HomeScreen(
             totalIncome = totalIncome,
             totalExpense = totalExpense,
             showAmounts = showAmounts,
-            onToggleAmounts = { showAmounts = !showAmounts }
+            onToggleAmounts = { showAmounts = !showAmounts },
+            isSyncing = isSyncing,
+            onSync = onSync
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Manual SMS history sync button
-        SyncActionButton(
-            label = Translations.t(language, "sync"),
-            isLoading = isSyncing,
-            enabled = !isSyncing,
-            onClick = onSync,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Telecom Assets Card
         TelecomAssetCard(
             language = language,
             dataVol = dataVol,
             voiceVol = voiceVol,
-            smsVol = smsVol
+            smsVol = smsVol,
+            airtimeBalance = 0.0 // Set if available
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Source Summaries
-        if (uniqueSources.isNotEmpty()) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                Text("SOURCE SUMMARIES", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            uniqueSources.forEach { src ->
-                val srcTxs = groupedTransactions[src] ?: emptyList()
-                val srcInc = srcTxs.filter { it.type.uppercase() == "INCOME" }.sumOf { it.amount }
-                val srcExp = srcTxs.filter { it.type.uppercase() == "EXPENSE" }.sumOf { it.amount }
-                val srcNet = srcInc - srcExp
-
-                Surface(
-                    shape = RoundedCornerShape(32.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.padding(bottom = 12.dp)
-                ) {
-                    Row(modifier = Modifier.padding(20.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.AccountBalance, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(com.ethiobalance.app.AppConstants.displaySource(src), fontSize = 14.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
-                            Text(
-                                if (srcTxs.isNotEmpty()) "${srcTxs.size} Transactions" else "Balance only",
-                                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp)
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            val bal = bankBalances[src]
-                            if (bal != null) {
-                                Text(fmt.format(bal), fontSize = 16.sp, fontWeight = FontWeight.Black, color = Blue600)
-                                Text("BALANCE", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Blue600.copy(alpha = 0.7f), letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+        // Source Summaries (Dark Grid)
+        if (activeBanks.isNotEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Slate900,
+                border = BorderStroke(1.dp, Slate800),
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Purple600.copy(alpha = 0.1f))
+                                    .border(1.dp, Purple500.copy(alpha = 0.2f), RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.AccountBalanceWallet, null, tint = Purple400, modifier = Modifier.size(16.dp))
                             }
-                            if (srcTxs.isNotEmpty()) {
-                                if (bal != null) Spacer(Modifier.height(6.dp))
-                                Text(fmt.format(srcNet), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if(srcNet >= 0) Emerald600 else Rose600)
-                                Text("NET FLOW", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp, modifier = Modifier.padding(top=2.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    "SOURCE SUMMARIES",
+                                    fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
+                                )
+                                Text(
+                                    "Active Ethiopian Accounts",
+                                    fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Slate500
+                                )
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { /* Handle Settings navigation if needed */ }) {
+                            Text(Translations.t(language, "manage").takeIf { it.isNotEmpty() } ?: "Manage", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Emerald400)
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Emerald400, modifier = Modifier.size(16.dp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 2-Column Grid for Banks
+                    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        activeBanks.chunked(2).forEach { rowBanks ->
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                rowBanks.forEach { bank ->
+                                    val bal = bankBalances[bank.id] ?: 0.0
+                                    val colorPrimary = Color(android.graphics.Color.parseColor(bank.color))
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(Slate900.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
+                                            .border(1.dp, Slate800, RoundedCornerShape(16.dp))
+                                            .padding(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(28.dp)
+                                                        .background(colorPrimary, RoundedCornerShape(8.dp)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        bank.id.take(3).uppercase(),
+                                                        fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.White
+                                                    )
+                                                }
+                                                Spacer(Modifier.width(8.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        bank.name,
+                                                        fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                                                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        bank.ussdCode,
+                                                        fontSize = 9.sp, fontWeight = FontWeight.Medium, color = Slate400
+                                                    )
+                                                }
+                                            }
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text(
+                                                    fmt.format(bal),
+                                                    fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White
+                                                )
+                                                Text(
+                                                    "ETB",
+                                                    fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = Slate500
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                // Fill empty space if odd number of items
+                                if (rowBanks.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                             }
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Recent Activity
@@ -195,29 +247,30 @@ fun HomeScreen(
         ) {
             Text(
                 Translations.t(language, "recentActivity").takeIf { it.isNotEmpty() }?.uppercase() ?: "RECENT ACTIVITY",
-                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp
+                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate400, letterSpacing = 2.sp
             )
             Text(
                 Translations.t(language, "viewAll").takeIf { it.isNotEmpty() }?.uppercase() ?: "VIEW ALL",
-                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 2.sp,
+                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Emerald400, letterSpacing = 2.sp,
                 modifier = Modifier.clickable { onViewAllTransactions() }
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
-
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
         val recentTransactions = financialTransactions.take(4)
         if (recentTransactions.isEmpty()) {
             Surface(
-                shape = RoundedCornerShape(32.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                shape = RoundedCornerShape(24.dp),
+                color = Slate900,
+                border = BorderStroke(1.dp, Slate800),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = "No recent transactions",
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Slate500,
                     modifier = Modifier.padding(vertical = 32.dp),
                     textAlign = TextAlign.Center
                 )
@@ -228,42 +281,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
-
-        Spacer(modifier = Modifier.height(120.dp)) // Nav bar padding
+        
+        Spacer(modifier = Modifier.height(120.dp))
     }
 }
-
-@Composable
-private fun SyncActionButton(
-    label: String,
-    isLoading: Boolean = false,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled && !isLoading,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Blue600.copy(alpha = if (enabled) 0.2f else 0.1f),
-            disabledContainerColor = Slate200
-        ),
-        shape = RoundedCornerShape(16.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Blue600)
-        } else {
-            Icon(Icons.Default.Refresh, null, tint = if (enabled) Blue600 else Slate400, modifier = Modifier.size(16.dp))
-        }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            label.uppercase(),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (enabled) Blue600 else Slate400,
-            letterSpacing = 1.sp
-        )
-    }
-}
-
