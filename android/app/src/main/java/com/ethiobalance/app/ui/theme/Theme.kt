@@ -59,38 +59,20 @@ private val DarkColorScheme = darkColorScheme(
     onError = Color.White,
 )
 
-private val MidnightColorScheme = darkColorScheme(
-    primary = Blue400,
-    onPrimary = Blue950,
-    primaryContainer = Blue600,
+private val VibrantColorScheme = darkColorScheme(
+    primary = Purple400,
+    onPrimary = Purple950,
+    primaryContainer = Purple600,
     onPrimaryContainer = Color.White,
     secondary = Color.White,
-    onSecondary = Blue950,
-    background = Blue950,
+    onSecondary = Purple950,
+    background = Color(0xFF180E29),
     onBackground = Color.White,
-    surface = Color(0xFF1E3A5F),
+    surface = Color(0xFF23163B),
     onSurface = Color.White,
-    surfaceVariant = Color(0xFF162D4A),
+    surfaceVariant = Color(0xFF2E1F4E),
     onSurfaceVariant = Slate400,
-    outline = Color(0xFF1E3A5F),
-    error = Rose500,
-    onError = Color.White,
-)
-
-private val ForestColorScheme = darkColorScheme(
-    primary = Emerald500,
-    onPrimary = Emerald950,
-    primaryContainer = Emerald600,
-    onPrimaryContainer = Color.White,
-    secondary = Color.White,
-    onSecondary = Emerald950,
-    background = Emerald950,
-    onBackground = Color.White,
-    surface = Color(0xFF0A3D2A),
-    onSurface = Color.White,
-    surfaceVariant = Color(0xFF083322),
-    onSurfaceVariant = Slate400,
-    outline = Color(0xFF0A3D2A),
+    outline = Color(0xFF3B2A63),
     error = Rose500,
     onError = Color.White,
 )
@@ -102,8 +84,7 @@ fun EthioBalanceTheme(
 ) {
     val colorScheme = when (themeId) {
         "dark" -> DarkColorScheme
-        "midnight" -> MidnightColorScheme
-        "forest" -> ForestColorScheme
+        "vibrant" -> VibrantColorScheme
         else -> LightColorScheme
     }
 

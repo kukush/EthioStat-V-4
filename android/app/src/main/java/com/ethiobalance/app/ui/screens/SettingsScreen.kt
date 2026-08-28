@@ -104,53 +104,48 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val themes = listOf(
-                Triple("light", "Light", Icons.Default.LightMode) to Color.White,
-                Triple("dark", "Dark", Icons.Default.DarkMode) to Slate900,
-                Triple("midnight", "Midnight", Icons.Default.Cloud) to Blue950,
-                Triple("forest", "Forest", Icons.Default.Bolt) to Emerald950
-            )
-            themes.chunked(2).forEach { chunk ->
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    chunk.forEach { (meta, _) ->
-                        val (id, label, icon) = meta
-                        val isActive = theme == id
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onThemeChange(id) },
-                            shape = RoundedCornerShape(24.dp),
-                            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
-                            shadowElevation = if (isActive) 8.dp else 0.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier.size(32.dp).clip(RoundedCornerShape(12.dp))
-                                        .background(if (isActive) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(icon, null, tint = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    label,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (isActive) {
-                                    Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        }
+        val themes = listOf(
+            Triple("light", "Light", Icons.Default.LightMode),
+            Triple("dark", "Dark", Icons.Default.DarkMode),
+            Triple("vibrant", "Vibrant", Icons.Default.Layers)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            themes.forEach { (id, label, icon) ->
+                val isActive = theme == id
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onThemeChange(id) },
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+                    shadowElevation = if (isActive) 6.dp else 0.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            icon,
+                            null,
+                            tint = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            label,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
+        }
         }
 
         Spacer(Modifier.height(20.dp))

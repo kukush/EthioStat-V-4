@@ -54,12 +54,14 @@ val Red500 = Color(0xFFEF4444)
 val Red600 = Color(0xFFDC2626)
 
 // Purple
-val Purple100 = Color(0xFFF3E8FF)
-val Purple200 = Color(0xFFE9D5FF)
+val Purple50 = Color(0xFFF3E8FF)
+val Purple100 = Color(0xFFE9D5FF)
+val Purple200 = Color(0xFFD8B4FE)
 val Purple400 = Color(0xFFC084FC)
-val Purple500 = Color(0xFF8B5CF6)
+val Purple500 = Color(0xFFA855F7)
 val Purple600 = Color(0xFF9333EA)
 val Purple700 = Color(0xFF7E22CE)
+val Purple950 = Color(0xFF3B0764)
 
 // Amber
 val Amber50 = Color(0xFFFFFBEB)
