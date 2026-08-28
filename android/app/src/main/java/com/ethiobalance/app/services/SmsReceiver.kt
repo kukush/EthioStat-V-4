@@ -93,7 +93,7 @@ class SmsReceiver : BroadcastReceiver() {
                                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                                     )
                                     val headsUp = NotificationCompat.Builder(context, SmsForegroundService.SYNC_CHANNEL_ID)
-                                        .setContentTitle("EthioStat")
+                                        .setContentTitle(AppConstants.APP_NAME)
                                         .setContentText("Telecom data updated — tap to return")
                                         .setSmallIcon(android.R.drawable.stat_notify_chat)
                                         .setPriority(NotificationCompat.PRIORITY_HIGH)

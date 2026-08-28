@@ -206,7 +206,7 @@ fun SettingsScreen(
                         PermissionBullet(
                             icon = Icons.Default.Info,
                             text = Translations.t(language, "permissionNoSend").takeIf { it.isNotEmpty() }
-                                ?: "EthioStat never sends SMS. Android shows \"send\" in the dialog, but only read access is used."
+                                ?: "${AppConstants.APP_NAME} never sends SMS. Android shows \"send\" in the dialog, but only read access is used."
                         )
                     }
                     Spacer(Modifier.height(20.dp))

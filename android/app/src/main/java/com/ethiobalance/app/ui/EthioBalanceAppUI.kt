@@ -114,11 +114,13 @@ fun EthioBalanceAppUI() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Image(
-                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                            painter = painterResource(id = com.ethiobalance.app.R.drawable.app_icon),
                             contentDescription = stringResource(R.string.app_name),
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(text = stringResource(R.string.app_name), fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface, letterSpacing = (-0.5).sp)
                         Spacer(modifier = Modifier.weight(1f))
                         // Language dropdown

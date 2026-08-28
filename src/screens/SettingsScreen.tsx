@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Check, CheckCircle2, Cpu, Globe, HelpCircle, Layers, Moon, Phone, RefreshCw, RotateCcw, ShieldCheck, Smartphone, Sun, Trash2, Wallet } from 'lucide-react';
 import { BankInfo, Language, TelecomAssets, ThemeMode } from '../types';
 import { t } from '../constants/translations';
+import { APP_NAME, APP_VERSION, APP_TAGLINE } from '../constants/app';
 
 interface SettingsScreenProps {
   language: Language;
@@ -314,6 +315,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* About App Info */}
+      <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 flex items-center gap-3">
+        <img
+          src="/app-icon-512.png"
+          alt={APP_NAME}
+          className="w-10 h-10 rounded-2xl object-cover shadow-md shadow-emerald-500/20 border border-slate-700/60 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-xs text-white">{APP_NAME}</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+              v{APP_VERSION} Offline
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 block mt-0.5">
+            {APP_TAGLINE} for Ethiopia
+          </span>
         </div>
       </div>
 

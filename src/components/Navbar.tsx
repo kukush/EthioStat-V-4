@@ -2,6 +2,7 @@ import React from 'react';
 import { Activity, Clock, RefreshCw, Settings, ShieldCheck, Smartphone } from 'lucide-react';
 import { Language, TelecomAssets } from '../types';
 import { t } from '../constants/translations';
+import { APP_NAME } from '../constants/app';
 
 interface NavbarProps {
   activeTab: 'home' | 'telecom' | 'transactions' | 'settings';
@@ -23,22 +24,18 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
         {/* Brand Logo & Title */}
         <div
-          className="flex items-center gap-2 cursor-pointer select-none"
+          className="flex items-center gap-2.5 cursor-pointer select-none"
           onClick={() => setActiveTab('home')}
         >
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 shadow-md shadow-emerald-500/20 text-white font-black text-sm">
-            EB
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border-2 border-slate-900" />
-          </div>
+          <img
+            src="/app-icon-512.png"
+            alt={APP_NAME}
+            className="w-8 h-8 rounded-xl object-cover shadow-md shadow-emerald-500/20 border border-slate-700/60"
+          />
           <div>
-            <div className="flex items-center gap-1">
-              <h1 className="font-extrabold text-sm tracking-tight text-white">
-                EthioBalance
-              </h1>
-              <span className="text-[8px] uppercase font-bold tracking-widest px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                v1.1
-              </span>
-            </div>
+            <h1 className="font-extrabold text-sm tracking-tight text-white">
+              {APP_NAME}
+            </h1>
             <div className="flex items-center gap-1 text-[10px] text-slate-400">
               <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
               <span>Offline Ledger</span>

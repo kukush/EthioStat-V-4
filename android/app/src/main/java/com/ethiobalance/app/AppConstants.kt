@@ -361,6 +361,12 @@ object AppConstants {
     }
 
     // -------------------------------------------------------------------------
+    // Application Identity & Branding — sourced from gradle.properties via BuildConfig
+    // -------------------------------------------------------------------------
+    val APP_NAME: String get() = BuildConfig.APP_NAME
+    val APP_VERSION_NAME: String get() = BuildConfig.APP_VERSION_NAME
+
+    // -------------------------------------------------------------------------
     // USSD Codes — sourced from gradle.properties via BuildConfig
     // -------------------------------------------------------------------------
     val USSD_BALANCE_CHECK: String get() = BuildConfig.USSD_BALANCE_CHECK

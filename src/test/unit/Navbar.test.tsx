@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Navbar, BottomNavBar } from '../../components/Navbar';
 import { TelecomAssets } from '../../types';
+import { APP_NAME } from '../../constants/app';
 
 describe('Navbar Unit Tests', () => {
   const telecomAssets: TelecomAssets = {
@@ -26,8 +27,9 @@ describe('Navbar Unit Tests', () => {
   it('renders brand title and offline security indicator', () => {
     render(<Navbar {...defaultProps} />);
 
-    expect(screen.getByText('EthioBalance')).toBeInTheDocument();
+    expect(screen.getByText(APP_NAME)).toBeInTheDocument();
     expect(screen.getByText('Offline Ledger')).toBeInTheDocument();
+    expect(screen.getByAltText(APP_NAME)).toBeInTheDocument();
   });
 
   it('does NOT render the sync button in Navbar anymore', () => {

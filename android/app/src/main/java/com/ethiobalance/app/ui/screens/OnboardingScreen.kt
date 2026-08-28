@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.ui.Translations
 import com.ethiobalance.app.ui.theme.Blue400
 import com.ethiobalance.app.ui.theme.Blue600
@@ -236,7 +237,7 @@ private fun OnboardingSlide(
             ) {
                 Image(
                     painter = painterResource(id = com.ethiobalance.app.R.drawable.app_icon),
-                    contentDescription = "EthioStat",
+                    contentDescription = AppConstants.APP_NAME,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -386,7 +387,7 @@ private fun OnboardingSetupSlide(
             ) {
                 Image(
                     painter = painterResource(id = com.ethiobalance.app.R.drawable.app_icon),
-                    contentDescription = "EthioStat",
+                    contentDescription = AppConstants.APP_NAME,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -549,7 +550,7 @@ private fun OnboardingWelcomeSlide(
         ) {
             Image(
                 painter = painterResource(id = com.ethiobalance.app.R.drawable.app_icon),
-                contentDescription = "EthioStat",
+                contentDescription = AppConstants.APP_NAME,
                 modifier = Modifier.size(48.dp)
             )
         }

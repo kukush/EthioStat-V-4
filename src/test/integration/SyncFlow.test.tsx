@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../../App';
+import { APP_NAME } from '../../constants/app';
 
 describe('Integration Test: USSD *804# Sync Flow', () => {
   beforeEach(() => {
@@ -13,7 +14,7 @@ describe('Integration Test: USSD *804# Sync Flow', () => {
     render(<App />);
 
     // Check brand header
-    expect(screen.getByText('EthioBalance')).toBeInTheDocument();
+    expect(screen.getByText(APP_NAME)).toBeInTheDocument();
 
     // Verify Sync button is rendered inside Net Balance Summary Card
     const syncButton = screen.getByRole('button', { name: /Sync/i });

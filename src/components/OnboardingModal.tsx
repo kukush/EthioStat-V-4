@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Check, ChevronRight, Cpu, EyeOff, Hash, Layers, ShieldCheck, Smartphone, X } from 'lucide-react';
 import { Language } from '../types';
 import { t } from '../constants/translations';
+import { APP_NAME, APP_DESCRIPTION } from '../constants/app';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -17,9 +18,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   const steps = [
     {
       title: '100% Offline & Private Financial Manager',
-      description:
-        'EthioBalance is engineered specifically for Ethiopia. It runs completely offline on your device — no bank passwords, no cloud uploads, and zero telemetry.',
-      icon: <ShieldCheck className="w-10 h-10 text-emerald-400" />,
+      description: APP_DESCRIPTION,
+      icon: <img src="/app-icon-512.png" alt={APP_NAME} className="w-12 h-12 rounded-2xl object-cover shadow-lg shadow-emerald-500/20" />,
     },
     {
       title: 'Smart SMS Parsing & Reconciliation',

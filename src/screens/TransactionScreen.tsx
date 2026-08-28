@@ -16,6 +16,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { BankInfo, FilterPeriod, Language, TransactionCategory, TransactionEntity, TransactionType } from '../types';
 import { formatCurrency, formatDate, t } from '../constants/translations';
 import { TransactionItem } from '../components/TransactionItem';
+import { APP_NAME } from '../constants/app';
 
 interface TransactionScreenProps {
   language: Language;
@@ -169,7 +170,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `EthioBalance_Ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `${APP_NAME}_Ledger_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

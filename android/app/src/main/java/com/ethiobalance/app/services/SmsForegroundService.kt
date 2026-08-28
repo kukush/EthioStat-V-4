@@ -43,7 +43,7 @@ class SmsForegroundService : Service() {
         Log.d(TAG, "onStartCommand: Starting manual SMS scan")
 
         val notification = NotificationCompat.Builder(this, AppConstants.NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("EthioStat")
+            .setContentTitle(AppConstants.APP_NAME)
             .setContentText("Scanning transaction history...")
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setPriority(NotificationCompat.PRIORITY_LOW)

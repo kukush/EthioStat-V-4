@@ -42,6 +42,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Property injection
+        buildConfigField("String", "APP_NAME", "\"${project.findProperty("ethiobalance.app_name") ?: "EthioStat"}\"")
+        buildConfigField("String", "APP_VERSION_NAME", "\"${project.findProperty("ethiobalance.app_version") ?: "1.1"}\"")
         buildConfigField("String", "USSD_BALANCE_CHECK", "\"${project.findProperty("ethiobalance.ussd.balance_check") ?: "*804#"}\"")
         buildConfigField("String", "USSD_RECHARGE_SELF", "\"${project.findProperty("ethiobalance.ussd.recharge_self") ?: "*805*"}\"")
         buildConfigField("String", "USSD_RECHARGE_OTHER", "\"${project.findProperty("ethiobalance.ussd.recharge_other") ?: "*805*"}\"")
