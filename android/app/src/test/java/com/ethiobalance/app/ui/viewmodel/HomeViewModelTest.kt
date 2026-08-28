@@ -101,7 +101,7 @@ class HomeViewModelTest {
         coVerify { settingsRepo.setLastScannedTimestamp(any()) }
         
         assertEquals(1, syncEvents.size)
-        assertTrue(syncEvents.first().contains("Synced 10 transactions"))
+        assertTrue(syncEvents.first().contains("Balances synced successfully"))
 
         job.cancel()
     }
