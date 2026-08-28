@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, CheckCircle2, Cpu, Globe, HelpCircle, Layers, Moon, Phone, RefreshCw, RotateCcw, ShieldCheck, Smartphone, Sun, Trash2, Wallet } from 'lucide-react';
+import { Check, CheckCircle2, Cpu, Download, Globe, HelpCircle, Layers, Moon, Phone, RefreshCw, RotateCcw, ShieldCheck, Smartphone, Sun, Terminal, Trash2, Wallet } from 'lucide-react';
 import { BankInfo, Language, TelecomAssets, ThemeMode } from '../types';
 import { t } from '../constants/translations';
 import { APP_NAME, APP_VERSION, APP_TAGLINE } from '../constants/app';
@@ -315,6 +315,33 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Android APK Build & Export Guide */}
+      <div className="rounded-3xl bg-slate-900 border border-slate-800 p-4 shadow-xl space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <Download className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              Android APK Build & Export
+            </h3>
+            <span className="text-[10px] text-slate-500 font-semibold">Generate native Android APK</span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs text-slate-300">
+          <p className="text-[11px] text-slate-400">
+            The native Android source code with Room DB, SMS Receiver, and Compose UI is located in <code className="text-emerald-400 font-mono text-[10px] bg-slate-900 px-1 py-0.5 rounded">/android</code>.
+          </p>
+          <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[10px] text-emerald-400 select-all overflow-x-auto space-y-1">
+            <div className="text-slate-500"># 1. Build fresh APK</div>
+            <div>cd android && ./gradlew assembleDebug</div>
+            <div className="text-slate-500 pt-1"># 2. Output location:</div>
+            <div className="text-cyan-300">android/app/build/outputs/apk/debug/app-debug.apk</div>
+          </div>
         </div>
       </div>
 

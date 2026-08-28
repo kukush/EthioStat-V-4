@@ -64,9 +64,22 @@ android {
     }
 
     applicationVariants.configureEach {
+        val variantName = name
         outputs.configureEach {
-            val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
-            output.outputFileName = "EthioStat-${name}.apk"
+            val output = this as? com.android.build.gradle.internal.api.ApkVariantOutputImpl
+            output?.outputFileName = "EthioStat-${variantName}.apk"
+        }
+    }
+
+    // Ensure standard app-debug.apk is also created as a mirror for Android Studio IDE deployment
+    tasks.matching { it.name.startsWith("assemble") }.configureEach {
+        doLast {
+            val apkDir = layout.buildDirectory.dir("outputs/apk/debug").get().asFile
+            val namedApk = File(apkDir, "EthioStat-debug.apk")
+            val standardApk = File(apkDir, "app-debug.apk")
+            if (namedApk.exists()) {
+                namedApk.copyTo(standardApk, overwrite = true)
+            }
         }
     }
 
