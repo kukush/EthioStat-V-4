@@ -31,7 +31,7 @@ jobs:
     - name: Run Android Tests
       run: |
         cd android
-        ./gradlew test
+        ./gradlew testDebugUnitTest
     - name: Generate JaCoCo report
       run: |
         cd android

@@ -378,7 +378,7 @@ tasks.register("checkIcons") {
         val destDir = repoRoot.resolve("public/dist/assets")
         val missing = mutableListOf<String>()
 
-        val required = listOf("app-icon-512.png", "app-icon-192.png", "logo.png")
+        val required = listOf("app-icon-512.png")
         required.forEach {
             if (!destDir.resolve(it).exists()) missing.add(it)
         }

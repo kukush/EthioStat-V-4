@@ -48,6 +48,5 @@ target/
 .windsurf
 
 # Ignored custom Java 22 Gradle wrapper configs
-android/gradle/wrapper/gradle-wrapper.properties
 android/.gradle-local/
 node_modules
