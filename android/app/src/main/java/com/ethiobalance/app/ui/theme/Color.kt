@@ -73,3 +73,25 @@ val Amber700 = Color(0xFFB45309)
 
 // Orange
 val Orange500 = Color(0xFFF97316)
+
+val Emerald300 = Color(0xFF6EE7B7)
+val Emerald400 = Color(0xFF34D399)
+val Emerald900 = Color(0xFF064E3B)
+
+val Rose300 = Color(0xFFFDA4AF)
+val Rose400 = Color(0xFFFB7185)
+
+val Cyan300 = Color(0xFF67E8F9)
+val Cyan500 = Color(0xFF06B6D4)
+val Cyan600 = Color(0xFF0891B2)
+
+val Blue300 = Color(0xFF93C5FD)
+val Blue900 = Color(0xFF1E3A8A)
+
+val Amber400 = Color(0xFFFBBF24)
+val Amber900 = Color(0xFF78350F)
+
+val Purple300 = Color(0xFFD8B4FE)
+val Purple900 = Color(0xFF581C87)
+
+val Orange400 = Color(0xFFFB923C)

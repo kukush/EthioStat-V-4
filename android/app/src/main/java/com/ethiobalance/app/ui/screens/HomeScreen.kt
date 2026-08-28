@@ -76,7 +76,7 @@ fun HomeScreen(
     val smsPkgs = packages.filter { it.type.contains("sms", ignoreCase = true) }
     val smsVol = smsPkgs.sumOf { it.remainingAmount }
     
-    val activeBanks = com.ethiobalance.app.AppConstants.KNOWN_BANKS.filter { uniqueSources.contains(it.id) || bankBalances.containsKey(it.id) }
+    val activeBanks = com.ethiobalance.app.AppConstants.KNOWN_BANKS.filter { uniqueSources.contains(it.abbreviation) || bankBalances.containsKey(it.abbreviation) }
 
     Column(
         modifier = Modifier
@@ -174,8 +174,8 @@ fun HomeScreen(
                         activeBanks.chunked(2).forEach { rowBanks ->
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 rowBanks.forEach { bank ->
-                                    val bal = bankBalances[bank.id] ?: 0.0
-                                    val colorPrimary = Color(android.graphics.Color.parseColor(bank.color))
+                                    val bal = bankBalances[bank.abbreviation] ?: 0.0
+                                    val colorPrimary = Emerald500
                                     
                                     Box(
                                         modifier = Modifier
@@ -197,19 +197,19 @@ fun HomeScreen(
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Text(
-                                                        bank.id.take(3).uppercase(),
+                                                        bank.abbreviation.take(3).uppercase(),
                                                         fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.White
                                                     )
                                                 }
                                                 Spacer(Modifier.width(8.dp))
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
-                                                        bank.name,
+                                                        bank.fullName,
                                                         fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White,
                                                         maxLines = 1, overflow = TextOverflow.Ellipsis
                                                     )
                                                     Text(
-                                                        bank.ussdCode,
+                                                        bank.senderId,
                                                         fontSize = 9.sp, fontWeight = FontWeight.Medium, color = Slate400
                                                     )
                                                 }
