@@ -10,7 +10,11 @@ import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +71,7 @@ fun TransactionItem(
     isSelected: Boolean = false,
     onClick: () -> Unit = {}
 ) {
+    var isExpanded by remember { mutableStateOf(false) }
     val isIncome = transaction.type.uppercase() == "INCOME"
     
     // Explicit Dark Theme Colors
@@ -115,7 +120,10 @@ fun TransactionItem(
             .clip(RoundedCornerShape(20.dp))
             .background(currentBgColor)
             .border(1.dp, currentBorderColor, RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
+            .clickable(onClick = { 
+                isExpanded = !isExpanded
+                onClick()
+            })
             .padding(14.dp)
     ) {
         Column {
@@ -197,7 +205,7 @@ fun TransactionItem(
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                // Right Side (Amount + Category)
+                // Right Side (Amount + Category + Chevron)
                 Row(verticalAlignment = Alignment.Top) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
@@ -214,6 +222,44 @@ fun TransactionItem(
                             letterSpacing = 1.sp,
                             modifier = Modifier.padding(top = 4.dp)
                         )
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = Slate500,
+                            modifier = Modifier.size(16.dp).padding(top = 2.dp)
+                        )
+                    }
+                }
+            }
+            
+            // Expanded Content
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = Slate800, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Raw SMS / Details
+                Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Slate950.copy(alpha = 0.5f)).padding(10.dp)) {
+                    Text(
+                        text = "DETAILS",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Slate500,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    Text(
+                        text = transaction.rawSmsBody ?: "No details available",
+                        fontSize = 11.sp,
+                        color = Slate300,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    
+                    if (transaction.reference != null) {
+                        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                            Text(text = "Ref: ${transaction.reference}", fontSize = 10.sp, color = Slate400, fontWeight = FontWeight.Mono)
+                            // Could add a copy button here
+                        }
                     }
                 }
             }

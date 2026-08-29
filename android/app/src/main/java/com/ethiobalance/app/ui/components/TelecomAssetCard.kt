@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,33 +80,37 @@ fun TelecomAssetCard(
                         )
                     }
                 }
-                
-                if (onOpenUssd != null && !isCompact) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Surface(
-                            color = Emerald600.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.3f)),
-                            onClick = { onOpenUssd("recharge") }
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                                Icon(Icons.Default.AddCircleOutline, null, tint = Emerald300, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(Translations.t(language, "recharge").takeIf { it.isNotEmpty() } ?: "Recharge", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Emerald300)
-                            }
+            }
+            
+            // USSD Action Buttons
+            if (onOpenUssd != null && !isCompact) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Surface(
+                        color = Emerald600.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.3f)),
+                        modifier = Modifier.weight(1f),
+                        onClick = { onOpenUssd("recharge") }
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)) {
+                            Icon(Icons.Default.AddCircleOutline, null, tint = Emerald300, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(Translations.t(language, "recharge").takeIf { it.isNotEmpty() } ?: "Recharge", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Emerald300)
                         }
-                        
-                        Surface(
-                            color = Cyan600.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Cyan500.copy(alpha = 0.3f)),
-                            onClick = { onOpenUssd("transfer") }
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                                Icon(Icons.Default.SwapHoriz, null, tint = Cyan300, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(Translations.t(language, "transfer").takeIf { it.isNotEmpty() } ?: "Transfer", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Cyan300)
-                            }
+                    }
+                    
+                    Surface(
+                        color = Cyan600.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Cyan500.copy(alpha = 0.3f)),
+                        modifier = Modifier.weight(1f),
+                        onClick = { onOpenUssd("transfer") }
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)) {
+                            Icon(Icons.Default.SwapHoriz, null, tint = Cyan300, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(Translations.t(language, "transfer").takeIf { it.isNotEmpty() } ?: "Transfer", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Cyan300)
                         }
                     }
                 }

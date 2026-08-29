@@ -82,6 +82,7 @@ fun PackageCard(
         )
     }
 
+    var isExpanded by remember { mutableStateOf(false) }
     val percentage = if (total > 0) Math.min(100.0, (value / total) * 100) else 0.0
     val expiryPercentage = if (totalDays > 0) Math.min(100.0, (daysLeft.toDouble() / totalDays) * 100) else 0.0
 
@@ -107,124 +108,148 @@ fun PackageCard(
         modifier = modifier
             .clip(RoundedCornerShape(32.dp))
             .background(theme.bg)
+            .clickable { isExpanded = !isExpanded }
             .padding(20.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left Content
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = translatedType.uppercase(),
-                    color = theme.accent,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
-                Text(
-                    text = label, 
-                    color = theme.text,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black
-                )
-                Row(verticalAlignment = Alignment.Bottom) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left Content
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString(),
+                        text = translatedType.uppercase(),
+                        color = theme.accent,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp
+                    )
+                    Text(
+                        text = label, 
                         color = theme.text,
-                        fontSize = 30.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Black
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = unit,
-                        color = theme.text.copy(alpha=0.8f),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString(),
+                            color = theme.text,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = unit,
+                            color = theme.text.copy(alpha=0.8f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                // Validity Bar
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text(Translations.t(language, "validity").uppercase().takeIf { it.isNotEmpty() } ?: "VALIDITY", fontSize = 9.sp, fontWeight = FontWeight.Black, color = theme.text.copy(alpha=0.6f))
-                    Text("$daysLeft / $totalDays ${Translations.t(language, "daysLeft")}", fontSize = 10.sp, fontWeight = FontWeight.Black, color = theme.text)
-                }
-                Spacer(Modifier.height(4.dp))
-                // Linear Progress
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(theme.linearBarBg)
-                ) {
+                    // Validity Bar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(Translations.t(language, "validity").uppercase().takeIf { it.isNotEmpty() } ?: "VALIDITY", fontSize = 9.sp, fontWeight = FontWeight.Black, color = theme.text.copy(alpha=0.6f))
+                        Text("$daysLeft / $totalDays ${Translations.t(language, "daysLeft")}", fontSize = 10.sp, fontWeight = FontWeight.Black, color = theme.text)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    // Linear Progress
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth((expiryPercentage / 100f).toFloat())
-                            .fillMaxHeight()
+                            .fillMaxWidth()
+                            .height(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(expiryBarColor)
+                            .background(theme.linearBarBg)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth((expiryPercentage / 100f).toFloat())
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(expiryBarColor)
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "${Translations.t(language, "expires").uppercase().takeIf { it.isNotEmpty() } ?: "EXPIRES"}: $expiryDateStr",
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.text.copy(alpha=0.6f)
                     )
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "${Translations.t(language, "expires").uppercase().takeIf { it.isNotEmpty() } ?: "EXPIRES"}: $expiryDateStr",
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = theme.text.copy(alpha=0.6f)
-                )
+
+                Spacer(Modifier.width(16.dp))
+
+                // Right Circular Progress
+                Box(
+                    modifier = Modifier.size(96.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Circle Drawing
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .drawBehind {
+                                drawArc(
+                                    color = theme.circularBarBg,
+                                    startAngle = 0f,
+                                    sweepAngle = 360f,
+                                    useCenter = false,
+                                    style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                                )
+                                drawArc(
+                                    color = circularColor,
+                                    startAngle = -90f,
+                                    sweepAngle = (percentage * 3.6).toFloat(),
+                                    useCenter = false,
+                                    style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                                )
+                            }
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${percentage.toInt()}%",
+                            color = theme.text,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "${total.toInt()} ${unit}",
+                            color = theme.text.copy(alpha=0.8f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
-            Spacer(Modifier.width(16.dp))
-
-            // Right Circular Progress
-            Box(
-                modifier = Modifier.size(96.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Circle Drawing
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .drawBehind {
-                            drawArc(
-                                color = theme.circularBarBg,
-                                startAngle = 0f,
-                                sweepAngle = 360f,
-                                useCenter = false,
-                                style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
-                            )
-                            drawArc(
-                                color = circularColor,
-                                startAngle = -90f,
-                                sweepAngle = (percentage * 3.6).toFloat(),
-                                useCenter = false,
-                                style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
-                            )
-                        }
+            // Expanded Content
+            if (isExpanded) {
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = theme.text.copy(alpha = 0.2f), thickness = 1.dp)
+                Spacer(Modifier.height(12.dp))
+                
+                Text(
+                    text = "DETAILS",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = theme.text.copy(alpha=0.5f),
+                    letterSpacing = 1.sp
                 )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${percentage.toInt()}%",
-                        color = theme.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "${total.toInt()} ${unit}",
-                        color = theme.text.copy(alpha=0.8f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Package details and usage information go here.", // Placeholder
+                    fontSize = 12.sp,
+                    color = theme.text.copy(alpha=0.7f)
+                )
             }
         }
     }
