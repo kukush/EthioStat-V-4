@@ -46,16 +46,33 @@ fun HomeScreen(
     onViewAllTransactions: () -> Unit,
 ) {
     var showAmounts by remember { mutableStateOf(true) }
-    val netBalance = totalIncome - totalExpense
-
+    var timeFilter by remember { mutableStateOf("ALL_TIME") }
+    
     val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }
 
-    val financialTransactions = transactions.filter {
+    val now = System.currentTimeMillis()
+    val filteredTransactions = remember(transactions, timeFilter) {
+        transactions.filter {
+            val diff = now - it.timestamp
+            when (timeFilter) {
+                "TODAY" -> diff <= 24 * 60 * 60 * 1000L
+                "THIS_WEEK" -> diff <= 7 * 24 * 60 * 60 * 1000L
+                "THIS_MONTH" -> diff <= 30 * 24 * 60 * 60 * 1000L
+                else -> true
+            }
+        }
+    }
+
+    val financialTransactions = filteredTransactions.filter {
         it.source != com.ethiobalance.app.AppConstants.SOURCE_AIRTIME
     }
+
+    val currentTotalIncome = financialTransactions.filter { it.type.equals("INCOME", ignoreCase = true) }.sumOf { it.amount }
+    val currentTotalExpense = financialTransactions.filter { it.type.equals("EXPENSE", ignoreCase = true) }.sumOf { it.amount }
+    val currentNetBalance = currentTotalIncome - currentTotalExpense
 
     val groupedTransactions = financialTransactions.groupBy {
         it.source
@@ -101,13 +118,15 @@ fun HomeScreen(
         // Financial Summary Card
         SummaryCard(
             language = language,
-            netBalance = netBalance,
-            totalIncome = totalIncome,
-            totalExpense = totalExpense,
+            netBalance = currentNetBalance,
+            totalIncome = currentTotalIncome,
+            totalExpense = currentTotalExpense,
             showAmounts = showAmounts,
             onToggleAmounts = { showAmounts = !showAmounts },
             isSyncing = isSyncing,
-            onSync = onSync
+            onSync = onSync,
+            homeTimeFilter = timeFilter,
+            onHomeTimeFilterSelected = { timeFilter = it }
         )
 
         Spacer(modifier = Modifier.height(16.dp))

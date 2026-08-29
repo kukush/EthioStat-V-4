@@ -6,23 +6,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.ui.Translations
@@ -44,6 +44,8 @@ fun SummaryCard(
     onToggleAmounts: (() -> Unit)? = null,
     isSyncing: Boolean = false,
     onSync: (() -> Unit)? = null,
+    homeTimeFilter: String = "ALL_TIME",
+    onHomeTimeFilterSelected: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
@@ -58,15 +60,8 @@ fun SummaryCard(
         shadowElevation = 8.dp,
         modifier = modifier.fillMaxWidth().animateContentSize()
     ) {
-        // Optional background gradient effect to simulate Tailwind's bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.linearGradient(listOf(Slate900, Slate800, Slate900)))
-        )
-
-        Column(modifier = Modifier.padding(20.dp)) {
-            // Header Row (NET BALANCE, Sync button, Eye icon)
+        Column(modifier = Modifier.padding(24.dp)) {
+            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -76,72 +71,71 @@ fun SummaryCard(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Emerald600.copy(alpha = 0.1f))
-                            .border(1.dp, Emerald500.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+                            .background(Slate800, RoundedCornerShape(10.dp))
+                            .border(1.dp, Slate700, RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.AccountBalanceWallet, null, tint = Emerald400, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = Translations.t(language, "netBalance").takeIf { it.isNotEmpty() }?.uppercase() ?: "NET BALANCE",
-                                fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp, color = Slate400
-                            )
-                            if (onSync != null && transactionCount == null) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    color = Emerald600.copy(alpha = 0.2f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    border = BorderStroke(1.dp, Emerald500.copy(alpha = 0.4f)),
-                                    onClick = onSync,
-                                    enabled = !isSyncing
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        if (isSyncing) {
-                                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = Emerald400)
-                                        } else {
-                                            Icon(Icons.Default.Refresh, null, tint = Emerald400, modifier = Modifier.size(12.dp))
-                                        }
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(Translations.t(language, "sync"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Emerald400)
-                                    }
-                                }
-                            }
-                        }
                         Text(
-                            text = sourceFilter?.let { com.ethiobalance.app.AppConstants.displaySource(it) } ?: Translations.t(language, "overallSummary").takeIf { it.isNotEmpty() } ?: "Overall Summary",
-                            fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                            color = Slate500
+                            Translations.t(language, "netBalance").takeIf { it.isNotEmpty() } ?: "Net Balance",
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate400,
+                            letterSpacing = 1.sp
                         )
+                        if (sourceFilter != null) {
+                            Text(
+                                sourceFilter.uppercase(),
+                                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate300
+                            )
+                        }
                     }
                 }
                 
-                if (onToggleAmounts != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Slate800)
-                            .border(1.dp, Slate700, RoundedCornerShape(12.dp))
-                            .clickable { onToggleAmounts() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            if (showAmounts) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            null, tint = Slate300, modifier = Modifier.size(18.dp)
-                        )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (onSync != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Slate800,
+                            border = BorderStroke(1.dp, Slate700),
+                            modifier = Modifier.clip(CircleShape).clickable(enabled = !isSyncing) { onSync() }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                if (isSyncing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = Emerald400)
+                                } else {
+                                    Icon(Icons.Default.Refresh, null, tint = Emerald400, modifier = Modifier.size(12.dp))
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(Translations.t(language, "sync"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Emerald400)
+                            }
+                        }
+                    }
+
+                    if (onToggleAmounts != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Slate800,
+                            border = BorderStroke(1.dp, Slate700),
+                            modifier = Modifier.clip(CircleShape).clickable { onToggleAmounts() }
+                        ) {
+                            Box(modifier = Modifier.padding(8.dp)) {
+                                Icon(
+                                    if (showAmounts) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = "Toggle amounts",
+                                    tint = Slate400,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // Fake pill row for Home Screen
             if (transactionCount == null && timeFilter == null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
@@ -152,17 +146,23 @@ fun SummaryCard(
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Box(modifier = Modifier.background(Slate700, RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text(Translations.t(language, "allTime").takeIf { it.isNotEmpty() } ?: "All Time", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                    Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text(Translations.t(language, "today").takeIf { it.isNotEmpty() } ?: "Today", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate400)
-                    }
-                    Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text(Translations.t(language, "thisWeek").takeIf { it.isNotEmpty() } ?: "Weekly", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate400)
-                    }
-                    Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text(Translations.t(language, "thisMonth").takeIf { it.isNotEmpty() } ?: "Monthly", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Slate400)
+                    val filters = listOf("ALL_TIME" to "allTime", "TODAY" to "today", "THIS_WEEK" to "thisWeek", "THIS_MONTH" to "thisMonth")
+                    filters.forEach { (key, translateKey) ->
+                        val isSelected = homeTimeFilter == key
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onHomeTimeFilterSelected?.invoke(key) }
+                                .background(if (isSelected) Slate700 else Color.Transparent, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                Translations.t(language, translateKey).takeIf { it.isNotEmpty() } ?: translateKey,
+                                fontSize = 11.sp, 
+                                fontWeight = FontWeight.Bold, 
+                                color = if (isSelected) Color.White else Slate400
+                            )
+                        }
                     }
                 }
             }
