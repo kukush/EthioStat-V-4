@@ -55,16 +55,23 @@ jobs:
       with:
         name: ethiobalance-debug.apk
         path: android/app/build/outputs/apk/debug/app-debug.apk
-
-
     - name: Notify Slack on Failure
       if: failure()
-      uses: slackapi/slack-github-action@v2.0.0 
+      uses: slackapi/slack-github-action@v2.0.0
       with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            {
-              "text": "❌ *Build Failed!* \n*Repo:* ${{ github.repository }} \n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Failed Logs>"
-            }
-
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          {
+            "text": "❌ *Build Failed!*\n*Repo:* ${{ github.repository }}\n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Failed Logs>"
+          }
+    - name: Notify Slack on Success
+      if: success()
+      uses: slackapi/slack-github-action@v2.0.0
+      with:
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          {
+            "text": "✅ *Build Succeeded!*\n*Repo:* ${{ github.repository }}\n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run Details>"
+          }
