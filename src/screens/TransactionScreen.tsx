@@ -409,7 +409,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({
               className="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 truncate"
             >
               <option value="ALL">All Sources</option>
-              {banks.map((b) => (
+              {banks.filter((b) => b.enabled).map((b) => (
                 <option key={b.id} value={b.abbreviation}>
                   {b.abbreviation}
                 </option>

@@ -113,6 +113,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         voiceMinutes={voiceMinutes}
         smsCount={smsCount}
         airtimeBalance={telecomAssets.airtimeBalance}
+        isCompact={true}
         onOpenUssd={onOpenUssd}
       />
 

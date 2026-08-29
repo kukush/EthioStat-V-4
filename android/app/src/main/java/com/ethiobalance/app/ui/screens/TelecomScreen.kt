@@ -59,11 +59,18 @@ fun TelecomScreen(
         val smsVol = packages.filter { it.type.uppercase() == "SMS" }
             .sumOf { it.remainingAmount }
 
-        TelecomAssetCard(
+                TelecomAssetCard(
             language = language,
             dataVol = dataVol,
             voiceVol = voiceVol,
-            smsVol = smsVol
+            smsVol = smsVol,
+            onOpenUssd = { action ->
+                if (action == "recharge") {
+                    showRechargeSheet = true
+                } else if (action == "transfer") {
+                    showTransferSheet = true
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))

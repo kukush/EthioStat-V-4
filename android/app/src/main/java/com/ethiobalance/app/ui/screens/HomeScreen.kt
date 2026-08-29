@@ -137,7 +137,8 @@ fun HomeScreen(
             dataVol = dataVol,
             voiceVol = voiceVol,
             smsVol = smsVol,
-            airtimeBalance = 0.0 // Set if available
+            airtimeBalance = 0.0, // Set if available
+            isCompact = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))

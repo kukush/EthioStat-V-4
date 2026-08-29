@@ -29,7 +29,8 @@ fun TelecomAssetCard(
     voiceVol: Double,
     smsVol: Double,
     airtimeBalance: Double = 0.0,
-    onOpenUssd: ((action: String) -> Unit)? = null
+    onOpenUssd: ((action: String) -> Unit)? = null,
+    isCompact: Boolean = false
 ) {
     val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
         minimumFractionDigits = 2
@@ -45,7 +46,7 @@ fun TelecomAssetCard(
         shadowElevation = 8.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(if (isCompact) 14.dp else 20.dp)) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -76,7 +77,7 @@ fun TelecomAssetCard(
                     }
                 }
                 
-                if (onOpenUssd != null) {
+                if (onOpenUssd != null && !isCompact) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Surface(
                             color = Emerald600.copy(alpha = 0.2f),
@@ -110,15 +111,15 @@ fun TelecomAssetCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Grid of 4 items: Data, Voice, SMS, Airtime
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)) {
                 // Column 1: Data and SMS
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)) {
                     // Data Card
                     Box(
                         modifier = Modifier.fillMaxWidth()
                             .background(Brush.verticalGradient(listOf(Blue900.copy(alpha=0.4f), Slate900)), RoundedCornerShape(16.dp))
                             .border(1.dp, Blue500.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                            .padding(if (isCompact) 10.dp else 14.dp)
                     ) {
                         Column {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -134,7 +135,7 @@ fun TelecomAssetCard(
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 String.format(Locale.US, "%.2f", dataVol),
-                                fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
+                                fontSize = if (isCompact) 18.sp else 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
                             )
                             Text("Available Internet", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Slate400, modifier = Modifier.padding(top = 2.dp))
                         }
@@ -145,7 +146,7 @@ fun TelecomAssetCard(
                         modifier = Modifier.fillMaxWidth()
                             .background(Brush.verticalGradient(listOf(Amber900.copy(alpha=0.4f), Slate900)), RoundedCornerShape(16.dp))
                             .border(1.dp, Amber500.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                            .padding(if (isCompact) 10.dp else 14.dp)
                     ) {
                         Column {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +162,7 @@ fun TelecomAssetCard(
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 smsVol.toInt().toString(),
-                                fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
+                                fontSize = if (isCompact) 18.sp else 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
                             )
                             Text("SMS Left", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Slate400, modifier = Modifier.padding(top = 2.dp))
                         }
@@ -169,13 +170,13 @@ fun TelecomAssetCard(
                 }
                 
                 // Column 2: Voice and Airtime
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)) {
                     // Voice Card
                     Box(
                         modifier = Modifier.fillMaxWidth()
                             .background(Brush.verticalGradient(listOf(Purple900.copy(alpha=0.4f), Slate900)), RoundedCornerShape(16.dp))
                             .border(1.dp, Purple500.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                            .padding(if (isCompact) 10.dp else 14.dp)
                     ) {
                         Column {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -191,7 +192,7 @@ fun TelecomAssetCard(
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 voiceVol.toInt().toString(),
-                                fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
+                                fontSize = if (isCompact) 18.sp else 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
                             )
                             Text("Voice Minutes", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Slate400, modifier = Modifier.padding(top = 2.dp))
                         }
@@ -202,7 +203,7 @@ fun TelecomAssetCard(
                         modifier = Modifier.fillMaxWidth()
                             .background(Brush.verticalGradient(listOf(Emerald900.copy(alpha=0.4f), Slate900)), RoundedCornerShape(16.dp))
                             .border(1.dp, Emerald500.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                            .padding(if (isCompact) 10.dp else 14.dp)
                     ) {
                         Column {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -218,7 +219,7 @@ fun TelecomAssetCard(
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 fmt.format(airtimeBalance),
-                                fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
+                                fontSize = if (isCompact) 18.sp else 24.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = (-0.5).sp
                             )
                             Text("Prepaid Credit", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = Slate400, modifier = Modifier.padding(top = 2.dp))
                         }
