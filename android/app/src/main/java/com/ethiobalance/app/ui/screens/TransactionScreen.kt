@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -363,7 +364,7 @@ fun TransactionScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
                         ),
-                        border = borderStroke()
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             // Top Row: Title, Records Count & Quick Action Buttons
@@ -682,7 +683,7 @@ fun TransactionScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
                         ),
-                        border = borderStroke()
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             // Search Box input at the top of the selector card
@@ -744,6 +745,7 @@ fun TransactionScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 // A helper boundary style for simple drop items
+                                @Composable
                                 fun Modifier.dropdownStyle(onClick: () -> Unit) = this
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(MaterialTheme.colorScheme.surface)
@@ -945,7 +947,7 @@ fun TransactionScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))4.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // ── SEARCH RESULTS SUMMARY BAR ────────────────────────────
                     val filteredIncome = remember(transactions) {
