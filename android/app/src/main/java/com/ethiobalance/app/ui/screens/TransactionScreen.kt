@@ -352,118 +352,219 @@ fun TransactionScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // ── TYPE FILTER CHIPS ─────────────────────────────────────
+                    // ── WEB-STYLE FILTER DROPDOWNS ────────────────────────────
                     Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        listOf(
-                            "ALL" to "allTypes",
-                            "INCOME" to "incomesOnly",
-                            "EXPENSE" to "expensesOnly",
-                            "TRANSFER" to "transfersOnly"
-                        ).forEach { (t, key) ->
-                            val isSel = typeFilter == t
-                            val activeColor = when (t) {
-                                "INCOME" -> Emerald500
-                                "EXPENSE" -> Rose500
-                                "TRANSFER" -> Purple500
-                                else -> MaterialTheme.colorScheme.primary
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSel) activeColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .border(1.dp, if (isSel) activeColor else Color.Transparent, RoundedCornerShape(12.dp))
-                                    .clickable { onTypeFilterChange(t) }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = Translations.t(language, key),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSel) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // ── CATEGORY FILTER CHIPS ─────────────────────────────────
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            "ALL" to "allCategories",
-                            "GENERAL" to "general",
-                            "SALARY" to "salary",
-                            "TELECOM" to "telecom",
-                            "RECHARGE" to "recharge",
-                            "SHOPPING" to "shopping",
-                            "DINING" to "dining",
-                            "UTILITY" to "utility",
-                            "TRANSFER" to "transfer"
-                        ).forEach { (cat, key) ->
-                            val isSel = categoryFilter == cat
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                    .clickable { onCategoryFilterChange(cat) }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = Translations.t(language, key),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // ── SOURCE FILTER CHIPS ───────────────────────────────────
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // ALL chip
-                        val isAllSelected = sourceFilter == null
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isAllSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .clickable { onSourceFilterChange(null) }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = Translations.t(language, "allSources"),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isAllSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        // 1. Sources Dropdown
+                        var sourceExpanded by remember { mutableStateOf(false) }
+                        val sourceLabel = if (sourceFilter == null) {
+                            Translations.t(language, "allSources")
+                        } else {
+                            uniqueSources.find { it.second == sourceFilter }?.first?.uppercase() ?: sourceFilter.uppercase()
                         }
 
-                        // Per-source chips
-                        uniqueSources.forEach { (abbreviation, name) ->
-                            val isSelected = sourceFilter == name
-                            Box(
+                        Box {
+                            Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                    .clickable { onSourceFilterChange(name) }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                    .clickable { sourceExpanded = true }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = abbreviation.uppercase(),
+                                    text = sourceLabel,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = sourceExpanded,
+                                onDismissRequest = { sourceExpanded = false },
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                            ) {
+                                // "All Sources" Option
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = Translations.t(language, "allSources"),
+                                            fontSize = 13.sp,
+                                            fontWeight = if (sourceFilter == null) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (sourceFilter == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    onClick = {
+                                        onSourceFilterChange(null)
+                                        sourceExpanded = false
+                                    }
+                                )
+                                // Each discovered source
+                                uniqueSources.forEach { (abbreviation, name) ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = abbreviation.uppercase(),
+                                                fontSize = 13.sp,
+                                                fontWeight = if (sourceFilter == name) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (sourceFilter == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            onSourceFilterChange(name)
+                                            sourceExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // 2. Types Dropdown
+                        var typeExpanded by remember { mutableStateOf(false) }
+                        val typeLabel = when (typeFilter) {
+                            "INCOME" -> Translations.t(language, "incomesOnly")
+                            "EXPENSE" -> Translations.t(language, "expensesOnly")
+                            "TRANSFER" -> Translations.t(language, "transfersOnly")
+                            else -> Translations.t(language, "allTypes")
+                        }
+
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                    .clickable { typeExpanded = true }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = typeLabel,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = typeExpanded,
+                                onDismissRequest = { typeExpanded = false },
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                            ) {
+                                listOf(
+                                    "ALL" to "allTypes",
+                                    "INCOME" to "incomesOnly",
+                                    "EXPENSE" to "expensesOnly",
+                                    "TRANSFER" to "transfersOnly"
+                                ).forEach { (t, key) ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = Translations.t(language, key),
+                                                fontSize = 13.sp,
+                                                fontWeight = if (typeFilter == t) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (typeFilter == t) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            onTypeFilterChange(t)
+                                            typeExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // 3. Categories Dropdown
+                        var categoryExpanded by remember { mutableStateOf(false) }
+                        val categoryLabel = when (categoryFilter) {
+                            "ALL" -> Translations.t(language, "allCategories")
+                            else -> Translations.t(language, categoryFilter.lowercase()).uppercase()
+                        }
+
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                    .clickable { categoryExpanded = true }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = categoryLabel,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = categoryExpanded,
+                                onDismissRequest = { categoryExpanded = false },
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                            ) {
+                                listOf(
+                                    "ALL" to "allCategories",
+                                    "GENERAL" to "general",
+                                    "SALARY" to "salary",
+                                    "TELECOM" to "telecom",
+                                    "RECHARGE" to "recharge",
+                                    "SHOPPING" to "shopping",
+                                    "DINING" to "dining",
+                                    "UTILITY" to "utility",
+                                    "TRANSFER" to "transfer"
+                                ).forEach { (cat, key) ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = Translations.t(language, key),
+                                                fontSize = 13.sp,
+                                                fontWeight = if (categoryFilter == cat) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (categoryFilter == cat) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            onCategoryFilterChange(cat)
+                                            categoryExpanded = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
