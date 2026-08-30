@@ -38,6 +38,7 @@ import com.ethiobalance.app.ui.theme.*
 import com.ethiobalance.app.ui.theme.EthioBalanceTheme
 import com.ethiobalance.app.ui.viewmodel.*
 import com.ethiobalance.app.ui.screens.LockedScreen
+import com.ethiobalance.app.services.BiometricAuthService
 
 @Composable
 fun EthioBalanceAppUI(biometricAuthService: BiometricAuthService? = null) {
