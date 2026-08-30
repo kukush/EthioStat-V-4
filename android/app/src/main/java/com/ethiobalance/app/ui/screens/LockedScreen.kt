@@ -64,11 +64,15 @@ fun LockedScreen(
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFF030712) // slate-950
     ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
         Box(contentAlignment = Alignment.BottomEnd) {
             Image(
                 painter = painterResource(id = R.drawable.app_icon),
@@ -90,7 +94,7 @@ fun LockedScreen(
             Text(
                 text = Translations.t(language, "pinSetupTitle").takeIf { it != "pinSetupTitle" } ?: "Set 4-Digit PIN",
                 fontSize = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.White
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -99,7 +103,7 @@ fun LockedScreen(
                 text = Translations.t(language, "pinRequirement").takeIf { it != "pinRequirement" } 
                     ?: "PIN must be exactly 4 digits (numbers only).",
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color(0xFF94A3B8), // slate-400
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -115,17 +119,25 @@ fun LockedScreen(
                     successMessage = ""
                 }
             },
-            label = { Text("PIN") },
+            label = { Text("PIN", color = Color(0xFF94A3B8)) },
+            singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = if (isPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { isPinVisible = !isPinVisible }) {
                     Icon(
                         imageVector = if (isPinVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = if (isPinVisible) "Hide PIN" else "Show PIN"
+                        contentDescription = if (isPinVisible) "Hide PIN" else "Show PIN",
+                        tint = Color(0xFF94A3B8)
                     )
                 }
             },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF10B981),
+                unfocusedBorderColor = Color(0xFF334155),
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White
+            ),
             modifier = Modifier.fillMaxWidth(0.8f)
         )
         
@@ -133,7 +145,7 @@ fun LockedScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
+                color = Color(0xFFFB7185), // rose-400
                 fontSize = 14.sp
             )
         }
@@ -142,7 +154,7 @@ fun LockedScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = successMessage,
-                color = MaterialTheme.colorScheme.primary,
+                color = Color(0xFF34D399), // emerald-400
                 fontSize = 14.sp
             )
         }
@@ -168,6 +180,7 @@ fun LockedScreen(
                     onUnlock()
                 }
             },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)), // emerald-600
             modifier = Modifier.fillMaxWidth(0.8f)
         ) {
             val buttonText = if (hasPin) {
@@ -175,7 +188,7 @@ fun LockedScreen(
             } else {
                 Translations.t(language, "setPin").takeIf { it != "setPin" } ?: "Set PIN"
             }
-            Text(buttonText)
+            Text(buttonText, color = Color.White)
         }
         
         // Use Biometric button
@@ -196,16 +209,19 @@ fun LockedScreen(
                             errorMessage = errString.toString()
                         }
                     )
-                }
+                },
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF34D399))
             ) {
                 Icon(
                     imageVector = Icons.Default.Fingerprint,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
+                    tint = Color(0xFF34D399)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(Translations.t(language, "useBiometric").takeIf { it != "useBiometric" } ?: "Use Biometric")
             }
         }
+      }
     }
 }
