@@ -634,14 +634,20 @@ fun TransactionScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "[+${fmt.format(filteredIncome)} -${fmt.format(filteredExpense)}]",
+                                text = "+${fmt.format(filteredIncome)}",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = FontWeight.Bold,
+                                color = Emerald600
+                            )
+                            Text(
+                                text = "-${fmt.format(filteredExpense)}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Rose600
                             )
                             Text(
                                 text = "${if (filteredNet >= 0) "+" else ""}${fmt.format(filteredNet)} ETB",
