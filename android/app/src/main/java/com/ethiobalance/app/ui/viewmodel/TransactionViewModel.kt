@@ -45,6 +45,12 @@ class TransactionViewModel @Inject constructor(
     private val _sourceFilter = MutableStateFlow<String?>(null)
     val sourceFilter: StateFlow<String?> = _sourceFilter.asStateFlow()
 
+    private val _typeFilter = MutableStateFlow("ALL")
+    val typeFilter: StateFlow<String> = _typeFilter.asStateFlow()
+
+    private val _categoryFilter = MutableStateFlow("ALL")
+    val categoryFilter: StateFlow<String> = _categoryFilter.asStateFlow()
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -59,20 +65,46 @@ class TransactionViewModel @Inject constructor(
     ) { start, end -> start to end }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null to null)
 
+    private data class FilterParams(
+        val transactions: List<TransactionEntity>,
+        val time: String,
+        val source: String?,
+        val type: String,
+        val category: String,
+        val query: String,
+        val configuredSources: List<TransactionSourceEntity>
+    )
+
     val filteredTransactions: StateFlow<List<TransactionEntity>> = combine(
-        allTransactions, _timeFilter, _sourceFilter, _searchQuery, settingsRepo.getTransactionSources()
-    ) { transactions, time, source, query, configuredSources ->
-        arrayOf(transactions, time, source, query, configuredSources)
-    }.combine(_customRangeTrigger) { arr, range ->
+        allTransactions,
+        _timeFilter,
+        _sourceFilter,
+        _typeFilter,
+        _categoryFilter,
+        _searchQuery,
+        settingsRepo.getTransactionSources()
+    ) { arr ->
         @Suppress("UNCHECKED_CAST")
+        FilterParams(
+            transactions = arr[0] as List<TransactionEntity>,
+            time = arr[1] as String,
+            source = arr[2] as String?,
+            type = arr[3] as String,
+            category = arr[4] as String,
+            query = arr[5] as String,
+            configuredSources = arr[6] as List<TransactionSourceEntity>
+        )
+    }.combine(_customRangeTrigger) { params, range ->
         formatTransactionUseCase(
-            arr[0] as List<TransactionEntity>,
-            arr[1] as String,
-            arr[2] as String?,
-            arr[3] as String,
-            arr[4] as List<TransactionSourceEntity>,
-            range.first,
-            range.second
+            transactions = params.transactions,
+            timeFilter = params.time,
+            sourceFilter = params.source,
+            typeFilter = params.type,
+            categoryFilter = params.category,
+            searchQuery = params.query,
+            configuredSources = params.configuredSources,
+            customStartMs = range.first,
+            customEndMs = range.second
         )
     }.distinctUntilChanged()
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -104,7 +136,33 @@ class TransactionViewModel @Inject constructor(
         _timeFilter.value = "custom"
     }
     fun setSourceFilter(source: String?) { _sourceFilter.value = source }
+    fun setTypeFilter(type: String) { _typeFilter.value = type }
+    fun setCategoryFilter(category: String) { _categoryFilter.value = category }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    fun addManualTransaction(
+        type: String,
+        source: String,
+        amount: Double,
+        category: String,
+        partyName: String,
+        reference: String
+    ) {
+        viewModelScope.launch {
+            val tx = TransactionEntity(
+                id = "tx-manual-${System.currentTimeMillis()}",
+                type = type.uppercase(),
+                amount = amount,
+                category = category.uppercase(),
+                source = source.uppercase(),
+                timestamp = System.currentTimeMillis(),
+                reference = reference.trim().ifBlank { "REF-${(100000..999999).random()}" },
+                partyName = partyName.trim().ifBlank { source },
+                transactionSubType = "Manual"
+            )
+            transactionRepo.insert(tx)
+        }
+    }
 
     /**
      * Trigger a full 90-day historical SMS scan across all known senders

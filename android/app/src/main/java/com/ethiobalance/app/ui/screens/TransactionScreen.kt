@@ -5,6 +5,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,14 +16,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,23 +52,32 @@ fun TransactionScreen(
     uniqueSources: List<Pair<String, String>>,
     timeFilter: String,
     sourceFilter: String?,
+    typeFilter: String = "ALL",
+    categoryFilter: String = "ALL",
     searchQuery: String,
     _isScanningHistory: Boolean = false,
     customStartMs: Long? = null,
     customEndMs: Long? = null,
     onTimeFilterChange: (String) -> Unit,
     onSourceFilterChange: (String?) -> Unit,
+    onTypeFilterChange: (String) -> Unit = {},
+    onCategoryFilterChange: (String) -> Unit = {},
     onSearchChange: (String) -> Unit,
     onCustomRangeChange: (Long?, Long?) -> Unit = { _, _ -> },
     onExportCsv: () -> Unit,
-    _onScanAll: () -> Unit
+    _onScanAll: () -> Unit,
+    onAddManualTransaction: (type: String, source: String, amount: Double, category: String, partyName: String, reference: String) -> Unit = { _, _, _, _, _, _ -> }
 ) {
     var showExportModal by remember { mutableStateOf(false) }
+    var showAddManualDialog by remember { mutableStateOf(false) }
+    var showChart by remember { mutableStateOf(false) }
+    
     val netBalance = totalIncome - totalExpense
     val listState = rememberLazyListState()
 
     var showDateRangePicker by remember { mutableStateOf(false) }
     var showAmounts by remember { mutableStateOf(true) }
+    
     val lastActivity = remember(transactions, language) {
         transactions.firstOrNull()?.let {
             try {
@@ -78,9 +87,11 @@ fun TransactionScreen(
             }
         }
     }
+    
     val showStickyBar by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 0 }
     }
+    
     val fmt = remember {
         NumberFormat.getNumberInstance(Locale.US).apply {
             minimumFractionDigits = 2
@@ -101,7 +112,17 @@ fun TransactionScreen(
                 totalIncome = totalIncome,
                 totalExpense = totalExpense,
                 userName = "Abebe Bikila",
-                userPhone = "0911234567" // Need to fix this to get actual phone
+                userPhone = "0911234567"
+            )
+        }
+
+        if (showAddManualDialog) {
+            AddTransactionDialog(
+                isOpen = true,
+                onClose = { showAddManualDialog = false },
+                onConfirm = onAddManualTransaction,
+                language = language,
+                uniqueSources = uniqueSources
             )
         }
         
@@ -111,17 +132,79 @@ fun TransactionScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 120.dp)
         ) {
-            // ── HEADER ITEM (scrolls away) ────────────────────────────────────
+            // ── HEADER ITEM ──────────────────────────────────────────────────
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Search bar
+                    // ── TOP BAR WITH ACTIONS ──────────────────────────────────
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = Translations.t(language, "transactionHistory"),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Chart Analysis Toggle
+                            IconButton(
+                                onClick = { showChart = !showChart },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(if (showChart) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant),
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = if (showChart) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            ) {
+                                Icon(Icons.Default.Equalizer, contentDescription = "Chart Analysis", modifier = Modifier.size(18.dp))
+                            }
+
+                            // Add Manual Transaction
+                            IconButton(
+                                onClick = { showAddManualDialog = true },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add Transaction", modifier = Modifier.size(18.dp))
+                            }
+
+                            // Export CSV
+                            IconButton(
+                                onClick = { showExportModal = true },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = "Export CSV", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ── SEARCH BAR ────────────────────────────────────────────
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = onSearchChange,
                         placeholder = {
-                            Text("Search transactions…", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(Translations.t(language, "searchTransactions"), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         },
                         leadingIcon = {
                             Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
@@ -148,63 +231,54 @@ fun TransactionScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Time Period Filters
-                    val filterScrollState = rememberScrollState()
-                    LaunchedEffect(timeFilter) {
-                        if (timeFilter == "custom") filterScrollState.animateScrollTo(filterScrollState.maxValue)
-                        else filterScrollState.animateScrollTo(0)
-                    }
+                    // ── DATE FILTER CHIPS ─────────────────────────────────────
                     Row(
-                        modifier = Modifier.horizontalScroll(filterScrollState),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
                             "allTime" to "allTime",
                             "today" to "today",
                             "thisWeek" to "thisWeek",
-                            "thisMonth" to "thisMonth"
+                            "thisMonth" to "thisMonth",
+                            "yearly" to "yearly"
                         ).forEach { (translationKey, filterVal) ->
                             val isSelected = timeFilter == filterVal
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                     .clickable { onTimeFilterChange(filterVal) }
-                                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Text(
-                                    text = Translations.t(language, translationKey)
-                                        .takeIf { it.isNotEmpty() } ?: translationKey.uppercase(),
+                                    text = Translations.t(language, translationKey),
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    letterSpacing = 0.5.sp,
-                                    maxLines = 1
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
 
-                        // Custom date range pill
+                        // Custom Date Range Picker Pill
                         val isCustomSelected = timeFilter == "custom"
                         val customPillText = if (isCustomSelected && customStartMs != null && customEndMs != null) {
                             val df = SimpleDateFormat("MMM d", Locale.US)
                             val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
                             "${df.format(Date(customStartMs))}–${df.format(Date(displayEndMs))}".uppercase()
                         } else {
-                            "▼"
+                            Translations.t(language, "custom")
                         }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
-                                .border(1.dp, if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                                .background(if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .clickable { showDateRangePicker = true }
-                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Icon(
                                     Icons.Default.DateRange,
                                     contentDescription = null,
@@ -214,10 +288,8 @@ fun TransactionScreen(
                                 Text(
                                     text = customPillText,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    letterSpacing = 0.5.sp,
-                                    maxLines = 1
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -225,11 +297,9 @@ fun TransactionScreen(
 
                     // DateRangePicker Dialog
                     if (showDateRangePicker) {
-                        // Get today in Ethiopia timezone and convert to UTC midnight for comparison
                         val todayEthiopia = Calendar.getInstance(AppConstants.ETHIOPIA_TIMEZONE)
                         val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
                         utcCalendar.timeInMillis = todayEthiopia.timeInMillis
-                        // Set to end of today in UTC (which corresponds to end of today in Ethiopia)
                         utcCalendar.set(Calendar.HOUR_OF_DAY, 23)
                         utcCalendar.set(Calendar.MINUTE, 59)
                         utcCalendar.set(Calendar.SECOND, 59)
@@ -250,7 +320,6 @@ fun TransactionScreen(
                                         val startMs = dateRangePickerState.selectedStartDateMillis
                                         val endMs = dateRangePickerState.selectedEndDateMillis
                                         if (startMs != null && endMs != null) {
-                                            // Set end to end of day (23:59:59.999)
                                             val endOfDay = endMs + (24 * 60 * 60 * 1000L - 1)
                                             onCustomRangeChange(startMs, endOfDay)
                                         }
@@ -258,12 +327,12 @@ fun TransactionScreen(
                                     },
                                     enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
                                 ) {
-                                    Text(Translations.t(language, "done").takeIf { it.isNotEmpty() } ?: "DONE")
+                                    Text(Translations.t(language, "done").uppercase())
                                 }
                             },
                             dismissButton = {
                                 TextButton(onClick = { showDateRangePicker = false }) {
-                                    Text(Translations.t(language, "cancel").takeIf { it.isNotEmpty() } ?: "CANCEL")
+                                    Text(Translations.t(language, "cancel").uppercase())
                                 }
                             }
                         ) {
@@ -271,7 +340,7 @@ fun TransactionScreen(
                                 state = dateRangePickerState,
                                 title = {
                                     Text(
-                                        text = Translations.t(language, "selectDateRange").takeIf { it.isNotEmpty() } ?: "SELECT DATE RANGE",
+                                        text = Translations.t(language, "selectDateRange"),
                                         modifier = Modifier.padding(start = 24.dp, top = 16.dp),
                                         style = MaterialTheme.typography.titleLarge
                                     )
@@ -281,36 +350,183 @@ fun TransactionScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    // Source Filter Chips
+                    // ── TYPE FILTER CHIPS ─────────────────────────────────────
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "ALL" to "allTypes",
+                            "INCOME" to "incomesOnly",
+                            "EXPENSE" to "expensesOnly",
+                            "TRANSFER" to "transfersOnly"
+                        ).forEach { (t, key) ->
+                            val isSel = typeFilter == t
+                            val activeColor = when (t) {
+                                "INCOME" -> Emerald500
+                                "EXPENSE" -> Rose500
+                                "TRANSFER" -> Purple500
+                                else -> MaterialTheme.colorScheme.primary
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSel) activeColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .border(1.dp, if (isSel) activeColor else Color.Transparent, RoundedCornerShape(12.dp))
+                                    .clickable { onTypeFilterChange(t) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = Translations.t(language, key),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSel) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // ── CATEGORY FILTER CHIPS ─────────────────────────────────
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "ALL" to "allCategories",
+                            "GENERAL" to "general",
+                            "SALARY" to "salary",
+                            "TELECOM" to "telecom",
+                            "RECHARGE" to "recharge",
+                            "SHOPPING" to "shopping",
+                            "DINING" to "dining",
+                            "UTILITY" to "utility",
+                            "TRANSFER" to "transfer"
+                        ).forEach { (cat, key) ->
+                            val isSel = categoryFilter == cat
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable { onCategoryFilterChange(cat) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = Translations.t(language, key),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // ── SOURCE FILTER CHIPS ───────────────────────────────────
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // ALL chip
-                        SourceChip(
-                            label = "ALL",
-                            isSelected = sourceFilter == null,
-                            onClick = { onSourceFilterChange(null) }
-                        )
+                        val isAllSelected = sourceFilter == null
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isAllSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .clickable { onSourceFilterChange(null) }
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = Translations.t(language, "allSources"),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isAllSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
                         // Per-source chips
                         uniqueSources.forEach { (abbreviation, name) ->
-                            SourceChip(
-                                label = name.take(8),
-                                abbreviation = abbreviation,
-                                isSelected = sourceFilter == name,
-                                onClick = { onSourceFilterChange(name) }
+                            val isSelected = sourceFilter == name
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable { onSourceFilterChange(name) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = abbreviation.uppercase(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // ── SEARCH RESULTS SUMMARY BAR ────────────────────────────
+                    val filteredIncome = remember(transactions) {
+                        transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
+                    }
+                    val filteredExpense = remember(transactions) {
+                        transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                    }
+                    val filteredNet = filteredIncome - filteredExpense
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${transactions.size} items",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "[+${fmt.format(filteredIncome)} -${fmt.format(filteredExpense)}]",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${if (filteredNet >= 0) "+" else ""}${fmt.format(filteredNet)} ETB",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (filteredNet >= 0) Emerald600 else Rose600
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Summary Card
+                    // ── CHART ANALYSIS CARD ───────────────────────────────────
+                    AnimatedVisibility(
+                        visible = showChart,
+                        enter = fadeIn(tween(250)) + expandVertically(),
+                        exit = fadeOut(tween(200)) + shrinkVertically()
+                    ) {
+                        TransactionChart(transactions = transactions, language = language)
+                    }
+
+                    // ── SUMMARY CARD ──────────────────────────────────────────
                     val displayTimeFilter = if (timeFilter == "custom" && customStartMs != null && customEndMs != null) {
                         val df = SimpleDateFormat("MMM d", Locale.US)
-                        // Subtract the end-of-day offset (24h - 1ms) for display to show the actual selected date
                         val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
                         "${df.format(Date(customStartMs))} – ${df.format(Date(displayEndMs))}".uppercase()
                     } else {
@@ -329,27 +545,16 @@ fun TransactionScreen(
                         onToggleAmounts = { showAmounts = !showAmounts }
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Text(
-                            Translations.t(language, "history").uppercase(),
-                            fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                            color = Slate400, letterSpacing = 2.sp
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { showExportModal = true }
-                        ) {
-                            Text("EXPORT CSV", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Blue600, letterSpacing = 2.sp)
-                            Spacer(Modifier.width(4.dp))
-                            Icon(Icons.Default.Download, null, tint = Blue600, modifier = Modifier.size(12.dp))
-                        }
-                    }
+                    // Section Divider
+                    Text(
+                        text = Translations.t(language, "history").uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Slate400,
+                        letterSpacing = 1.5.sp
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             }
@@ -361,9 +566,9 @@ fun TransactionScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 16.dp)
-                            .clip(RoundedCornerShape(40.dp))
+                            .clip(RoundedCornerShape(32.dp))
                             .background(MaterialTheme.colorScheme.surface)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(40.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(32.dp))
                             .padding(48.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -393,7 +598,7 @@ fun TransactionScreen(
             }
         }
 
-        // ── STICKY COMPACT BAR (appears after scrolling past header) ──────────
+        // ── STICKY COMPACT BAR ────────────────────────────────────────────────
         AnimatedVisibility(
             visible = showStickyBar,
             enter = fadeIn(tween(200)),
@@ -414,58 +619,14 @@ fun TransactionScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Compact filter pills
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf("allTime" to "allTime", "today" to "today", "thisWeek" to "thisWeek", "thisMonth" to "thisMonth").forEach { (key, val_) ->
-                            val isSel = timeFilter == val_
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                    .clickable { onTimeFilterChange(val_) }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                Text(
-                                    Translations.t(language, key).takeIf { it.isNotEmpty() } ?: key.uppercase(),
-                                    fontSize = 7.sp, fontWeight = FontWeight.Black,
-                                    color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
-                        // Compact custom pill
-                        val isCompactCustom = timeFilter == "custom"
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isCompactCustom) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable { showDateRangePicker = true }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Icon(
-                                    Icons.Default.DateRange, null,
-                                    modifier = Modifier.size(8.dp),
-                                    tint = if (isCompactCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    if (isCompactCustom && customStartMs != null && customEndMs != null) {
-                                        val df = SimpleDateFormat("M/d", Locale.US)
-                                        // Subtract the end-of-day offset (24h - 1ms) for display to show the actual selected date
-                                        val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
-                                        "${df.format(Date(customStartMs))}–${df.format(Date(displayEndMs))}"
-                                    } else {
-                                        Translations.t(language, "custom").takeIf { it.isNotEmpty() } ?: "CUSTOM"
-                                    },
-                                    fontSize = 7.sp, fontWeight = FontWeight.Black,
-                                    color = if (isCompactCustom) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
+                    // Compact date/type filters summary
+                    Column {
+                        Text(
+                            text = "${transactions.size} items filtered",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     // Net balance chip
                     Box(
@@ -486,45 +647,324 @@ fun TransactionScreen(
     }
 }
 
-// ── Reusable source chip component ───────────────────────────────────────────
 @Composable
-private fun SourceChip(label: String, abbreviation: String = label, isSelected: Boolean, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }.width(64.dp)
+fun TransactionChart(
+    transactions: List<TransactionEntity>,
+    language: String
+) {
+    val sourceData = remember(transactions) {
+        val groups = transactions.groupBy { it.source.uppercase() }
+        groups.map { (source, txs) ->
+            val income = txs.filter { it.type == "INCOME" }.sumOf { it.amount }
+            val expense = txs.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+            source to (income to expense)
+        }.filter { it.second.first > 0 || it.second.second > 0 }
+         .sortedByDescending { it.second.first + it.second.second }
+         .take(5) // Show top 5 sources for high-fidelity clean visual layout
+    }
+
+    if (sourceData.isEmpty()) return
+
+    val maxVal = remember(sourceData) {
+        val max = sourceData.maxOf { maxOf(it.second.first, it.second.second) }
+        if (max == 0.0) 1.0 else max
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
     ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
-                .border(
-                    if (isSelected) 3.dp else 1.dp,
-                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = abbreviation.uppercase(),
-                fontSize = when {
-                    abbreviation.length <= 2 -> 15.sp
-                    abbreviation.length <= 3 -> 13.sp
-                    else -> 10.sp
-                },
-                fontWeight = FontWeight.Black,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                text = Translations.t(language, "sourceFlow"),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                sourceData.forEach { (source, flows) ->
+                    val income = flows.first
+                    val expense = flows.second
+
+                    val incomeHeightPct = (income / maxVal).toFloat().coerceIn(0.04f, 1f)
+                    val expenseHeightPct = (expense / maxVal).toFloat().coerceIn(0.04f, 1f)
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxHeight(0.85f)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            // Income Bar (Green)
+                            Box(
+                                modifier = Modifier
+                                    .width(14.dp)
+                                    .fillMaxHeight(incomeHeightPct)
+                                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                    .background(Emerald500)
+                            )
+                            // Expense Bar (Red)
+                            Box(
+                                modifier = Modifier
+                                    .width(14.dp)
+                                    .fillMaxHeight(expenseHeightPct)
+                                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                    .background(Rose500)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = source,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            // Legend
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Emerald500))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(Translations.t(language, "income"), fontSize = 11.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(20.dp))
+                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Rose500))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(Translations.t(language, "expense"), fontSize = 11.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = label.uppercase(),
-            fontSize = 9.sp, fontWeight = FontWeight.Bold,
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            letterSpacing = 1.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddTransactionDialog(
+    isOpen: Boolean,
+    onClose: () -> Unit,
+    onConfirm: (type: String, source: String, amount: Double, category: String, partyName: String, reference: String) -> Unit,
+    language: String,
+    uniqueSources: List<Pair<String, String>>
+) {
+    if (!isOpen) return
+
+    var amount by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf("EXPENSE") }
+    var selectedSource by remember { mutableStateOf("CASH") }
+    var selectedCategory by remember { mutableStateOf("GENERAL") }
+    var partyName by remember { mutableStateOf("") }
+    var reference by remember { mutableStateOf("") }
+
+    val categories = listOf("GENERAL", "SALARY", "TELECOM", "RECHARGE", "SHOPPING", "DINING", "UTILITY", "TRANSFER")
+    val defaultSources = listOf("CASH", "TELEBIRR", "CBE") + uniqueSources.map { it.first }.filter { it != "CASH" && it != "TELEBIRR" && it != "CBE" }
+
+    AlertDialog(
+        onDismissRequest = onClose,
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 6.dp,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = Translations.t(language, "addTransactionManually"),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                // Type Selection Row
+                Column {
+                    Text(
+                        text = Translations.t(language, "type").uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("INCOME" to Emerald500, "EXPENSE" to Rose500, "TRANSFER" to Purple500).forEach { (t, color) ->
+                            val isSel = selectedType == t
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSel) color.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .border(1.5.dp, if (isSel) color else Color.Transparent, RoundedCornerShape(12.dp))
+                                    .clickable { selectedType = t }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = Translations.t(language, t.lowercase()).uppercase(),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSel) color else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Amount
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { if (it.isEmpty() || it.toDoubleOrNull() != null || it.endsWith(".")) amount = it },
+                    label = { Text(Translations.t(language, "amount") + " (ETB)") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                // Source Choice Chips
+                Column {
+                    Text(
+                        text = Translations.t(language, "source").uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        defaultSources.forEach { s ->
+                            val isSel = selectedSource == s
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { selectedSource = s }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = s,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Category Choice Chips
+                Column {
+                    Text(
+                        text = Translations.t(language, "category").uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categories.forEach { c ->
+                            val isSel = selectedCategory == c
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { selectedCategory = c }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = Translations.t(language, c.lowercase()).uppercase(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Recipient / Sender Name
+                OutlinedTextField(
+                    value = partyName,
+                    onValueChange = { partyName = it },
+                    label = { Text(Translations.t(language, "partyName")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                // Reference ID
+                OutlinedTextField(
+                    value = reference,
+                    onValueChange = { reference = it },
+                    label = { Text(Translations.t(language, "reference")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                // Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    TextButton(onClick = onClose) {
+                        Text(Translations.t(language, "cancel").uppercase(), fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = {
+                            val amtVal = amount.toDoubleOrNull() ?: 0.0
+                            if (amtVal > 0.0) {
+                                onConfirm(selectedType, selectedSource, amtVal, selectedCategory, partyName, reference)
+                                onClose()
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = amount.toDoubleOrNull() != null && (amount.toDoubleOrNull() ?: 0.0) > 0.0
+                    ) {
+                        Text(Translations.t(language, "addTransaction").uppercase(), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }

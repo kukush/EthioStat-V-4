@@ -135,7 +135,13 @@ object Translations {
         "onboardingPunchTelecom" to "📊 SMART BALANCE & DATA TRACKING\n• See package expiry dates with countdown timers\n⚡ INSTANT BALANCE SYNC\n• Checks your balance using USSD (*804#)\n• Automatically parses results into clear insights\n• Perfect for new users and elderly users\n📦 RECHARGE & PACKAGE MANAGEMENT\n• Recharge airtime using vouchers",
         "onboardingPunchTrans" to "💰 AUTOMATIC FINANCIAL TRACKING\n• Convert SMS alerts from banks and wallets into a smart ledger\n• Automatically categorize income and expenses\n• View daily, weekly, monthly, custom summaries\n• See your live Net Balance without manual calculations",
         "onboardingPunchSetting" to "📱 CUSTOMIZABLE SOURCES\n• Choose which banks or wallets to track from Settings\n• Supports Telebirr and all major Ethiopian banks\n• Track only the sources you select",
-        "onboardingPunchSetup" to "🔒 100% OFFLINE & PRIVATE\n• No internet required\n• Your data never leaves your device\n• No account, no signup, no cloud\n🌍 BUILT FOR ETHIOPIA\n• Supports English, Amharic (አማርኛ), and Afaan Oromo\n🎯 WHY ETHIOSTAT?\n• No manual tracking\n• No confusing SMS messages\n• No internet dependency"
+        "onboardingPunchSetup" to "🔒 100% OFFLINE & PRIVATE\n• No internet required\n• Your data never leaves your device\n• No account, no signup, no cloud\n🌍 BUILT FOR ETHIOPIA\n• Supports English, Amharic (አማርኛ), and Afaan Oromo\n🎯 WHY ETHIOSTAT?\n• No manual tracking\n• No confusing SMS messages\n• No internet dependency",
+        "filterByDate" to "Filter By Date", "allTypes" to "All Types", "incomesOnly" to "Incomes Only", "expensesOnly" to "Expenses Only",
+        "transfersOnly" to "Transfers Only", "searchTransactions" to "Search transactions...", "addTransactionManually" to "Add Transaction",
+        "allSources" to "All Sources", "allCategories" to "All Categories", "customStartDate" to "Start Date", "customEndDate" to "End Date",
+        "clearDateFilter" to "Clear Date", "addTransaction" to "Add Transaction", "type" to "Type", "source" to "Source",
+        "category" to "Category", "partyName" to "Recipient / Sender Name", "reference" to "Reference ID", "chartAnalysis" to "Chart Analysis",
+        "sourceFlow" to "Source Flow (ETB)"
     )
 
     private val am = mapOf(
@@ -275,7 +281,13 @@ object Translations {
         "onboardingPunchTelecom" to "📊 ሚዛን ና ዳታ ክትትል\n• የፓኬጅ የማብቂያ ቀን ካውንትዳውን ሲቆጥሩ ይመልከቱ\n⚡ ቅጽበታዊ ሚዛን ማመሳሰል\n• ሚዛንዎን በUSSD (*804#) ይፈትሻሉ\n• ውጤቶች በራስ-ሰር ይተነተናሉ\n• ለአዳዲስ እና አዛውንት ተጠቃሚዎች ተስማሚ\n📦 ሬቻርጅ ና ፓኬጅ አያያዝ\n• አየር ሰዓት ቫውቸር ተጠቅሞ ሬቻርጅ ያድርጉ",
         "onboardingPunchTrans" to "💰 ራስ-ሰር የፋይናንስ ክትትል\n• ከባንኮች እና ዋሌቶች SMS ወደ ስማርት ሌጀር ይቀይሩ\n• ገቢ እና ወጪ በራስ-ሰር ይመደባሉ\n• የዕለት፣ ሳምንት፣ ወር፣ ብጁ ማጠቃለያዎችን ይመልከቱ\n• ቀጥታ ጠቅላላ ሚዛን ያለ ማስላት ያሳያል",
         "onboardingPunchSetting" to "📱 ብጁ ምንጮች\n• ከቅንብሮች የትኞቹ ባንኮች ወይም ዋሌቶች እንደሚከታተሉ ይምረጡ\n• ቴሌብርና ዋና የኢትዮጵያ ባንኮችን ይደግፋሉ\n• የሚፈልጉትን ምንጮች ብቻ ይከታተሉ",
-        "onboardingPunchSetup" to "🔒 100% ከበይነ-መረብ ነፃ ና ምስጢራዊ\n• ኢንተርኔት አያስፈልግም\n• ውሂብዎ መሣሪያዎ ላይ ብቻ ይቆያሉ\n• አካውንት፣ ምዝገባ፣ ወይም ክላውድ አያስፈልግም\n🌍 ለኢትዮጵያ የተሠራ\n• እንግሊዝኛ፣ አማርኛ እና አፋን ኦሮሞን ይደግፋሉ\n🎯 ለምን ኢትዮስታት?\n• ምንም ማስላት የለም\n• ምንም ግራ-አጋቢ SMS የለም\n• ምንም ኢንተርኔት ጥገኛ የለም"
+        "onboardingPunchSetup" to "🔒 100% ከበይነ-መረብ ነፃ ና ምስጢራዊ\n• ኢንተርኔት አያስፈልግም\n• ውሂብዎ መሣሪያዎ ላይ ብቻ ይቆያሉ\n• አካውንት፣ ምዝገባ፣ ወይም ክላውድ አያስፈልግም\n🌍 ለኢትዮጵያ የተሠራ\n• እንግሊዝኛ፣ አማርኛ እና አፋን ኦሮሞን ይደግፋሉ\n🎯 ለምን ኢትዮስታት?\n• ምንም ማስላት የለም\n• ምንም ግራ-አጋቢ SMS የለም\n• ምንም ኢንተርኔት ጥገኛ የለም",
+        "filterByDate" to "በቀን ያጣሩ", "allTypes" to "ሁሉም ዓይነቶች", "incomesOnly" to "ገቢዎች ብቻ", "expensesOnly" to "ወጪዎች ብቻ",
+        "transfersOnly" to "ዝውውሮች ብቻ", "searchTransactions" to "ግብይቶችን ይፈልጉ...", "addTransactionManually" to "ግብይት በእጅ ያስገቡ",
+        "allSources" to "ሁሉም ምንጮች", "allCategories" to "ሁሉም ምድቦች", "customStartDate" to "መጀመሪያ ቀን", "customEndDate" to "ማጠናቀቂያ ቀን",
+        "clearDateFilter" to "አጽዳ", "addTransaction" to "ግብይት አክል", "type" to "ዓይነት", "source" to "ምንጭ",
+        "category" to "ምድብ", "partyName" to "የተቀባይ / የላኪ ስም", "reference" to "የማጣቀሻ ቁጥር", "chartAnalysis" to "የሠንጠረዥ ትንተና",
+        "sourceFlow" to "የምንጭ ፍሰት (ብር)"
     )
 
     private val om = mapOf(
@@ -421,6 +433,12 @@ object Translations {
         "onboardingPunchTrans" to "💰 HORDOFFII MAALLAQAA OFUMAAN\n• SMS baankii fi waalleetii irraa gara leejarii qaroo jijjiiraa\n• Galii fi baasii ofumaan qoodi\n• Cuunfaa guyyaa, torbee, ji'a, barbaachisaa ilaali\n• Balansi qulqulluu jiraataa herreguu malee ilaali",
         "onboardingPunchSetting" to "📱 MADDA FILATAMAADHA\n• Baankii fi waalleetii hordofuu barbaaddu Qindaa'ina irraa fili\n• Telebirr fi baankiiwwan gurguddoo Itoophiyaa ni deeggaraa\n• Madda filatte qofaa hordofaa",
         "onboardingPunchSetup" to "🔒 100% TOORA ALAA FI DHUUNFAA\n• Interneetii hin barbaachisu\n• Daataan kee meeshaa kee irraa hin baatu\n• Herreegaa, galmee, ykn klaawdii hin barbaachisu\n🌍 ITOOPHIYAAF IJAARAME\n• Afaan Ingilizii, Amaaraa fi Afaan Oromoo ni deeggaraa\n🎯 MAALIIF ETHIOSTAT?\n• Hordoffii harkaan hin jiru\n• SMS gaddisiisaa hin jiru\n• Interneetiirratti hirkatuu hin jiru"
+        "filterByDate" to "Guyyaan deebisi", "allTypes" to "Gosa Hunda", "incomesOnly" to "Galii Qofa", "expensesOnly" to "Baasii Qofa",
+        "transfersOnly" to "Dabarsuu Qofa", "searchTransactions" to "Daldala barbaadi...", "addTransactionManually" to "Daldala Harkaan Galchi",
+        "allSources" to "Madda Hunda", "allCategories" to "Ramaddii Hunda", "customStartDate" to "Guyyaa Jalqabaa", "customEndDate" to "Guyyaa Dhumaa",
+        "clearDateFilter" to "Haqi", "addTransaction" to "Daldala Dabali", "type" to "Gosa", "source" to "Madda",
+        "category" to "Ramaddii", "partyName" to "Maqaa Fudhataa / Ergaa", "reference" to "Koodii Mirkaneessaa", "chartAnalysis" to "Gabaasa Saaroo",
+        "sourceFlow" to "Madda Yaasaa (ETB)"
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)

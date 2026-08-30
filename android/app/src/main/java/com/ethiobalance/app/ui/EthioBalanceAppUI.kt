@@ -264,6 +264,8 @@ fun EthioBalanceAppUI() {
                         val uniqueSources by transactionVM.uniqueSources.collectAsStateWithLifecycle()
                         val timeFilter by transactionVM.timeFilter.collectAsStateWithLifecycle()
                         val sourceFilter by transactionVM.sourceFilter.collectAsStateWithLifecycle()
+                        val typeFilter by transactionVM.typeFilter.collectAsStateWithLifecycle()
+                        val categoryFilter by transactionVM.categoryFilter.collectAsStateWithLifecycle()
                         val searchQuery by transactionVM.searchQuery.collectAsStateWithLifecycle()
                         val isScanning by transactionVM.isScanningHistory.collectAsStateWithLifecycle()
                         val customStartMs by transactionVM.customStartMs.collectAsStateWithLifecycle()
@@ -277,16 +279,23 @@ fun EthioBalanceAppUI() {
                             uniqueSources = uniqueSources,
                             timeFilter = timeFilter,
                             sourceFilter = sourceFilter,
+                            typeFilter = typeFilter,
+                            categoryFilter = categoryFilter,
                             searchQuery = searchQuery,
                             _isScanningHistory = isScanning,
                             customStartMs = customStartMs,
                             customEndMs = customEndMs,
                             onTimeFilterChange = { transactionVM.setTimeFilter(it) },
                             onSourceFilterChange = { transactionVM.setSourceFilter(it) },
+                            onTypeFilterChange = { transactionVM.setTypeFilter(it) },
+                            onCategoryFilterChange = { transactionVM.setCategoryFilter(it) },
                             onSearchChange = { transactionVM.setSearchQuery(it) },
                             onCustomRangeChange = { start, end -> transactionVM.setCustomRange(start, end) },
                             onExportCsv = { transactionVM.exportToCsv(context) },
-                            _onScanAll = { transactionVM.scanSmsHistory() }
+                            _onScanAll = { transactionVM.scanSmsHistory() },
+                            onAddManualTransaction = { type, source, amount, cat, party, ref ->
+                                transactionVM.addManualTransaction(type, source, amount, cat, party, ref)
+                            }
                         )
                     }
 

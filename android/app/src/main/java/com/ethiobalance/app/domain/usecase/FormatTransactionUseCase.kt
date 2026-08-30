@@ -15,7 +15,9 @@ class FormatTransactionUseCase @Inject constructor() {
         searchQuery: String,
         configuredSources: List<TransactionSourceEntity>,
         customStartMs: Long? = null,
-        customEndMs: Long? = null
+        customEndMs: Long? = null,
+        typeFilter: String = "ALL",
+        categoryFilter: String = "ALL"
     ): List<TransactionEntity> {
         val enabledResolved = configuredSources.map {
             it.abbreviation.lowercase()
@@ -23,7 +25,7 @@ class FormatTransactionUseCase @Inject constructor() {
         
         var filtered = transactions.filter {
             val resolved = it.source.lowercase()
-            resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledResolved.contains(resolved)
+            it.id.startsWith("tx-manual-") || (resolved != AppConstants.SOURCE_AIRTIME.lowercase() && enabledResolved.contains(resolved))
         }
 
         val now = System.currentTimeMillis()
@@ -34,34 +36,18 @@ class FormatTransactionUseCase @Inject constructor() {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
-        val startOfWeek = Calendar.getInstance().apply {
-            timeInMillis = now
-            val currentDay = get(Calendar.DAY_OF_WEEK)
-            val daysToSubtract = if (firstDayOfWeek == Calendar.SUNDAY) {
-                currentDay - Calendar.SUNDAY
-            } else {
-                // For Monday as first day of week
-                if (currentDay == Calendar.SUNDAY) 6 else currentDay - Calendar.MONDAY
-            }
-            add(Calendar.DAY_OF_MONTH, -daysToSubtract)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-        val startOfMonth = Calendar.getInstance().apply {
-            timeInMillis = now
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+
+        // React web-style relative dates
+        val sevenDaysAgo = now - 7L * AppConstants.MILLISECONDS_PER_DAY
+        val thirtyDaysAgo = now - 30L * AppConstants.MILLISECONDS_PER_DAY
+        val oneYearAgo = now - 365L * AppConstants.MILLISECONDS_PER_DAY
+
         filtered = when (timeFilter) {
-            "today"     -> filtered.filter { it.timestamp >= startOfToday }
-            "thisWeek"  -> filtered.filter { it.timestamp >= startOfWeek }
-            "thisMonth" -> filtered.filter { it.timestamp >= startOfMonth }
-            "custom"    -> {
+            "today"      -> filtered.filter { it.timestamp >= startOfToday }
+            "thisWeek", "weekly"   -> filtered.filter { it.timestamp >= sevenDaysAgo }
+            "thisMonth", "monthly"  -> filtered.filter { it.timestamp >= thirtyDaysAgo }
+            "thisYear", "yearly"   -> filtered.filter { it.timestamp >= oneYearAgo }
+            "custom"     -> {
                 val start = customStartMs ?: 0L
                 val end = customEndMs ?: Long.MAX_VALUE
                 filtered.filter { it.timestamp in start..end }
@@ -69,9 +55,21 @@ class FormatTransactionUseCase @Inject constructor() {
             else -> filtered
         }
 
-        if (sourceFilter != null) {
+        if (sourceFilter != null && !sourceFilter.equals("ALL", ignoreCase = true)) {
             filtered = filtered.filter {
                 it.source.equals(sourceFilter, ignoreCase = true)
+            }
+        }
+
+        if (!typeFilter.equals("ALL", ignoreCase = true)) {
+            filtered = filtered.filter {
+                it.type.equals(typeFilter, ignoreCase = true)
+            }
+        }
+
+        if (!categoryFilter.equals("ALL", ignoreCase = true)) {
+            filtered = filtered.filter {
+                it.category.equals(categoryFilter, ignoreCase = true)
             }
         }
 
