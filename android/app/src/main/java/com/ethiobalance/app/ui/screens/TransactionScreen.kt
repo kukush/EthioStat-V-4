@@ -64,27 +64,29 @@ fun TransactionScreen(
     onExportCsv: () -> Unit,
     _onScanAll: () -> Unit
 ) {
-    var showAmounts by remember { mutableStateOf(true) }
-    var showDateRangePicker by remember { mutableStateOf(false) }
+    var showExportModal by remember { mutableStateOf(false) }
     val netBalance = totalIncome - totalExpense
     val listState = rememberLazyListState()
 
-    // Show the compact sticky bar when the user has scrolled past the header item (index 0)
-    val showStickyBar by remember {
-        derivedStateOf { listState.firstVisibleItemIndex >= 1 }
-    }
-
-    val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
-        minimumFractionDigits = 2
-        maximumFractionDigits = 2
-    }
-
-    val lastActivity = if (transactions.isNotEmpty()) {
-        try { Translations.formatDate(language, transactions.first().timestamp, "MMM d, yyyy HH:mm") } catch (e: Exception) { "N/A" }
-    } else { "N/A" }
+    // ... (rest of the state declarations) ...
 
     Box(modifier = Modifier.fillMaxSize()) {
-
+        if (showExportModal) {
+            ExportPreviewDialog(
+                isOpen = true,
+                onClose = { showExportModal = false },
+                onConfirm = { 
+                    onExportCsv()
+                    showExportModal = false
+                },
+                transactions = transactions,
+                totalIncome = totalIncome,
+                totalExpense = totalExpense,
+                userName = "Abebe Bikila",
+                userPhone = "0911234567" // Need to fix this to get actual phone
+            )
+        }
+        
         // ── Main Scrollable List ──────────────────────────────────────────────
         LazyColumn(
             state = listState,
@@ -323,7 +325,7 @@ fun TransactionScreen(
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { onExportCsv() }
+                            modifier = Modifier.clickable { showExportModal = true }
                         ) {
                             Text("EXPORT CSV", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Blue600, letterSpacing = 2.sp)
                             Spacer(Modifier.width(4.dp))

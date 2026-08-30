@@ -124,28 +124,42 @@ class TransactionViewModel @Inject constructor(
     }
 
     fun exportToCsv(context: Context) {
-        val transactions = filteredTransactions.value
-        if (transactions.isEmpty()) return
+        viewModelScope.launch {
+            val transactions = filteredTransactions.value
+            if (transactions.isEmpty()) return@launch
 
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)
-        val fileName = "ethiostat_export_${dateFormat.format(Date())}.csv"
-        val file = File(context.cacheDir, fileName)
+            val userName = settingsRepo.userName.first()
+            val userPhone = settingsRepo.userPhone.first()
+            val totalIncome = totalIncome.value
+            val totalExpense = totalExpense.value
+            val netBalance = totalIncome - totalExpense
 
-        file.bufferedWriter().use { writer ->
-            writer.write("ID,Type,Amount,Category,Source,Timestamp\n")
-            transactions.forEach { t ->
-                writer.write("${t.id},${t.type},${t.amount},${t.category},${t.source},${t.timestamp}\n")
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)
+            val fileName = "ethiostat_export_${dateFormat.format(Date())}.csv"
+            val file = File(context.cacheDir, fileName)
+
+            file.bufferedWriter().use { writer ->
+                writer.write("EthioBalance Financial Report,,,,,,\n")
+                writer.write("Account Holder,$userName,,,,,\n")
+                writer.write("Phone Number,$userPhone,,,,,\n")
+                writer.write("Summary,Income,$totalIncome,Expense,$totalExpense,Net,$netBalance\n")
+                writer.write("\n")
+                writer.write("Name,Date,Amount,Timestamp,Category,Type,Source Transaction\n")
+                transactions.forEach { t ->
+                    val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(t.timestamp))
+                    writer.write("${t.recipientOrSender ?: "N/A"},$date,${t.amount},${t.timestamp},${t.category},${t.type},${t.source}\n")
+                }
             }
-        }
 
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/csv"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/csv"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Export Transactions").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Export Transactions").apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        })
     }
 }

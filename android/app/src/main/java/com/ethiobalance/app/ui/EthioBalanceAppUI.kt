@@ -37,6 +37,7 @@ import com.ethiobalance.app.ui.screens.*
 import com.ethiobalance.app.ui.theme.*
 import com.ethiobalance.app.ui.theme.EthioBalanceTheme
 import com.ethiobalance.app.ui.viewmodel.*
+import com.ethiobalance.app.ui.screens.LockedScreen
 
 @Composable
 fun EthioBalanceAppUI() {
@@ -48,6 +49,21 @@ fun EthioBalanceAppUI() {
     val theme by settingsVM.theme.collectAsStateWithLifecycle()
     val language by settingsVM.language.collectAsStateWithLifecycle()
     val hasSeenOnboarding by settingsVM.hasSeenOnboarding.collectAsStateWithLifecycle()
+    val isBiometricEnabled by settingsVM.isBiometricEnabled.collectAsStateWithLifecycle()
+    val isPinEnabled by settingsVM.isPinEnabled.collectAsStateWithLifecycle()
+    val isAutoSyncEnabled by settingsVM.isAutoSyncEnabled.collectAsStateWithLifecycle()
+    
+    // Auto-Sync
+    LaunchedEffect(Unit) {
+        if (isAutoSyncEnabled) {
+            homeVM.triggerManualSync()
+        }
+    }
+    
+    var isLocked by remember { mutableStateOf(true) }
+    
+    // Only lock if at least one security method is enabled
+    val shouldLock = isBiometricEnabled || isPinEnabled
 
     var currentRoute by remember { mutableStateOf("home") }
 
@@ -78,6 +94,13 @@ fun EthioBalanceAppUI() {
     }
 
     EthioBalanceTheme(themeId = theme) {
+        if (shouldLock && isLocked) {
+            LockedScreen(
+                onUnlock = { isLocked = false },
+                onUseBiometric = { isLocked = false }
+            )
+            return@EthioBalanceTheme
+        }
         // Wait for onboarding state to load from DataStore
         if (hasSeenOnboarding == null) {
             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
@@ -272,6 +295,9 @@ fun EthioBalanceAppUI() {
                         val userPhone by settingsVM.userPhone.collectAsStateWithLifecycle()
                         val userAvatar by settingsVM.userAvatar.collectAsStateWithLifecycle()
                         val transactionSources by settingsVM.transactionSources.collectAsStateWithLifecycle()
+                        val isBiometricEnabled by settingsVM.isBiometricEnabled.collectAsStateWithLifecycle()
+                        val isPinEnabled by settingsVM.isPinEnabled.collectAsStateWithLifecycle()
+                        val isAutoSyncEnabled by settingsVM.isAutoSyncEnabled.collectAsStateWithLifecycle()
 
                         SettingsScreen(
                             language = language,
@@ -287,6 +313,12 @@ fun EthioBalanceAppUI() {
                             onUpdateSource = { settingsVM.updateTransactionSource(it) },
                             onToggleSource = { settingsVM.toggleTransactionSource(it) },
                             onRemoveSource = { settingsVM.removeTransactionSource(it) },
+                            isBiometricEnabled = isBiometricEnabled,
+                            isPinEnabled = isPinEnabled,
+                            isAutoSyncEnabled = isAutoSyncEnabled,
+                            onToggleBiometric = { settingsVM.setBiometricEnabled(it) },
+                            onTogglePin = { settingsVM.setPinEnabled(it) },
+                            onToggleAutoSync = { settingsVM.setAutoSyncEnabled(it) },
                             onRequestPermissions = {
                                 permissionLauncher.launch(
                                     arrayOf(

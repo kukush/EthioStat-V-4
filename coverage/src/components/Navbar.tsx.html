@@ -195,10 +195,8 @@
 <a name='L130'></a><a href='#L130'>130</a>
 <a name='L131'></a><a href='#L131'>131</a>
 <a name='L132'></a><a href='#L132'>132</a>
-<a name='L133'></a><a href='#L133'>133</a>
-<a name='L134'></a><a href='#L134'>134</a>
-<a name='L135'></a><a href='#L135'>135</a>
-<a name='L136'></a><a href='#L136'>136</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L133'></a><a href='#L133'>133</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -218,7 +216,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-yes">26x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -247,10 +245,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -263,7 +257,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -285,7 +279,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-yes">22x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -300,7 +294,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -337,6 +331,7 @@
 import { Activity, Clock, RefreshCw, Settings, ShieldCheck, Smartphone } from 'lucide-react';
 import { Language, TelecomAssets } from '../types';
 import { t } from '../constants/translations';
+import { APP_NAME } from '../constants/app';
 &nbsp;
 interface NavbarProps {
   activeTab: 'home' | 'telecom' | 'transactions' | 'settings';
@@ -358,22 +353,18 @@ export const Navbar: React.FC&lt;NavbarProps&gt; = ({
       &lt;div className="max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-2"&gt;
         {/* Brand Logo &amp; Title */}
         &lt;div
-          className="flex items-center gap-2 cursor-pointer select-none"
+          className="flex items-center gap-2.5 cursor-pointer select-none"
           onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etActiveTab('home')}</span>
         &gt;
-          &lt;div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 shadow-md shadow-emerald-500/20 text-white font-black text-sm"&gt;
-            EB
-            &lt;span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full border-2 border-slate-900" /&gt;
-          &lt;/div&gt;
+          &lt;img
+            src="/app-icon-512.png"
+            alt={APP_NAME}
+            className="w-8 h-8 rounded-xl object-cover shadow-md shadow-emerald-500/20 border border-slate-700/60"
+          /&gt;
           &lt;div&gt;
-            &lt;div className="flex items-center gap-1"&gt;
-              &lt;h1 className="font-extrabold text-sm tracking-tight text-white"&gt;
-                EthioBalance
-              &lt;/h1&gt;
-              &lt;span className="text-[8px] uppercase font-bold tracking-widest px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"&gt;
-                v1.1
-              &lt;/span&gt;
-            &lt;/div&gt;
+            &lt;h1 className="font-extrabold text-sm tracking-tight text-white"&gt;
+              {APP_NAME}
+            &lt;/h1&gt;
             &lt;div className="flex items-center gap-1 text-[10px] text-slate-400"&gt;
               &lt;ShieldCheck className="w-2.5 h-2.5 text-emerald-400" /&gt;
               &lt;span&gt;Offline Ledger&lt;/span&gt;
@@ -475,7 +466,7 @@ export const BottomNavBar: React.FC&lt;{
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-08-28T14:16:08.475Z
+                at 2026-08-30T11:30:13.551Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

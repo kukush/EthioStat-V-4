@@ -38,8 +38,29 @@ class SettingsViewModel @Inject constructor(
     val transactionSources: StateFlow<List<TransactionSourceEntity>> = settingsRepo.getTransactionSources()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val isBiometricEnabled: StateFlow<Boolean> = settingsRepo.isBiometricEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        
+    val isPinEnabled: StateFlow<Boolean> = settingsRepo.isPinEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val isAutoSyncEnabled: StateFlow<Boolean> = settingsRepo.isAutoSyncEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun setLanguage(lang: String) {
         viewModelScope.launch { settingsRepo.setLanguage(lang) }
+    }
+    
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepo.setBiometricEnabled(enabled) }
+    }
+    
+    fun setPinEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepo.setPinEnabled(enabled) }
+    }
+    
+    fun setAutoSyncEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepo.setAutoSyncEnabled(enabled) }
     }
 
     fun setTheme(theme: String) {

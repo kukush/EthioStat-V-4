@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { SecurityProvider } from '../../components/BiometricProvider';
 import App from '../../App';
 
 describe('Integration Test: Transaction Management & Filtering Flow', () => {
@@ -9,7 +10,11 @@ describe('Integration Test: Transaction Management & Filtering Flow', () => {
   });
 
   it('navigates between Home, Telecom, Transactions, and Settings tabs', async () => {
-    render(<App />);
+    render(
+      <SecurityProvider>
+        <App />
+      </SecurityProvider>
+    );
 
     // Click History (Transactions) tab in bottom nav
     const txTab = screen.getByRole('button', { name: /History/i });
@@ -40,7 +45,11 @@ describe('Integration Test: Transaction Management & Filtering Flow', () => {
   });
 
   it('opens and closes Add Transaction modal and records manual transaction', async () => {
-    render(<App />);
+    render(
+      <SecurityProvider>
+        <App />
+      </SecurityProvider>
+    );
 
     // Click Record button on Home screen
     const recordBtn = screen.getByRole('button', { name: /Record/i });

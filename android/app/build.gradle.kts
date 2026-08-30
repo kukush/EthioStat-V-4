@@ -211,6 +211,9 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    
+    // Biometric authentication
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

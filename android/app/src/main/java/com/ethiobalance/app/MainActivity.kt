@@ -3,7 +3,7 @@ package com.ethiobalance.app
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -13,18 +13,22 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.ethiobalance.app.repository.SettingsRepository
 import com.ethiobalance.app.repository.SmsRepository
 import com.ethiobalance.app.ui.EthioBalanceAppUI
+import com.ethiobalance.app.services.BiometricAuthService
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var smsRepo: SmsRepository
 
     @Inject
     lateinit var settingsRepo: SettingsRepository
+
+    @Inject
+    lateinit var biometricAuthService: BiometricAuthService
 
     private val allPermissions = arrayOf(
         Manifest.permission.READ_SMS,

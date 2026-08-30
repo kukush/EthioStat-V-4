@@ -32,7 +32,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>33/33</span>
             </div>
         
             
@@ -212,7 +212,12 @@
 <a name='L147'></a><a href='#L147'>147</a>
 <a name='L148'></a><a href='#L148'>148</a>
 <a name='L149'></a><a href='#L149'>149</a>
-<a name='L150'></a><a href='#L150'>150</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -234,7 +239,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -245,6 +251,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -255,14 +271,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -373,6 +381,7 @@ interface TelecomAssetCardProps {
   smsCount: number;
   airtimeBalance: number;
   onOpenUssd: (action?: 'balance' | 'recharge' | 'transfer' | 'gift') =&gt; void;
+  isCompact?: boolean;
 }
 &nbsp;
 export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
@@ -382,10 +391,11 @@ export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
   smsCount,
   airtimeBalance,
   onOpenUssd,
+  isCompact = false,
 }) =&gt; {
   return (
-    &lt;div className="rounded-3xl bg-slate-900 border border-slate-800 p-5 shadow-xl"&gt;
-      &lt;div className="flex items-center justify-between gap-2 mb-4"&gt;
+    &lt;div className={`rounded-3xl bg-slate-900 border border-slate-800 shadow-xl ${isCompact ? "p-3" : "p-5"}`}&gt;
+      &lt;div className={`flex items-center justify-between gap-2 ${isCompact ? "mb-3" : "mb-4"}`}&gt;
         &lt;div className="flex items-center gap-2"&gt;
           &lt;div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400"&gt;
             &lt;Radio className="w-5 h-5" /&gt;
@@ -397,34 +407,36 @@ export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
             &lt;span className="text-[10px] text-slate-500 font-semibold"&gt;Ethio Telecom / *804#&lt;/span&gt;
           &lt;/div&gt;
         &lt;/div&gt;
-&nbsp;
+        
         {/* Quick USSD Action Buttons */}
-        &lt;div className="flex items-center gap-1.5"&gt;
-          &lt;button
-            id="quick-recharge-btn"
-            onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >o</span>nOpenUssd('recharge')}</span>
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold text-[11px] transition-all active:scale-95"
-            title="Recharge Airtime via Voucher *805*"
-          &gt;
-            &lt;PlusCircle className="w-3.5 h-3.5" /&gt;
-            &lt;span&gt;{t(language, 'recharge')}&lt;/span&gt;
-          &lt;/button&gt;
-          &lt;button
-            id="quick-transfer-btn"
-            onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >o</span>nOpenUssd('transfer')}</span>
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 font-bold text-[11px] transition-all active:scale-95"
-            title="Transfer Airtime *806*"
-          &gt;
-            &lt;ArrowRightLeft className="w-3.5 h-3.5" /&gt;
-            &lt;span&gt;{t(language, 'transfer')}&lt;/span&gt;
-          &lt;/button&gt;
-        &lt;/div&gt;
+        {!isCompact &amp;&amp; (
+          &lt;div className="flex items-center gap-1.5"&gt;
+            &lt;button
+              id="quick-recharge-btn"
+              onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >o</span>nOpenUssd('recharge')}</span>
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold text-[11px] transition-all active:scale-95"
+              title="Recharge Airtime via Voucher *805*"
+            &gt;
+              &lt;PlusCircle className="w-3.5 h-3.5" /&gt;
+              &lt;span&gt;{t(language, 'recharge')}&lt;/span&gt;
+            &lt;/button&gt;
+            &lt;button
+              id="quick-transfer-btn"
+              onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >o</span>nOpenUssd('transfer')}</span>
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 font-bold text-[11px] transition-all active:scale-95"
+              title="Transfer Airtime *806*"
+            &gt;
+              &lt;ArrowRightLeft className="w-3.5 h-3.5" /&gt;
+              &lt;span&gt;{t(language, 'transfer')}&lt;/span&gt;
+            &lt;/button&gt;
+          &lt;/div&gt;
+        )}
       &lt;/div&gt;
 &nbsp;
       {/* 4-Item Metric Grid: Data, Voice, SMS, Airtime */}
-      &lt;div className="grid grid-cols-2 sm:grid-cols-4 gap-3"&gt;
+      &lt;div className={`grid grid-cols-2 sm:grid-cols-4 ${isCompact ? "gap-2" : "gap-3"}`}&gt;
         {/* Data / Internet */}
-        &lt;div className="p-3.5 rounded-2xl bg-gradient-to-b from-blue-950/40 to-slate-900 border border-blue-500/20 flex flex-col justify-between"&gt;
+        &lt;div className={`rounded-2xl bg-gradient-to-b from-blue-950/40 to-slate-900 border border-blue-500/20 flex flex-col justify-between ${isCompact ? "p-2.5" : "p-3.5"}`}&gt;
           &lt;div className="flex items-center justify-between mb-2"&gt;
             &lt;span className="text-[11px] font-bold text-blue-400 tracking-wider uppercase flex items-center gap-1"&gt;
               &lt;Globe className="w-3.5 h-3.5" /&gt;
@@ -435,17 +447,17 @@ export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
             &lt;/span&gt;
           &lt;/div&gt;
           &lt;div&gt;
-            &lt;div className="text-2xl font-black text-white tracking-tight"&gt;
+            &lt;div className={`${isCompact ? "text-xl" : "text-2xl"} font-black text-white tracking-tight`}&gt;
               {dataVolGb.toFixed(2)}
             &lt;/div&gt;
-            &lt;div className="text-[10px] text-slate-400 font-medium mt-0.5"&gt;
+            &lt;div className={`${isCompact ? "text-[9px]" : "text-[10px]"} text-slate-400 font-medium mt-0.5`}&gt;
               Available Internet
             &lt;/div&gt;
           &lt;/div&gt;
         &lt;/div&gt;
 &nbsp;
         {/* Voice / Audio */}
-        &lt;div className="p-3.5 rounded-2xl bg-gradient-to-b from-purple-950/40 to-slate-900 border border-purple-500/20 flex flex-col justify-between"&gt;
+        &lt;div className={`rounded-2xl bg-gradient-to-b from-purple-950/40 to-slate-900 border border-purple-500/20 flex flex-col justify-between ${isCompact ? "p-2.5" : "p-3.5"}`}&gt;
           &lt;div className="flex items-center justify-between mb-2"&gt;
             &lt;span className="text-[11px] font-bold text-purple-400 tracking-wider uppercase flex items-center gap-1"&gt;
               &lt;PhoneCall className="w-3.5 h-3.5" /&gt;
@@ -456,17 +468,17 @@ export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
             &lt;/span&gt;
           &lt;/div&gt;
           &lt;div&gt;
-            &lt;div className="text-2xl font-black text-white tracking-tight"&gt;
+            &lt;div className={`${isCompact ? "text-xl" : "text-2xl"} font-black text-white tracking-tight`}&gt;
               {Math.round(voiceMinutes)}
             &lt;/div&gt;
-            &lt;div className="text-[10px] text-slate-400 font-medium mt-0.5"&gt;
+            &lt;div className={`${isCompact ? "text-[9px]" : "text-[10px]"} text-slate-400 font-medium mt-0.5`}&gt;
               Voice Minutes
             &lt;/div&gt;
           &lt;/div&gt;
         &lt;/div&gt;
 &nbsp;
         {/* SMS Messages */}
-        &lt;div className="p-3.5 rounded-2xl bg-gradient-to-b from-amber-950/40 to-slate-900 border border-amber-500/20 flex flex-col justify-between"&gt;
+        &lt;div className={`rounded-2xl bg-gradient-to-b from-amber-950/40 to-slate-900 border border-amber-500/20 flex flex-col justify-between ${isCompact ? "p-2.5" : "p-3.5"}`}&gt;
           &lt;div className="flex items-center justify-between mb-2"&gt;
             &lt;span className="text-[11px] font-bold text-amber-400 tracking-wider uppercase flex items-center gap-1"&gt;
               &lt;MessageSquare className="w-3.5 h-3.5" /&gt;
@@ -477,17 +489,17 @@ export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
             &lt;/span&gt;
           &lt;/div&gt;
           &lt;div&gt;
-            &lt;div className="text-2xl font-black text-white tracking-tight"&gt;
+            &lt;div className={`${isCompact ? "text-xl" : "text-2xl"} font-black text-white tracking-tight`}&gt;
               {smsCount}
             &lt;/div&gt;
-            &lt;div className="text-[10px] text-slate-400 font-medium mt-0.5"&gt;
+            &lt;div className={`${isCompact ? "text-[9px]" : "text-[10px]"} text-slate-400 font-medium mt-0.5`}&gt;
               SMS Left
             &lt;/div&gt;
           &lt;/div&gt;
         &lt;/div&gt;
 &nbsp;
         {/* Available Airtime */}
-        &lt;div className="p-3.5 rounded-2xl bg-gradient-to-b from-emerald-950/40 to-slate-900 border border-emerald-500/20 flex flex-col justify-between"&gt;
+        &lt;div className={`rounded-2xl bg-gradient-to-b from-emerald-950/40 to-slate-900 border border-emerald-500/20 flex flex-col justify-between ${isCompact ? "p-2.5" : "p-3.5"}`}&gt;
           &lt;div className="flex items-center justify-between mb-2"&gt;
             &lt;span className="text-[11px] font-bold text-emerald-400 tracking-wider uppercase flex items-center gap-1"&gt;
               &lt;Sparkles className="w-3.5 h-3.5" /&gt;
@@ -498,10 +510,10 @@ export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
             &lt;/span&gt;
           &lt;/div&gt;
           &lt;div&gt;
-            &lt;div className="text-2xl font-black text-white tracking-tight"&gt;
+            &lt;div className={`${isCompact ? "text-xl" : "text-2xl"} font-black text-white tracking-tight`}&gt;
               {formatCurrency(airtimeBalance)}
             &lt;/div&gt;
-            &lt;div className="text-[10px] text-slate-400 font-medium mt-0.5"&gt;
+            &lt;div className={`${isCompact ? "text-[9px]" : "text-[10px]"} text-slate-400 font-medium mt-0.5`}&gt;
               Prepaid Credit
             &lt;/div&gt;
           &lt;/div&gt;
@@ -517,7 +529,7 @@ export const TelecomAssetCard: React.FC&lt;TelecomAssetCardProps&gt; = ({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-08-28T14:16:08.475Z
+                at 2026-08-30T11:30:13.551Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

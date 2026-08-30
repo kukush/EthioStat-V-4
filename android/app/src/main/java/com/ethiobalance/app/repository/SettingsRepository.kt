@@ -39,6 +39,25 @@ class SettingsRepository @Inject constructor(
         val USER_AVATAR_KEY = stringPreferencesKey("user_avatar")
         val ONBOARDING_KEY = booleanPreferencesKey("onboarding_seen")
         val LAST_SCANNED_TIMESTAMP_KEY = longPreferencesKey("last_scanned_timestamp")
+        val BIOMETRIC_ENABLED_KEY = booleanPreferencesKey("biometric_enabled")
+        val PIN_ENABLED_KEY = booleanPreferencesKey("pin_enabled")
+        val AUTO_SYNC_ENABLED_KEY = booleanPreferencesKey("auto_sync_enabled")
+    }
+
+    // Biometric & PIN & AutoSync
+    val isBiometricEnabled: Flow<Boolean> = dataStore.data.map { it[BIOMETRIC_ENABLED_KEY] ?: false }
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        dataStore.edit { it[BIOMETRIC_ENABLED_KEY] = enabled }
+    }
+    
+    val isPinEnabled: Flow<Boolean> = dataStore.data.map { it[PIN_ENABLED_KEY] ?: false }
+    suspend fun setPinEnabled(enabled: Boolean) {
+        dataStore.edit { it[PIN_ENABLED_KEY] = enabled }
+    }
+    
+    val isAutoSyncEnabled: Flow<Boolean> = dataStore.data.map { it[AUTO_SYNC_ENABLED_KEY] ?: true }
+    suspend fun setAutoSyncEnabled(enabled: Boolean) {
+        dataStore.edit { it[AUTO_SYNC_ENABLED_KEY] = enabled }
     }
 
     // Onboarding

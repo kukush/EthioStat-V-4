@@ -20,6 +20,12 @@ interface SettingsScreenProps {
   onOpenSmsSimulator: () => void;
   onOpenOnboarding: () => void;
   onResetData: () => void;
+  isBiometricEnabled: boolean;
+  setIsBiometricEnabled: (enabled: boolean) => void;
+  isPinEnabled: boolean;
+  setIsPinEnabled: (enabled: boolean) => void;
+  isAutoSyncEnabled: boolean;
+  setIsAutoSyncEnabled: (enabled: boolean) => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
@@ -37,6 +43,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onOpenSmsSimulator,
   onOpenOnboarding,
   onResetData,
+  isBiometricEnabled,
+  setIsBiometricEnabled,
+  isPinEnabled,
+  setIsPinEnabled,
+  isAutoSyncEnabled,
+  setIsAutoSyncEnabled,
 }) => {
   const [sim1Phone, setSim1Phone] = useState(telecomAssets.sim1Number);
   const [sim2Phone, setSim2Phone] = useState(telecomAssets.sim2Number);
@@ -403,30 +415,45 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         }}
       />
 
-      {/* Android APK Build & Export Guide */}
+      {/* Security Section */}
       <div className="rounded-3xl bg-slate-900 border border-slate-800 p-4 shadow-xl space-y-3">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-            <Download className="w-4 h-4" />
+          <div className="p-2 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-400">
+            <ShieldCheck className="w-4 h-4" />
           </div>
           <div>
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-              Android APK Build & Export
+              Security
             </h3>
-            <span className="text-[10px] text-slate-500 font-semibold">Generate native Android APK</span>
+            <span className="text-[10px] text-slate-500 font-semibold">Enable or disable authentication</span>
           </div>
         </div>
 
-        <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs text-slate-300">
-          <p className="text-[11px] text-slate-400">
-            The native Android source code with Room DB, SMS Receiver, and Compose UI is located in <code className="text-emerald-400 font-mono text-[10px] bg-slate-900 px-1 py-0.5 rounded">/android</code>.
-          </p>
-          <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[10px] text-emerald-400 select-all overflow-x-auto space-y-1">
-            <div className="text-slate-500"># 1. Build fresh APK</div>
-            <div>cd android && ./gradlew assembleDebug</div>
-            <div className="text-slate-500 pt-1"># 2. Output location:</div>
-            <div className="text-cyan-300">android/app/build/outputs/apk/debug/app-debug.apk</div>
-          </div>
+        <div className="space-y-2">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-700">
+              <span className="text-xs font-bold text-white">Biometric Authentication</span>
+              <button 
+                  onClick={() => setIsBiometricEnabled(!isBiometricEnabled)}
+                  className={`w-10 h-6 rounded-full p-1 transition-colors ${isBiometricEnabled ? 'bg-emerald-600' : 'bg-slate-700'}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isBiometricEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-700">
+              <span className="text-xs font-bold text-white">PIN Authentication</span>
+              <button 
+                  onClick={() => setIsPinEnabled(!isPinEnabled)}
+                  className={`w-10 h-6 rounded-full p-1 transition-colors ${isPinEnabled ? 'bg-emerald-600' : 'bg-slate-700'}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isPinEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-700">
+              <span className="text-xs font-bold text-white">Auto-Sync</span>
+              <button 
+                  onClick={() => setIsAutoSyncEnabled(!isAutoSyncEnabled)}
+                  className={`w-10 h-6 rounded-full p-1 transition-colors ${isAutoSyncEnabled ? 'bg-emerald-600' : 'bg-slate-700'}`}>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isAutoSyncEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
         </div>
       </div>
 

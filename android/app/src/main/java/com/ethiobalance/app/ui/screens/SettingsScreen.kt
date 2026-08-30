@@ -52,6 +52,12 @@ fun SettingsScreen(
     onUpdateSource: (TransactionSourceEntity) -> Unit,
     onToggleSource: (String) -> Unit,
     onRemoveSource: (String) -> Unit,
+    isBiometricEnabled: Boolean,
+    isPinEnabled: Boolean,
+    isAutoSyncEnabled: Boolean,
+    onToggleBiometric: (Boolean) -> Unit,
+    onTogglePin: (Boolean) -> Unit,
+    onToggleAutoSync: (Boolean) -> Unit,
     onRequestPermissions: () -> Unit = {}
 ) {
     var showEditProfile by remember { mutableStateOf(false) }
@@ -273,17 +279,36 @@ fun SettingsScreen(
             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             shadowElevation = 1.dp
         ) {
-            Row(modifier = Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Emerald50),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Shield, null, tint = Emerald600, modifier = Modifier.size(24.dp))
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Emerald50),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Shield, null, tint = Emerald600, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text("Offline-First Privacy", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
+                        Text("All your SMS data is processed locally.", fontSize = 12.sp, color = Slate400, modifier = Modifier.padding(top=4.dp), lineHeight = 18.sp)
+                    }
                 }
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text("Offline-First Privacy", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Slate900)
-                    Text("All your SMS data is processed locally on your device. No data ever leaves your phone.", fontSize = 12.sp, color = Slate400, modifier = Modifier.padding(top=4.dp), lineHeight = 18.sp)
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Biometric", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate900)
+                    Switch(checked = isBiometricEnabled, onCheckedChange = onToggleBiometric)
+                }
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("PIN Lock", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate900)
+                    Switch(checked = isPinEnabled, onCheckedChange = onTogglePin)
+                }
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Auto-Sync", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Slate900)
+                    Switch(checked = isAutoSyncEnabled, onCheckedChange = onToggleAutoSync)
                 }
             }
         }

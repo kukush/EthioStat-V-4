@@ -39,8 +39,20 @@ import { UssdModal } from './components/UssdModal';
 import { SmsSimulatorModal } from './components/SmsSimulatorModal';
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { useSecurity } from './components/BiometricProvider';
+import { LockedScreen } from './screens/LockedScreen';
 
 export const App: React.FC = () => {
+  const { isLocked, isBiometricEnabled, setIsBiometricEnabled, isPinEnabled, setIsPinEnabled, isAutoSyncEnabled, setIsAutoSyncEnabled } = useSecurity();
+  const shouldLock = isBiometricEnabled || isPinEnabled;
+
+  // Auto-Sync
+  React.useEffect(() => {
+    if (isAutoSyncEnabled) {
+      handleExecuteSync();
+    }
+  }, []);
+
   // Navigation & View state
   const [activeTab, setActiveTab] = useState<'home' | 'telecom' | 'transactions' | 'settings'>('home');
   const [language, setLanguageState] = useState<Language>(loadLanguage());
@@ -327,6 +339,10 @@ export const App: React.FC = () => {
     setCompletedOnboarding(true);
   };
 
+  if (shouldLock && isLocked) {
+    return <LockedScreen language={language} />;
+  }
+
   return (
     <div className={`min-h-screen ${theme === 'light' ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100'}`}>
       {/* Top Header & Navigation */}
@@ -395,6 +411,12 @@ export const App: React.FC = () => {
             onOpenSmsSimulator={() => setIsSmsSimOpen(true)}
             onOpenOnboarding={() => setIsOnboardingOpen(true)}
             onResetData={handleResetData}
+            isBiometricEnabled={isBiometricEnabled}
+            setIsBiometricEnabled={setIsBiometricEnabled}
+            isPinEnabled={isPinEnabled}
+            setIsPinEnabled={setIsPinEnabled}
+            isAutoSyncEnabled={isAutoSyncEnabled}
+            setIsAutoSyncEnabled={setIsAutoSyncEnabled}
           />
         )}
       </main>

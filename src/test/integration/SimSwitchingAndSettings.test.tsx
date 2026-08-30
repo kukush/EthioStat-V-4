@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { SecurityProvider } from '../../components/BiometricProvider';
 import App from '../../App';
 
 describe('Integration Test: Dual-SIM Switching & Settings Flow', () => {
@@ -9,7 +10,11 @@ describe('Integration Test: Dual-SIM Switching & Settings Flow', () => {
   });
 
   it('switches between SIM 1 and SIM 2 using top navigation selector', async () => {
-    render(<App />);
+    render(
+      <SecurityProvider>
+        <App />
+      </SecurityProvider>
+    );
 
     const sim1Btn = screen.getByRole('button', { name: /SIM 1/i });
     const sim2Btn = screen.getByRole('button', { name: /SIM 2/i });
@@ -29,7 +34,11 @@ describe('Integration Test: Dual-SIM Switching & Settings Flow', () => {
   });
 
   it('allows language change to Amharic and Afaan Oromoo in Settings', async () => {
-    render(<App />);
+    render(
+      <SecurityProvider>
+        <App />
+      </SecurityProvider>
+    );
 
     // Go to Settings
     const settingsTab = screen.getByRole('button', { name: /Settings/i });

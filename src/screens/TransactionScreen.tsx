@@ -17,6 +17,8 @@ import { BankInfo, FilterPeriod, Language, TransactionCategory, TransactionEntit
 import { formatCurrency, formatDate, t } from '../constants/translations';
 import { TransactionItem } from '../components/TransactionItem';
 import { APP_NAME } from '../constants/app';
+import { loadUserName, loadTelecomAssets } from '../services/storage';
+import { ExportPreviewModal } from '../components/ExportPreviewModal';
 
 interface TransactionScreenProps {
   language: Language;
@@ -42,6 +44,7 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({
   const [customEndDate, setCustomEndDate] = useState('');
   const [showChart, setShowChart] = useState(false);
   const [exportNotice, setExportNotice] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Date filtering logic
   const isWithinPeriod = (timestamp: number, period: FilterPeriod): boolean => {
@@ -152,32 +155,44 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({
 
   // CSV Export
   const handleExportCsv = () => {
-    const headers = ['ID', 'Date', 'Source', 'Type', 'Category', 'Party', 'Amount (ETB)', 'Fee', 'Reference', 'Raw SMS'];
+    const userName = loadUserName();
+    const userPhone = loadTelecomAssets().sim1Number;
+
+    const headers = ['Name', 'Date', 'Amount', 'Timestamp', 'Category', 'Type', 'Source Transaction'];
     const rows = filteredTransactions.map((tx) => [
-      tx.id,
-      new Date(tx.timestamp).toISOString(),
-      tx.source,
-      tx.type,
-      tx.category,
-      `"${(tx.recipientOrSender || '').replace(/"/g, '""')}"`,
+      `"${(tx.recipientOrSender || 'N/A').replace(/"/g, '""')}"`,
+      new Date(tx.timestamp).toISOString().split('T')[0],
       tx.amount,
-      tx.fee || 0,
-      `"${(tx.reference || '').replace(/"/g, '""')}"`,
-      `"${(tx.rawSmsBody || '').replace(/"/g, '""')}"`,
+      tx.timestamp,
+      tx.category,
+      tx.type,
+      tx.source,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const reportContent = [
+        `EthioBalance Financial Report,,,,,`,
+        `Account Holder,${userName},,,,,`,
+        `Phone Number,${userPhone},,,,,`,
+        `Summary,Income,${totalIncome},Expense,${totalExpense},Net,${totalIncome - totalExpense}`,
+        "",
+        headers.join(','),
+        ...rows.map((r) => r.join(','))
+    ].join('\n');
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(reportContent);
+    
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `${APP_NAME}_Ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('href', csvContent);
+    link.setAttribute('download', `${APP_NAME}_Report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
     setExportNotice(true);
     setTimeout(() => setExportNotice(false), 3000);
+    setShowExportModal(false);
   };
+
 
   const handleResetFilters = () => {
     setSelectedPeriod('allTime');
@@ -232,12 +247,23 @@ export const TransactionScreen: React.FC<TransactionScreenProps> = ({
 
             <button
               id="export-csv-btn"
-              onClick={handleExportCsv}
+              onClick={() => setShowExportModal(true)}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition-colors"
               title="Download CSV Ledger"
             >
               <Download className="w-4 h-4 text-emerald-400" />
             </button>
+
+            <ExportPreviewModal
+              isOpen={showExportModal}
+              onClose={() => setShowExportModal(false)}
+              onConfirm={handleExportCsv}
+              transactions={filteredTransactions}
+              totalIncome={totalIncome}
+              totalExpense={totalExpense}
+              userName={loadUserName()}
+              userPhone={loadTelecomAssets().sim1Number}
+            />
 
             <button
               id="add-tx-history-btn"
