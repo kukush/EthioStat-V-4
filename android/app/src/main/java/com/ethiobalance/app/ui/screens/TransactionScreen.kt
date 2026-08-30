@@ -36,8 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.ethiobalance.app.AppConstants
 import com.ethiobalance.app.data.TransactionEntity
 import com.ethiobalance.app.ui.Translations
-import com.ethiobalance.app.ui.components.SummaryCard
-import com.ethiobalance.app.ui.components.TransactionItem
+import com.ethiobalance.app.ui.components.*
 import com.ethiobalance.app.ui.theme.*
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -68,7 +67,26 @@ fun TransactionScreen(
     val netBalance = totalIncome - totalExpense
     val listState = rememberLazyListState()
 
-    // ... (rest of the state declarations) ...
+    var showDateRangePicker by remember { mutableStateOf(false) }
+    var showAmounts by remember { mutableStateOf(true) }
+    val lastActivity = remember(transactions, language) {
+        transactions.firstOrNull()?.let {
+            try {
+                Translations.formatDate(language, it.timestamp)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+    val showStickyBar by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 0 }
+    }
+    val fmt = remember {
+        NumberFormat.getNumberInstance(Locale.US).apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (showExportModal) {

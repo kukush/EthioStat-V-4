@@ -5,13 +5,14 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.Executor
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BiometricAuthService @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) {
     private val executor: Executor = ContextCompat.getMainExecutor(context)
 

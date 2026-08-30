@@ -147,7 +147,7 @@ class TransactionViewModel @Inject constructor(
                 writer.write("Name,Date,Amount,Timestamp,Category,Type,Source Transaction\n")
                 transactions.forEach { t ->
                     val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(t.timestamp))
-                    writer.write("${t.recipientOrSender ?: "N/A"},$date,${t.amount},${t.timestamp},${t.category},${t.type},${t.source}\n")
+                    writer.write("${t.partyName ?: "N/A"},$date,${t.amount},${t.timestamp},${t.category},${t.type},${t.source}\n")
                 }
             }
 

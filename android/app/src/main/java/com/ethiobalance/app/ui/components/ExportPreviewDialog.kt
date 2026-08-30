@@ -83,7 +83,7 @@ fun ExportPreviewDialog(
                     }
                     items(transactions.take(10)) { tx ->
                         Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(tx.recipientOrSender ?: "N/A", fontSize = 12.sp, modifier = Modifier.weight(1f))
+                            Text(tx.partyName ?: "N/A", fontSize = 12.sp, modifier = Modifier.weight(1f))
                             Text(fmt.format(tx.amount), fontSize = 12.sp)
                         }
                     }
