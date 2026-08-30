@@ -782,28 +782,7 @@ fun TransactionScreen(
                         TransactionChart(transactions = transactions, language = language)
                     }
 
-                    // ── SUMMARY CARD ──────────────────────────────────────────
-                    val displayTimeFilter = if (timeFilter == "custom" && customStartMs != null && customEndMs != null) {
-                        val df = SimpleDateFormat("MMM d", Locale.US)
-                        val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
-                        "${df.format(Date(customStartMs))} – ${df.format(Date(displayEndMs))}".uppercase()
-                    } else {
-                        timeFilter
-                    }
-                    SummaryCard(
-                        language = language,
-                        netBalance = netBalance,
-                        totalIncome = totalIncome,
-                        totalExpense = totalExpense,
-                        transactionCount = transactions.size,
-                        timeFilter = displayTimeFilter,
-                        sourceFilter = sourceFilter,
-                        lastActivity = lastActivity,
-                        showAmounts = showAmounts,
-                        onToggleAmounts = { showAmounts = !showAmounts }
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Section Divider
                     Text(
