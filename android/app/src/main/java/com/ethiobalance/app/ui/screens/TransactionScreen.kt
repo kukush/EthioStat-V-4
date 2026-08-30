@@ -350,226 +350,602 @@ fun TransactionScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // ── WEB-STYLE FILTER DROPDOWNS ────────────────────────────
-                    Row(
+                    val hasActiveFilters = timeFilter != "allTime" || sourceFilter != null || typeFilter != "ALL" || categoryFilter != "ALL" || searchQuery.isNotEmpty()
+
+                    // ── 1. UNIFIED ACTION HEADER CARD (React Web-Style) ───────
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 6.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                        ),
+                        border = borderStroke()
                     ) {
-                        // 1. Sources Dropdown
-                        var sourceExpanded by remember { mutableStateOf(false) }
-                        val sourceLabel = if (sourceFilter == null) {
-                            Translations.t(language, "allSources")
-                        } else {
-                            uniqueSources.find { it.second == sourceFilter }?.first?.uppercase() ?: sourceFilter.uppercase()
-                        }
-
-                        Box {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // Top Row: Title, Records Count & Quick Action Buttons
                             Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                    .clickable { sourceExpanded = true }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = sourceLabel,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = sourceExpanded,
-                                onDismissRequest = { sourceExpanded = false },
-                                modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                            ) {
-                                // "All Sources" Option
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = Translations.t(language, "allSources"),
-                                            fontSize = 13.sp,
-                                            fontWeight = if (sourceFilter == null) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (sourceFilter == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Emerald500.copy(alpha = 0.15f))
+                                            .border(1.dp, Emerald500.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Layers,
+                                            contentDescription = null,
+                                            tint = Emerald600,
+                                            modifier = Modifier.size(20.dp)
                                         )
-                                    },
-                                    onClick = {
-                                        onSourceFilterChange(null)
-                                        sourceExpanded = false
                                     }
-                                )
-                                // Each discovered source
-                                uniqueSources.forEach { (abbreviation, name) ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = abbreviation.uppercase(),
-                                                fontSize = 13.sp,
-                                                fontWeight = if (sourceFilter == name) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (sourceFilter == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        },
-                                        onClick = {
-                                            onSourceFilterChange(name)
-                                            sourceExpanded = false
-                                        }
-                                    )
+
+                                    Column {
+                                        Text(
+                                            text = Translations.t(language, "transactionHistory").uppercase(),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            letterSpacing = 1.sp
+                                        )
+                                        Text(
+                                            text = "${transactions.size} records • Offline Ledger",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Analytics Toggle Button
+                                    IconButton(
+                                        onClick = { showChart = !showChart },
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(
+                                                if (showChart) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) 
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                            ),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            contentColor = if (showChart) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Equalizer,
+                                            contentDescription = "Chart",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    // Download/Export CSV
+                                    IconButton(
+                                        onClick = { showExportModal = true },
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            contentColor = Emerald600
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = "Export CSV",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    // Quick Manual Record Button
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Emerald600)
+                                            .clickable { showAddManualDialog = true }
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Record",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = "Record",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        // 2. Types Dropdown
-                        var typeExpanded by remember { mutableStateOf(false) }
-                        val typeLabel = when (typeFilter) {
-                            "INCOME" -> Translations.t(language, "incomesOnly")
-                            "EXPENSE" -> Translations.t(language, "expensesOnly")
-                            "TRANSFER" -> Translations.t(language, "transfersOnly")
-                            else -> Translations.t(language, "allTypes")
-                        }
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                            )
 
-                        Box {
+                            // Date Filter Section
                             Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                    .clickable { typeExpanded = true }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = typeLabel,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = typeExpanded,
-                                onDismissRequest = { typeExpanded = false },
-                                modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                            ) {
-                                listOf(
-                                    "ALL" to "allTypes",
-                                    "INCOME" to "incomesOnly",
-                                    "EXPENSE" to "expensesOnly",
-                                    "TRANSFER" to "transfersOnly"
-                                ).forEach { (t, key) ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = Translations.t(language, key),
-                                                fontSize = 13.sp,
-                                                fontWeight = if (typeFilter == t) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (typeFilter == t) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        },
-                                        onClick = {
-                                            onTypeFilterChange(t)
-                                            typeExpanded = false
-                                        }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DateRange,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = Emerald500
+                                    )
+                                    Text(
+                                        text = Translations.t(language, "filterByDate").uppercase(),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        letterSpacing = 1.sp
                                     )
                                 }
+
+                                if (hasActiveFilters) {
+                                    Row(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                onTimeFilterChange("allTime")
+                                                onSourceFilterChange(null)
+                                                onTypeFilterChange("ALL")
+                                                onCategoryFilterChange("ALL")
+                                                onSearchChange("")
+                                            }
+                                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = "Reset",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = "Reset",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             }
-                        }
 
-                        // 3. Categories Dropdown
-                        var categoryExpanded by remember { mutableStateOf(false) }
-                        val categoryLabel = when (categoryFilter) {
-                            "ALL" -> Translations.t(language, "allCategories")
-                            else -> Translations.t(language, categoryFilter.lowercase()).uppercase()
-                        }
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                        Box {
+                            // Date Period Selection Horizontal Row
                             Row(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                    .clickable { categoryExpanded = true }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(
-                                    text = categoryLabel,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = categoryExpanded,
-                                onDismissRequest = { categoryExpanded = false },
-                                modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                            ) {
                                 listOf(
-                                    "ALL" to "allCategories",
-                                    "GENERAL" to "general",
-                                    "SALARY" to "salary",
-                                    "TELECOM" to "telecom",
-                                    "RECHARGE" to "recharge",
-                                    "SHOPPING" to "shopping",
-                                    "DINING" to "dining",
-                                    "UTILITY" to "utility",
-                                    "TRANSFER" to "transfer"
-                                ).forEach { (cat, key) ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = Translations.t(language, key),
-                                                fontSize = 13.sp,
-                                                fontWeight = if (categoryFilter == cat) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (categoryFilter == cat) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    "allTime" to "allTime",
+                                    "today" to "today",
+                                    "thisWeek" to "thisWeek",
+                                    "thisMonth" to "thisMonth",
+                                    "yearly" to "yearly"
+                                ).forEach { (translationKey, filterVal) ->
+                                    val isSelected = timeFilter == filterVal
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.primary 
+                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                             )
-                                        },
-                                        onClick = {
-                                            onCategoryFilterChange(cat)
-                                            categoryExpanded = false
-                                        }
-                                    )
+                                            .clickable { onTimeFilterChange(filterVal) }
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = Translations.t(language, translationKey),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                // Custom Period Picker Box Button
+                                val isCustomSelected = timeFilter == "custom"
+                                val customPillText = if (isCustomSelected && customStartMs != null && customEndMs != null) {
+                                    val df = SimpleDateFormat("MMM d", Locale.US)
+                                    val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
+                                    "${df.format(Date(customStartMs))}–${df.format(Date(displayEndMs))}".uppercase()
+                                } else {
+                                    Translations.t(language, "custom")
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(
+                                            if (isCustomSelected) MaterialTheme.colorScheme.primary 
+                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        )
+                                        .clickable { showDateRangePicker = true }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically, 
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DateRange,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = customPillText,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    // DateRangePickerDialog Box overlay
+                    if (showDateRangePicker) {
+                        val todayEthiopia = Calendar.getInstance(AppConstants.ETHIOPIA_TIMEZONE)
+                        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                        utcCalendar.timeInMillis = todayEthiopia.timeInMillis
+                        utcCalendar.set(Calendar.HOUR_OF_DAY, 23)
+                        utcCalendar.set(Calendar.MINUTE, 59)
+                        utcCalendar.set(Calendar.SECOND, 59)
+                        utcCalendar.set(Calendar.MILLISECOND, 999)
+                        val endOfTodayUtc = utcCalendar.timeInMillis
+                        val dateRangePickerState = rememberDateRangePickerState(
+                            selectableDates = object : SelectableDates {
+                                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                                    return utcTimeMillis <= endOfTodayUtc
+                                }
+                            }
+                        )
+                        DatePickerDialog(
+                            onDismissRequest = { showDateRangePicker = false },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        val startMs = dateRangePickerState.selectedStartDateMillis
+                                        val endMs = dateRangePickerState.selectedEndDateMillis
+                                        if (startMs != null && endMs != null) {
+                                            val endOfDay = endMs + (24 * 60 * 60 * 1000L - 1)
+                                            onCustomRangeChange(startMs, endOfDay)
+                                        }
+                                        showDateRangePicker = false
+                                    },
+                                    enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
+                                ) {
+                                    Text(Translations.t(language, "done").uppercase())
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDateRangePicker = false }) {
+                                    Text(Translations.t(language, "cancel").uppercase())
+                                }
+                            }
+                        ) {
+                            DateRangePicker(
+                                state = dateRangePickerState,
+                                title = {
+                                    Text(
+                                        text = Translations.t(language, "selectDateRange"),
+                                        modifier = Modifier.padding(start = 24.dp, top = 16.dp),
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                },
+                                modifier = Modifier.heightIn(max = 500.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // ── 2. SEARCH & FILTER DROPDOWNS GROUP (React Web-Style) ──
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                        ),
+                        border = borderStroke()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // Search Box input at the top of the selector card
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = onSearchChange,
+                                placeholder = {
+                                    Text(
+                                        text = Translations.t(language, "searchTransactions"), 
+                                        fontSize = 13.sp, 
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Search, 
+                                        contentDescription = null, 
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { onSearchChange("") }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close, 
+                                                contentDescription = "Clear", 
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 44.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Three-Way Dropdowns Row directly below Search Box
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // A helper boundary style for simple drop items
+                                fun Modifier.dropdownStyle(onClick: () -> Unit) = this
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                    .clickable(onClick = onClick)
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+
+                                // A. Sources Dropdown
+                                var sourceExpanded by remember { mutableStateOf(false) }
+                                val sourceLabel = if (sourceFilter == null) {
+                                    Translations.t(language, "allSources")
+                                } else {
+                                    uniqueSources.find { it.second == sourceFilter }?.first?.uppercase() ?: sourceFilter.uppercase()
+                                }
+
+                                Box {
+                                    Row(
+                                        modifier = Modifier.dropdownStyle { sourceExpanded = true },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = sourceLabel,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = sourceExpanded,
+                                        onDismissRequest = { sourceExpanded = false },
+                                        modifier = Modifier
+                                            .background(MaterialTheme.colorScheme.surface)
+                                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = Translations.t(language, "allSources"),
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (sourceFilter == null) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (sourceFilter == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                )
+                                            },
+                                            onClick = {
+                                                onSourceFilterChange(null)
+                                                sourceExpanded = false
+                                            }
+                                        )
+                                        uniqueSources.forEach { (abbreviation, name) ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = abbreviation.uppercase(),
+                                                        fontSize = 12.sp,
+                                                        fontWeight = if (sourceFilter == name) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (sourceFilter == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                },
+                                                onClick = {
+                                                    onSourceFilterChange(name)
+                                                    sourceExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // B. Types Dropdown
+                                var typeExpanded by remember { mutableStateOf(false) }
+                                val typeLabel = when (typeFilter) {
+                                    "INCOME" -> Translations.t(language, "incomesOnly")
+                                    "EXPENSE" -> Translations.t(language, "expensesOnly")
+                                    "TRANSFER" -> Translations.t(language, "transfersOnly")
+                                    else -> Translations.t(language, "allTypes")
+                                }
+
+                                Box {
+                                    Row(
+                                        modifier = Modifier.dropdownStyle { typeExpanded = true },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = typeLabel,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = typeExpanded,
+                                        onDismissRequest = { typeExpanded = false },
+                                        modifier = Modifier
+                                            .background(MaterialTheme.colorScheme.surface)
+                                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                    ) {
+                                        listOf(
+                                            "ALL" to "allTypes",
+                                            "INCOME" to "incomesOnly",
+                                            "EXPENSE" to "expensesOnly",
+                                            "TRANSFER" to "transfersOnly"
+                                        ).forEach { (t, key) ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = Translations.t(language, key),
+                                                        fontSize = 12.sp,
+                                                        fontWeight = if (typeFilter == t) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (typeFilter == t) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                },
+                                                onClick = {
+                                                    onTypeFilterChange(t)
+                                                    typeExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // C. Categories Dropdown
+                                var categoryExpanded by remember { mutableStateOf(false) }
+                                val categoryLabel = when (categoryFilter) {
+                                    "ALL" -> Translations.t(language, "allCategories")
+                                    else -> Translations.t(language, categoryFilter.lowercase()).uppercase()
+                                }
+
+                                Box {
+                                    Row(
+                                        modifier = Modifier.dropdownStyle { categoryExpanded = true },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = categoryLabel,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = categoryExpanded,
+                                        onDismissRequest = { categoryExpanded = false },
+                                        modifier = Modifier
+                                            .background(MaterialTheme.colorScheme.surface)
+                                            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                    ) {
+                                        listOf(
+                                            "ALL" to "allCategories",
+                                            "GENERAL" to "general",
+                                            "SALARY" to "salary",
+                                            "TELECOM" to "telecom",
+                                            "RECHARGE" to "recharge",
+                                            "SHOPPING" to "shopping",
+                                            "DINING" to "dining",
+                                            "UTILITY" to "utility",
+                                            "TRANSFER" to "transfer"
+                                        ).forEach { (cat, key) ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = Translations.t(language, key),
+                                                        fontSize = 12.sp,
+                                                        fontWeight = if (categoryFilter == cat) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (categoryFilter == cat) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                },
+                                                onClick = {
+                                                    onCategoryFilterChange(cat)
+                                                    categoryExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))4.dp))
 
                     // ── SEARCH RESULTS SUMMARY BAR ────────────────────────────
                     val filteredIncome = remember(transactions) {
@@ -771,6 +1147,16 @@ fun TransactionChart(
         if (max == 0.0) 1.0 else max
     }
 
+    val formatYVal = { v: Double ->
+        if (v >= 1000000.0) {
+            "${(v / 1000000.0).toInt()}m"
+        } else if (v >= 1000.0) {
+            "${(v / 1000.0).toInt()}k"
+        } else {
+            v.toInt().toString()
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -790,46 +1176,101 @@ fun TransactionChart(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.Bottom
+                    .height(160.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                sourceData.forEach { (source, flows) ->
-                    val income = flows.first
-                    val expense = flows.second
+                // Left: Y-Axis Ticks
+                Column(
+                    modifier = Modifier
+                        .width(42.dp)
+                        .fillMaxHeight()
+                        .padding(bottom = 12.dp, end = 6.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(formatYVal(maxVal), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(formatYVal(maxVal * 0.66), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(formatYVal(maxVal * 0.33), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("0", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
 
-                    val incomeHeightPct = (income / maxVal).toFloat().coerceIn(0.04f, 1f)
-                    val expenseHeightPct = (expense / maxVal).toFloat().coerceIn(0.04f, 1f)
-
+                // Right: Grid lines + Bars Plot Area
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    // Draw Horizontal Grid lines
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 12.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxHeight(0.85f)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            // Income Bar (Green)
-                            Box(
-                                modifier = Modifier
-                                    .width(14.dp)
-                                    .fillMaxHeight(incomeHeightPct)
-                                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                    .background(Emerald500)
-                            )
-                            // Expense Bar (Red)
-                            Box(
-                                modifier = Modifier
-                                    .width(14.dp)
-                                    .fillMaxHeight(expenseHeightPct)
-                                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                    .background(Rose500)
+                        listOf(1f, 0.66f, 0.33f, 0f).forEach { _ ->
+                            HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // Draw Bars (aligned to bottom)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        sourceData.forEach { (source, flows) ->
+                            val income = flows.first
+                            val expense = flows.second
+
+                            val incomeHeightPct = (income / maxVal).toFloat().coerceIn(0.04f, 1f)
+                            val expenseHeightPct = (expense / maxVal).toFloat().coerceIn(0.04f, 1f)
+
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                // Income Bar (Green)
+                                Box(
+                                    modifier = Modifier
+                                        .width(14.dp)
+                                        .fillMaxHeight(incomeHeightPct)
+                                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                        .background(Emerald500)
+                                )
+                                // Expense Bar (Red)
+                                Box(
+                                    modifier = Modifier
+                                        .width(14.dp)
+                                        .fillMaxHeight(expenseHeightPct)
+                                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                        .background(Rose500)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // X-Axis labels Row aligned underneath the bars plot area!
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 42.dp), // offset matching the Y-axis ticks width
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                sourceData.forEach { (source, _) ->
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = source,
                             fontSize = 10.sp,
