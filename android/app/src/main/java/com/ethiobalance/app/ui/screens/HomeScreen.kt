@@ -49,7 +49,9 @@ fun HomeScreen(
     onViewAllTransactions: () -> Unit,
 ) {
     var showAmounts by remember { mutableStateOf(true) }
-    var timeFilter by remember { mutableStateOf("ALL_TIME") }
+    var timeFilter by remember { mutableStateOf("allTime") }
+    var customStartMs by remember { mutableStateOf<Long?>(null) }
+    var customEndMs by remember { mutableStateOf<Long?>(null) }
     
     val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
         minimumFractionDigits = 2
@@ -57,13 +59,30 @@ fun HomeScreen(
     }
 
     val now = System.currentTimeMillis()
-    val filteredTransactions = remember(transactions, timeFilter) {
+    val filteredTransactions = remember(transactions, timeFilter, customStartMs, customEndMs) {
+        val startOfToday = java.util.Calendar.getInstance().apply {
+            timeInMillis = now
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val sevenDaysAgo = now - 7L * 24 * 60 * 60 * 1000L
+        val thirtyDaysAgo = now - 30L * 24 * 60 * 60 * 1000L
+        val oneYearAgo = now - 365L * 24 * 60 * 60 * 1000L
+
         transactions.filter {
-            val diff = now - it.timestamp
             when (timeFilter) {
-                "TODAY" -> diff <= 24 * 60 * 60 * 1000L
-                "THIS_WEEK" -> diff <= 7 * 24 * 60 * 60 * 1000L
-                "THIS_MONTH" -> diff <= 30 * 24 * 60 * 60 * 1000L
+                "today" -> it.timestamp >= startOfToday
+                "thisWeek" -> it.timestamp >= sevenDaysAgo
+                "thisMonth" -> it.timestamp >= thirtyDaysAgo
+                "yearly" -> it.timestamp >= oneYearAgo
+                "custom" -> {
+                    val start = customStartMs ?: 0L
+                    val end = customEndMs ?: Long.MAX_VALUE
+                    it.timestamp in start..end
+                }
                 else -> true
             }
         }
@@ -129,7 +148,14 @@ fun HomeScreen(
             isSyncing = isSyncing,
             onSync = onSync,
             homeTimeFilter = timeFilter,
-            onHomeTimeFilterSelected = { timeFilter = it }
+            onHomeTimeFilterSelected = { timeFilter = it },
+            homeCustomStartMs = customStartMs,
+            homeCustomEndMs = customEndMs,
+            onHomeCustomRangeChange = { start, end ->
+                customStartMs = start
+                customEndMs = end
+                timeFilter = "custom"
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))

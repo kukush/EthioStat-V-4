@@ -46,8 +46,11 @@ fun SummaryCard(
     onToggleAmounts: (() -> Unit)? = null,
     isSyncing: Boolean = false,
     onSync: (() -> Unit)? = null,
-    homeTimeFilter: String = "ALL_TIME",
+    homeTimeFilter: String = "allTime",
     onHomeTimeFilterSelected: ((String) -> Unit)? = null,
+    homeCustomStartMs: Long? = null,
+    homeCustomEndMs: Long? = null,
+    onHomeCustomRangeChange: ((Long?, Long?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val fmt = NumberFormat.getNumberInstance(Locale.US).apply {
@@ -140,33 +143,14 @@ fun SummaryCard(
 
             if (transactionCount == null && timeFilter == null) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF0F172A).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                        .border(1.dp, Slate800, RoundedCornerShape(12.dp))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    val filters = listOf("ALL_TIME" to "allTime", "TODAY" to "today", "THIS_WEEK" to "thisWeek", "THIS_MONTH" to "thisMonth")
-                    filters.forEach { (key, translateKey) ->
-                        val isSelected = homeTimeFilter == key
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onHomeTimeFilterSelected?.invoke(key) }
-                                .background(if (isSelected) Slate700 else Color.Transparent, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                Translations.t(language, translateKey).takeIf { it.isNotEmpty() } ?: translateKey,
-                                fontSize = 11.sp, 
-                                fontWeight = FontWeight.Bold, 
-                                color = if (isSelected) Color.White else Slate400
-                            )
-                        }
-                    }
-                }
+                TimeFilterSelector(
+                    language = language,
+                    selectedFilter = homeTimeFilter,
+                    onFilterSelected = { onHomeTimeFilterSelected?.invoke(it) },
+                    customStartMs = homeCustomStartMs,
+                    customEndMs = homeCustomEndMs,
+                    onCustomRangeChange = { start, end -> onHomeCustomRangeChange?.invoke(start, end) }
+                )
             }
             
             // Transaction Time Filter (if transaction mode)

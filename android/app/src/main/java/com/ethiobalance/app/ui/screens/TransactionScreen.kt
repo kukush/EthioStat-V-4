@@ -76,7 +76,6 @@ fun TransactionScreen(
     val netBalance = totalIncome - totalExpense
     val listState = rememberLazyListState()
 
-    var showDateRangePicker by remember { mutableStateOf(false) }
     var showAmounts by remember { mutableStateOf(true) }
     
     val lastActivity = remember(transactions, language) {
@@ -321,132 +320,14 @@ fun TransactionScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Date Period Selection Horizontal Row
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                listOf(
-                                    "allTime" to "allTime",
-                                    "today" to "today",
-                                    "thisWeek" to "thisWeek",
-                                    "thisMonth" to "thisMonth",
-                                    "yearly" to "yearly"
-                                ).forEach { (translationKey, filterVal) ->
-                                    val isSelected = timeFilter == filterVal
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(
-                                                if (isSelected) MaterialTheme.colorScheme.primary 
-                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                            )
-                                            .clickable { onTimeFilterChange(filterVal) }
-                                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text(
-                                            text = Translations.t(language, translationKey),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-
-                                // Custom Period Picker Box Button
-                                val isCustomSelected = timeFilter == "custom"
-                                val customPillText = if (isCustomSelected && customStartMs != null && customEndMs != null) {
-                                    val df = SimpleDateFormat("MMM d", Locale.US)
-                                    val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
-                                    "${df.format(Date(customStartMs))}–${df.format(Date(displayEndMs))}".uppercase()
-                                } else {
-                                    Translations.t(language, "custom")
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(
-                                            if (isCustomSelected) MaterialTheme.colorScheme.primary 
-                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                        )
-                                        .clickable { showDateRangePicker = true }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically, 
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.DateRange,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(12.dp),
-                                            tint = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = customPillText,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // DateRangePickerDialog Box overlay
-                    if (showDateRangePicker) {
-                        val todayEthiopia = Calendar.getInstance(AppConstants.ETHIOPIA_TIMEZONE)
-                        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-                        utcCalendar.timeInMillis = todayEthiopia.timeInMillis
-                        utcCalendar.set(Calendar.HOUR_OF_DAY, 23)
-                        utcCalendar.set(Calendar.MINUTE, 59)
-                        utcCalendar.set(Calendar.SECOND, 59)
-                        utcCalendar.set(Calendar.MILLISECOND, 999)
-                        val endOfTodayUtc = utcCalendar.timeInMillis
-                        val dateRangePickerState = rememberDateRangePickerState(
-                            selectableDates = object : SelectableDates {
-                                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                                    return utcTimeMillis <= endOfTodayUtc
-                                }
-                            }
-                        )
-                        DatePickerDialog(
-                            onDismissRequest = { showDateRangePicker = false },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        val startMs = dateRangePickerState.selectedStartDateMillis
-                                        val endMs = dateRangePickerState.selectedEndDateMillis
-                                        if (startMs != null && endMs != null) {
-                                            val endOfDay = endMs + (24 * 60 * 60 * 1000L - 1)
-                                            onCustomRangeChange(startMs, endOfDay)
-                                        }
-                                        showDateRangePicker = false
-                                    },
-                                    enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
-                                ) {
-                                    Text(Translations.t(language, "done").uppercase())
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showDateRangePicker = false }) {
-                                    Text(Translations.t(language, "cancel").uppercase())
-                                }
-                            }
-                        ) {
-                            DateRangePicker(
-                                state = dateRangePickerState,
-                                title = {
-                                    Text(
-                                        text = Translations.t(language, "selectDateRange"),
-                                        modifier = Modifier.padding(start = 24.dp, top = 16.dp),
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                },
-                                modifier = Modifier.heightIn(max = 500.dp)
+                            // Unified Time Filter Selector
+                            TimeFilterSelector(
+                                language = language,
+                                selectedFilter = timeFilter,
+                                onFilterSelected = onTimeFilterChange,
+                                customStartMs = customStartMs,
+                                customEndMs = customEndMs,
+                                onCustomRangeChange = onCustomRangeChange
                             )
                         }
                     }
