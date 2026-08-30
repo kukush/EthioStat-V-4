@@ -25,13 +25,13 @@ subprojects {
         if (p.plugins.hasPlugin("java") || p.plugins.hasPlugin("java-library") || p.plugins.hasPlugin("com.android.application") || p.plugins.hasPlugin("com.android.library")) {
             configure<JavaPluginExtension> {
                 toolchain {
-                    languageVersion.set(JavaLanguageVersion.of(17))
+                    languageVersion.set(JavaLanguageVersion.of(21))
                 }
             }
         }
         if (p.plugins.hasPlugin("org.jetbrains.kotlin.android")) {
             configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
-                jvmToolchain(17)
+                jvmToolchain(21)
             }
         }
     }
