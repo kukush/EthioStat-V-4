@@ -239,7 +239,7 @@ fun TransactionItem(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 // Raw SMS / Details
-                Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Slate950.copy(alpha = 0.5f)).padding(10.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Slate900.copy(alpha = 0.5f)).padding(10.dp)) {
                     Text(
                         text = "DETAILS",
                         fontSize = 9.sp,
@@ -249,7 +249,7 @@ fun TransactionItem(
                         modifier = Modifier.padding(bottom = 6.dp)
                     )
                     Text(
-                        text = transaction.rawSmsBody ?: "No details available",
+                        text = transaction.reference ?: "No details available",
                         fontSize = 11.sp,
                         color = Slate300,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -257,7 +257,7 @@ fun TransactionItem(
                     
                     if (transaction.reference != null) {
                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text(text = "Ref: ${transaction.reference}", fontSize = 10.sp, color = Slate400, fontWeight = FontWeight.Mono)
+                            Text(text = "Ref: ${transaction.reference}", fontSize = 10.sp, color = Slate400, fontWeight = FontWeight.Medium)
                             // Could add a copy button here
                         }
                     }
