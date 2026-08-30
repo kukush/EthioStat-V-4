@@ -116,7 +116,7 @@ fun LockedScreen(
                 }
             },
             label = { Text("PIN") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = if (isPinVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { isPinVisible = !isPinVisible }) {

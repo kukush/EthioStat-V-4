@@ -63,6 +63,12 @@ fun EthioBalanceAppUI(biometricAuthService: BiometricAuthService? = null) {
     }
     
     var isLocked by remember { mutableStateOf(true) }
+
+    LaunchedEffect(isBiometricEnabled, isPinEnabled) {
+        if (isBiometricEnabled || isPinEnabled) {
+            isLocked = true
+        }
+    }
     
     // Only lock if at least one security method is enabled
     val shouldLock = isBiometricEnabled || isPinEnabled
