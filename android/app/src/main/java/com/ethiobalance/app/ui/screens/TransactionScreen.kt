@@ -138,224 +138,9 @@ fun TransactionScreen(
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ── TOP BAR WITH ACTIONS ──────────────────────────────────
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = Translations.t(language, "transactionHistory"),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Chart Analysis Toggle
-                            IconButton(
-                                onClick = { showChart = !showChart },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(if (showChart) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant),
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    contentColor = if (showChart) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            ) {
-                                Icon(Icons.Default.Equalizer, contentDescription = "Chart Analysis", modifier = Modifier.size(18.dp))
-                            }
-
-                            // Add Manual Transaction
-                            IconButton(
-                                onClick = { showAddManualDialog = true },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = "Add Transaction", modifier = Modifier.size(18.dp))
-                            }
-
-                            // Export CSV
-                            IconButton(
-                                onClick = { showExportModal = true },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            ) {
-                                Icon(Icons.Default.Download, contentDescription = "Export CSV", modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // ── SEARCH BAR ────────────────────────────────────────────
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchChange,
-                        placeholder = {
-                            Text(Translations.t(language, "searchTransactions"), fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { onSearchChange("") }) {
-                                    Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // ── DATE FILTER CHIPS ─────────────────────────────────────
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            "allTime" to "allTime",
-                            "today" to "today",
-                            "thisWeek" to "thisWeek",
-                            "thisMonth" to "thisMonth",
-                            "yearly" to "yearly"
-                        ).forEach { (translationKey, filterVal) ->
-                            val isSelected = timeFilter == filterVal
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                    .clickable { onTimeFilterChange(filterVal) }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = Translations.t(language, translationKey),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // Custom Date Range Picker Pill
-                        val isCustomSelected = timeFilter == "custom"
-                        val customPillText = if (isCustomSelected && customStartMs != null && customEndMs != null) {
-                            val df = SimpleDateFormat("MMM d", Locale.US)
-                            val displayEndMs = customEndMs - (24 * 60 * 60 * 1000L - 1)
-                            "${df.format(Date(customStartMs))}–${df.format(Date(displayEndMs))}".uppercase()
-                        } else {
-                            Translations.t(language, "custom")
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isCustomSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .clickable { showDateRangePicker = true }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = customPillText,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isCustomSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-
-                    // DateRangePicker Dialog
-                    if (showDateRangePicker) {
-                        val todayEthiopia = Calendar.getInstance(AppConstants.ETHIOPIA_TIMEZONE)
-                        val utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-                        utcCalendar.timeInMillis = todayEthiopia.timeInMillis
-                        utcCalendar.set(Calendar.HOUR_OF_DAY, 23)
-                        utcCalendar.set(Calendar.MINUTE, 59)
-                        utcCalendar.set(Calendar.SECOND, 59)
-                        utcCalendar.set(Calendar.MILLISECOND, 999)
-                        val endOfTodayUtc = utcCalendar.timeInMillis
-                        val dateRangePickerState = rememberDateRangePickerState(
-                            selectableDates = object : SelectableDates {
-                                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                                    return utcTimeMillis <= endOfTodayUtc
-                                }
-                            }
-                        )
-                        DatePickerDialog(
-                            onDismissRequest = { showDateRangePicker = false },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        val startMs = dateRangePickerState.selectedStartDateMillis
-                                        val endMs = dateRangePickerState.selectedEndDateMillis
-                                        if (startMs != null && endMs != null) {
-                                            val endOfDay = endMs + (24 * 60 * 60 * 1000L - 1)
-                                            onCustomRangeChange(startMs, endOfDay)
-                                        }
-                                        showDateRangePicker = false
-                                    },
-                                    enabled = dateRangePickerState.selectedStartDateMillis != null && dateRangePickerState.selectedEndDateMillis != null
-                                ) {
-                                    Text(Translations.t(language, "done").uppercase())
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showDateRangePicker = false }) {
-                                    Text(Translations.t(language, "cancel").uppercase())
-                                }
-                            }
-                        ) {
-                            DateRangePicker(
-                                state = dateRangePickerState,
-                                title = {
-                                    Text(
-                                        text = Translations.t(language, "selectDateRange"),
-                                        modifier = Modifier.padding(start = 24.dp, top = 16.dp),
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                },
-                                modifier = Modifier.heightIn(max = 500.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
+                    // ── 1. UNIFIED ACTION HEADER CARD (React Web-Style) ───────
                     val hasActiveFilters = timeFilter != "allTime" || sourceFilter != null || typeFilter != "ALL" || categoryFilter != "ALL" || searchQuery.isNotEmpty()
 
-                    // ── 1. UNIFIED ACTION HEADER CARD (React Web-Style) ───────
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -453,27 +238,21 @@ fun TransactionScreen(
                                         )
                                     }
 
-                                    // Quick Manual Record Button
-                                    Row(
+                                    // Quick Manual Record Button (+)
+                                    IconButton(
+                                        onClick = { showAddManualDialog = true },
                                         modifier = Modifier
+                                            .size(34.dp)
                                             .clip(RoundedCornerShape(10.dp))
-                                            .background(Emerald600)
-                                            .clickable { showAddManualDialog = true }
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            .background(Emerald600),
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            contentColor = Color.White
+                                        )
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Add,
-                                            contentDescription = "Record",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                        Text(
-                                            text = "Record",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                            contentDescription = "Add",
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
