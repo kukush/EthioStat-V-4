@@ -41,6 +41,7 @@ class SettingsRepository @Inject constructor(
         val LAST_SCANNED_TIMESTAMP_KEY = longPreferencesKey("last_scanned_timestamp")
         val BIOMETRIC_ENABLED_KEY = booleanPreferencesKey("biometric_enabled")
         val PIN_ENABLED_KEY = booleanPreferencesKey("pin_enabled")
+        val PIN_CODE_KEY = stringPreferencesKey("app_pin_code")
         val AUTO_SYNC_ENABLED_KEY = booleanPreferencesKey("auto_sync_enabled")
     }
 
@@ -53,6 +54,11 @@ class SettingsRepository @Inject constructor(
     val isPinEnabled: Flow<Boolean> = dataStore.data.map { it[PIN_ENABLED_KEY] ?: false }
     suspend fun setPinEnabled(enabled: Boolean) {
         dataStore.edit { it[PIN_ENABLED_KEY] = enabled }
+    }
+
+    val storedPin: Flow<String?> = dataStore.data.map { it[PIN_CODE_KEY] }
+    suspend fun setPin(pin: String) {
+        dataStore.edit { it[PIN_CODE_KEY] = pin }
     }
     
     val isAutoSyncEnabled: Flow<Boolean> = dataStore.data.map { it[AUTO_SYNC_ENABLED_KEY] ?: true }

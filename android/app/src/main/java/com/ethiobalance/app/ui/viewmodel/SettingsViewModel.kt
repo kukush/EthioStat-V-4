@@ -44,6 +44,9 @@ class SettingsViewModel @Inject constructor(
     val isPinEnabled: StateFlow<Boolean> = settingsRepo.isPinEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val storedPin: StateFlow<String?> = settingsRepo.storedPin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val isAutoSyncEnabled: StateFlow<Boolean> = settingsRepo.isAutoSyncEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -57,6 +60,10 @@ class SettingsViewModel @Inject constructor(
     
     fun setPinEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepo.setPinEnabled(enabled) }
+    }
+
+    fun setPin(pin: String) {
+        viewModelScope.launch { settingsRepo.setPin(pin) }
     }
     
     fun setAutoSyncEnabled(enabled: Boolean) {

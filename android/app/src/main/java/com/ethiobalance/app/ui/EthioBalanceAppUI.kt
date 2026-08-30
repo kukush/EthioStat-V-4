@@ -40,7 +40,7 @@ import com.ethiobalance.app.ui.viewmodel.*
 import com.ethiobalance.app.ui.screens.LockedScreen
 
 @Composable
-fun EthioBalanceAppUI() {
+fun EthioBalanceAppUI(biometricAuthService: BiometricAuthService? = null) {
     val homeVM: HomeViewModel = hiltViewModel()
     val telecomVM: TelecomViewModel = hiltViewModel()
     val transactionVM: TransactionViewModel = hiltViewModel()
@@ -51,6 +51,7 @@ fun EthioBalanceAppUI() {
     val hasSeenOnboarding by settingsVM.hasSeenOnboarding.collectAsStateWithLifecycle()
     val isBiometricEnabled by settingsVM.isBiometricEnabled.collectAsStateWithLifecycle()
     val isPinEnabled by settingsVM.isPinEnabled.collectAsStateWithLifecycle()
+    val storedPin by settingsVM.storedPin.collectAsStateWithLifecycle()
     val isAutoSyncEnabled by settingsVM.isAutoSyncEnabled.collectAsStateWithLifecycle()
     
     // Auto-Sync
@@ -95,9 +96,16 @@ fun EthioBalanceAppUI() {
 
     EthioBalanceTheme(themeId = theme) {
         if (shouldLock && isLocked) {
+            val activity = androidx.compose.ui.platform.LocalContext.current as? androidx.fragment.app.FragmentActivity
             LockedScreen(
+                storedPin = storedPin,
+                isPinEnabled = isPinEnabled,
+                isBiometricEnabled = isBiometricEnabled,
+                onSetPin = { pin -> settingsVM.setPin(pin) },
                 onUnlock = { isLocked = false },
-                onUseBiometric = { isLocked = false }
+                biometricAuthService = biometricAuthService,
+                activity = activity,
+                language = language
             )
             return@EthioBalanceTheme
         }

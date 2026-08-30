@@ -141,7 +141,17 @@ object Translations {
         "allSources" to "All Sources", "allCategories" to "All Categories", "customStartDate" to "Start Date", "customEndDate" to "End Date",
         "clearDateFilter" to "Clear Date", "addTransaction" to "Add Transaction", "type" to "Type", "source" to "Source",
         "category" to "Category", "partyName" to "Recipient / Sender Name", "reference" to "Reference ID", "chartAnalysis" to "Chart Analysis",
-        "sourceFlow" to "Source Flow (ETB)"
+        "sourceFlow" to "Source Flow (ETB)",
+        "pinSetupTitle" to "Set 4-Digit PIN",
+        "pinEnterTitle" to "Enter 4-Digit PIN",
+        "pinRequirement" to "PIN must be exactly 4 digits (numbers only).",
+        "invalidPinError" to "Invalid PIN. Please try again.",
+        "pinSetupSuccess" to "PIN set successfully!",
+        "unlock" to "Unlock",
+        "setPin" to "Set PIN",
+        "useBiometric" to "Use Biometric",
+        "biometric_title" to "Verify Identity",
+        "biometric_subtitle" to "Scan fingerprint or face"
     )
 
     private val am = mapOf(
@@ -287,7 +297,17 @@ object Translations {
         "allSources" to "ሁሉም ምንጮች", "allCategories" to "ሁሉም ምድቦች", "customStartDate" to "መጀመሪያ ቀን", "customEndDate" to "ማጠናቀቂያ ቀን",
         "clearDateFilter" to "አጽዳ", "addTransaction" to "ግብይት አክል", "type" to "ዓይነት", "source" to "ምንጭ",
         "category" to "ምድብ", "partyName" to "የተቀባይ / የላኪ ስም", "reference" to "የማጣቀሻ ቁጥር", "chartAnalysis" to "የሠንጠረዥ ትንተና",
-        "sourceFlow" to "የምንጭ ፍሰት (ብር)"
+        "sourceFlow" to "የምንጭ ፍሰት (ብር)",
+        "pinSetupTitle" to "የ4-አሃዝ PIN ያዘጋጁ",
+        "pinEnterTitle" to "የ4-አሃዝ PIN ያስገቡ",
+        "pinRequirement" to "PIN በትክክል 4 አሃዝ መሆን አለበት (ቁጥሮች ብቻ)።",
+        "invalidPinError" to "ልክ ያልሆነ PIN። እባክዎ እንደገና ይሞክሩ።",
+        "pinSetupSuccess" to "PIN በተሳካ ሁኔታ ተዘጋጅቷል!",
+        "unlock" to "ክፈት",
+        "setPin" to "PIN አዘጋጅ",
+        "useBiometric" to "ጣት አሻራ ተጠቀም",
+        "biometric_title" to "ማንነትዎን ያረጋግጡ",
+        "biometric_subtitle" to "የጣት አሻራ ወይም የፊት ገጽታ ይቃኙ"
     )
 
     private val om = mapOf(
@@ -438,7 +458,17 @@ object Translations {
         "allSources" to "Madda Hunda", "allCategories" to "Ramaddii Hunda", "customStartDate" to "Guyyaa Jalqabaa", "customEndDate" to "Guyyaa Dhumaa",
         "clearDateFilter" to "Haqi", "addTransaction" to "Daldala Dabali", "type" to "Gosa", "source" to "Madda",
         "category" to "Ramaddii", "partyName" to "Maqaa Fudhataa / Ergaa", "reference" to "Koodii Mirkaneessaa", "chartAnalysis" to "Gabaasa Saaroo",
-        "sourceFlow" to "Madda Yaasaa (ETB)"
+        "sourceFlow" to "Madda Yaasaa (ETB)",
+        "pinSetupTitle" to "PIN Dijiitii 4 Haaressi",
+        "pinEnterTitle" to "PIN Dijiitii 4 Galchi",
+        "pinRequirement" to "PIN dijiitii 4 qofa ta'uu qaba (lakkoofsa qofa).",
+        "invalidPinError" to "PIN dogoggora. Maaloo irra deebi'ii yaali.",
+        "pinSetupSuccess" to "PIN milkaa'inaan saagameera!",
+        "unlock" to "Bani",
+        "setPin" to "PIN Haaressi",
+        "useBiometric" to "Biometric Fayyadami",
+        "biometric_title" to "Eenyummeessa Mirkaneessi",
+        "biometric_subtitle" to "Ashaaraa qubaa ykn fuula keessan scan godhaa"
     )
 
     private val maps = mapOf("en" to en, "am" to am, "om" to om)

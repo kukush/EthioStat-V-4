@@ -75,7 +75,7 @@ class MainActivity : FragmentActivity() {
         
         splashScreen.setKeepOnScreenCondition { !isReady }
 
-        setContent { EthioBalanceAppUI() }
+        setContent { EthioBalanceAppUI(biometricAuthService = biometricAuthService) }
     }
 
     /**
