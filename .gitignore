@@ -50,3 +50,8 @@ target/
 # Ignored custom Java 22 Gradle wrapper configs
 android/.gradle-local/
 node_modules
+
+# AI Studio Agent custom instruction files
+AGENTS.md
+GEMINI.md
+
