@@ -3,7 +3,7 @@ import { Lock, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { useSecurity } from '../components/BiometricProvider';
 
 export const LockedScreen = ({ language }: { language: string }) => {
-  const { unlockWithBiometric, unlockWithPin, hasPin, setPin } = useSecurity();
+  const { unlockWithBiometric, unlockWithPin, hasPin, setPin, isPinEnabled, isBiometricEnabled } = useSecurity();
   const [pin, setPinInput] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState('');
@@ -75,7 +75,7 @@ export const LockedScreen = ({ language }: { language: string }) => {
         </div>
       </div>
 
-      {!hasPin && (
+      {isPinEnabled && !hasPin && (
         <>
           <h2 className="text-xl font-bold mb-1">
             {t('pinSetupTitle')}
@@ -86,47 +86,53 @@ export const LockedScreen = ({ language }: { language: string }) => {
         </>
       )}
 
-      <div className="relative w-full max-w-xs mb-4">
-        <input
-          type={showPin ? "text" : "password"}
-          maxLength={4}
-          value={pin}
-          onChange={(e) => {
-            const filtered = e.target.value.replace(/\D/g, '');
-            setPinInput(filtered);
-            setError('');
-          }}
-          placeholder="••••"
-          className="w-full p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-center text-xl tracking-widest font-mono text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-        />
-        <button
-          onClick={() => setShowPin(!showPin)}
-          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-        </button>
-      </div>
+      {isPinEnabled && (
+        <>
+          <div className="relative w-full max-w-xs mb-4">
+            <input
+              type={showPin ? "text" : "password"}
+              maxLength={4}
+              value={pin}
+              onChange={(e) => {
+                const filtered = e.target.value.replace(/\D/g, '');
+                setPinInput(filtered);
+                setError('');
+              }}
+              placeholder="••••"
+              className="w-full p-3.5 bg-slate-900 border border-slate-800 rounded-2xl text-center text-xl tracking-widest font-mono text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+            />
+            <button
+              onClick={() => setShowPin(!showPin)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
 
-      {error && (
-        <p className="text-xs text-rose-400 mb-4 font-semibold px-4 max-w-xs">
-          {error}
-        </p>
+          {error && (
+            <p className="text-xs text-rose-400 mb-4 font-semibold px-4 max-w-xs">
+              {error}
+            </p>
+          )}
+
+          <button
+            onClick={handleUnlock}
+            className="w-full max-w-xs py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-emerald-950/20 active:scale-95"
+          >
+            {hasPin ? t('unlock') : t('setPin')}
+          </button>
+        </>
       )}
 
-      <button
-        onClick={handleUnlock}
-        className="w-full max-w-xs py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-emerald-950/20 active:scale-95"
-      >
-        {hasPin ? t('unlock') : t('setPin')}
-      </button>
-
-      <button
-        onClick={unlockWithBiometric}
-        className="mt-6 flex items-center gap-2 text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-4 py-2 rounded-full border border-emerald-500/20 active:scale-95"
-      >
-        <Fingerprint className="w-4 h-4" />
-        <span>{t('useBiometric')}</span>
-      </button>
+      {isBiometricEnabled && (
+        <button
+          onClick={unlockWithBiometric}
+          className={`${isPinEnabled ? 'mt-6' : ''} flex items-center gap-2 text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-4 py-2 rounded-full border border-emerald-500/20 active:scale-95`}
+        >
+          <Fingerprint className="w-4 h-4" />
+          <span>{t('useBiometric')}</span>
+        </button>
+      )}
     </div>
   );
 };
