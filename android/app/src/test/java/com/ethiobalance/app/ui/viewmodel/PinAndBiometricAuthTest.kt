@@ -85,10 +85,10 @@ class PinAndBiometricAuthTest {
         assertFalse(viewModel.isPinEnabled.first())
 
         viewModel.setPinEnabled(true)
-        assertTrue(viewModel.isPinEnabled.first())
+        assertTrue(viewModel.isPinEnabled.first { it == true })
 
         viewModel.setPinEnabled(false)
-        assertFalse(viewModel.isPinEnabled.first())
+        assertFalse(viewModel.isPinEnabled.first { it == false })
     }
 
     @Test
@@ -96,10 +96,10 @@ class PinAndBiometricAuthTest {
         assertFalse(viewModel.isBiometricEnabled.first())
 
         viewModel.setBiometricEnabled(true)
-        assertTrue(viewModel.isBiometricEnabled.first())
+        assertTrue(viewModel.isBiometricEnabled.first { it == true })
 
         viewModel.setBiometricEnabled(false)
-        assertFalse(viewModel.isBiometricEnabled.first())
+        assertFalse(viewModel.isBiometricEnabled.first { it == false })
     }
 
     @Test
@@ -109,7 +109,7 @@ class PinAndBiometricAuthTest {
         val testPin = "1234"
         viewModel.setPin(testPin)
 
-        val savedPin = viewModel.storedPin.first()
+        val savedPin = viewModel.storedPin.first { it == testPin }
         assertEquals(testPin, savedPin)
 
         // Validate 4-digit numeric constraint logic
