@@ -47,6 +47,7 @@ export const SecurityProvider = ({ children }: { children: ReactNode }) => {
   const setPin = (pin: string) => {
     localStorage.setItem('app_pin', pin);
     setStoredPin(pin);
+    setIsLocked(false);
   };
   
   const setBiometricEnabled = (enabled: boolean) => {
